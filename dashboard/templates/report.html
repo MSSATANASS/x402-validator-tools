@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h2>Validation Report</h2>
+  <table>
+    <tr><th style="width:120px">URL</th><td class="url-cell">{{ record.url }}</td></tr>
+    <tr><th>Time</th><td>{{ record.timestamp[:19] }}</td></tr>
+    <tr><th>Status</th><td><span class="badge badge-{{ record.overall_status|lower }}">{{ record.overall_status }}</span></td></tr>
+    <tr><th>Summary</th><td>{{ record.summary or "—" }}</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Check Results</h2>
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Status</th><th>Message</th></tr>
+    </thead>
+    <tbody>
+    {% for c in record.checks %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td><span class="badge badge-{{ c.status|lower }}">{{ c.status }}</span></td>
+        <td>{{ c.message }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if record.checks %}
+<div class="card">
+  <h2>Result Breakdown</h2>
+  <div class="chart-box">
+    <canvas id="resultChart"></canvas>
+  </div>
+</div>
+<script>
+  const checks = {{ record.checks|tojson }};
+  const labels = checks.map(c => c.name);
+  const values = checks.map(c => c.status === 'PASS' ? 1 : 0);
+  new Chart(document.getElementById('resultChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Pass (1) / Fail (0)',
+        data: values,
+        backgroundColor: values.map(v => v ? '#22c55e' : '#ef4444'),
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { min: 0, max: 1, ticks: { stepSize: 1, color: '#94a3b8' } },
+        x: { ticks: { color: '#94a3b8' } }
+      },
+      plugins: { legend: { labels: { color: '#e2e8f0' } } }
+    }
+  });
+</script>
+{% endif %}
+
+<p><a href="{{ url_for('index') }}">&larr; Back</a></p>
+
+{% endblock %}

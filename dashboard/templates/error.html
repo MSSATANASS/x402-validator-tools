@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Error</h2>
+  {% if url %}
+  <p>Failed to validate <strong>{{ url }}</strong>.</p>
+  {% endif %}
+  <p style="color: #fca5a5;">{{ error }}</p>
+  <p><a href="{{ url_for('index') }}">&larr; Back</a></p>
+</div>
+{% endblock %}

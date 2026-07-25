@@ -1,0 +1,10 @@
+listen_host: "0.0.0.0"
+listen_port: 8080
+
+validation:
+  strict_mode: false
+  timeout: 10.0
+
+headers:
+  x-validation-status: "X-Validation-Status"
+  x-validation-report: "X-Validation-Report"

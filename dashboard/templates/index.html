@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h2>Validate an Endpoint</h2>
+  <p style="color: #94a3b8; margin-bottom: 1rem;">Enter a URL to check x402 payment and manifest compliance.</p>
+  <form method="POST">
+    <div class="form-group">
+      <input type="text" name="url" placeholder="https://api.example.com/pay" required>
+      <button type="submit">Validate</button>
+    </div>
+  </form>
+</div>
+
+{% if results %}
+<div class="card">
+  <h2>Pass / Fail Trend</h2>
+  <div class="chart-box">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Recent Results ({{ results|length }})</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>URL</th>
+        <th>Status</th>
+        <th>Report</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in results[:50] %}
+      <tr>
+        <td>{{ r.timestamp[:19] }}</td>
+        <td class="url-cell" title="{{ r.url }}">{{ r.url }}</td>
+        <td><span class="badge badge-{{ r.overall_status|lower }}">{{ r.overall_status }}</span></td>
+        <td><a href="{{ url_for('report', record_id=r.id) }}">View</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const timestamps = {{ results[:50]|map(attribute='timestamp')|list|tojson }};
+  const labels = timestamps.map(t => t.substring(0, 19));
+  const statuses = {{ results[:50]|map(attribute='overall_status')|list|tojson }};
+  const passCount = statuses.filter(s => s === 'PASS').length;
+  const failCount = statuses.filter(s => s !== 'PASS').length;
+  new Chart(document.getElementById('trendChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pass', 'Fail'],
+      datasets: [{
+        data: [passCount, failCount],
+        backgroundColor: ['#22c55e', '#ef4444'],
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#e2e8f0' } }
+      }
+    }
+  });
+</script>
+{% endif %}
+
+{% endblock %}

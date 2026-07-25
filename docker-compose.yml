@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  proxy:
+    build: .
+    command: ["python", "main.py", "proxy"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./proxy_config.yaml:/app/proxy_config.yaml
+    networks:
+      - x402-net
+
+  dashboard:
+    build: .
+    command: ["python", "main.py", "dashboard", "0.0.0.0", "5000"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    networks:
+      - x402-net
+
+networks:
+  x402-net:
