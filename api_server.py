@@ -55,7 +55,7 @@ async def create_checkout_session(plan_id: str):
         payment_method_types=["card"],
         line_items=[{"price": plan["price_id"], "quantity": 1}],
         mode="subscription",
-        success_url="https://cute-foxes-write.loca.lt/success",
-        cancel_url="https://cute-foxes-write.loca.lt/cancel",
+        success_url="https://x402-validator-tools.onrender.com/success",
+        cancel_url="https://x402-validator-tools.onrender.com/cancel",
     )
     return {"checkout_url": session.url}

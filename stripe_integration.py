@@ -19,8 +19,8 @@ def create_checkout_session(plan_id: str, customer_email: str | None = None) -> 
         line_items=[{"price": plan["price_id"], "quantity": 1}],
         mode="subscription",
         customer_email=customer_email,
-        success_url="https://cute-foxes-write.loca.lt/dashboard?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url="https://cute-foxes-write.loca.lt/pricing",
+        success_url="https://x402-validator-tools.onrender.com/dashboard?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url="https://x402-validator-tools.onrender.com/pricing",
     )
     return session.url
 
