@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Dashboard — x402 Validator</title>
+<style>body{font-family:sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;background:#0d1117;color:#c9d1d9;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:0.5rem;text-align:left;border-bottom:1px solid #30363d;}
+th{background:#161b22;color:#8b949e;}
+.pass{color:#3fb950;}.fail{color:#f85149;}
+.api-key{background:#161b22;padding:0.5rem;border-radius:4px;font-family:monospace;}
+a{color:#58a6ff;}</style></head>
+<body>
+<h1>Dashboard</h1>
+<p>Logged in as {{ user.email }} ({{ user.plan }} plan)</p>
+<p class="api-key">API Key: {{ user.api_key }}</p>
+
+<h2>Recent Validations</h2>
+{% if history %}
+<table><thead><tr><th>URL</th><th>Status</th><th>Date</th></tr></thead>
+<tbody>{% for row in history %}
+<tr><td>{{ row[0] }}</td><td class="{{ row[1].lower() }}">{{ row[1] }}</td><td>{{ row[3] }}</td></tr>
+{% endfor %}</tbody></table>
+{% else %}
+<p>No validations yet. Use your API key to validate endpoints.</p>
+{% endif %}
+<p><a href="/">Home</a></p>
+</body></html>

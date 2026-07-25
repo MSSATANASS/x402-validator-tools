@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>x402 Validator</title>
+<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;background:#0d1117;color:#c9d1d9;}
+a{color:#58a6ff;}</style></head>
+<body>
+<h1>x402 Validator</h1>
+<p>Validate endpoints against the x402 strict-v2 standard.</p>
+{% if user %}
+  <p>Logged in as {{ user.email }} ({{ user.plan }}). <a href="/dashboard">Dashboard</a></p>
+{% else %}
+  <p><a href="/signup">Sign up</a> for a free API key.</p>
+{% endif %}
+</body></html>
