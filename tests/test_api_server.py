@@ -140,8 +140,14 @@ class TestLanding:
         # Section anchors so navbar Pricing scrolls
         assert 'id="pricing"' in r.text
         assert 'id="audit"' in r.text
-        # og:image removed until a real asset exists (was 404ing)
-        assert "og-image.png" not in r.text
+        # og:image now points to a real generated asset served from /static
+        assert 'property="og:image" content="https://lastminutestickets.com/static/og-image.png"' in r.text
+        assert 'name="twitter:image"' in r.text
+        # Real PNG favicon + apple-touch-icon (replaces the old inline SVG data URI)
+        assert 'rel="icon" type="image/png" href="/static/favicon-32.png"' in r.text
+        assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in r.text
+        # Navbar uses the real logo mark image, not a generic sunburst icon
+        assert '/static/logo-mark-512.png' in r.text
         # Navbar only links to sections/routes that actually exist —
         # no dead links to #stories, /docs, or a non-existent "Book A Demo"
         assert "#stories" not in r.text

@@ -23,10 +23,12 @@ import asyncio
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from api_server.models import (
@@ -52,6 +54,11 @@ app = FastAPI(
     version="0.3.0",
     description="Audit x402 endpoint conformance as a service.",
 )
+
+# Static assets (logo, favicon, og-image) live alongside this package.
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 
 # ---------------------------------------------------------------------------
@@ -110,11 +117,16 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://lastminutestickets.com/">
 <meta property="og:site_name" content="x402 validator">
+<meta property="og:image" content="https://lastminutestickets.com/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="x402 Validator — strict-v2 conformance audits">
 <meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
+<meta name="twitter:image" content="https://lastminutestickets.com/static/og-image.png">
 <meta name="robots" content="index, follow">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%233054ff'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700' font-size='14'>x4</text></svg>">
+<link rel="icon" type="image/png" href="/static/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://stream.mux.com" crossorigin>
@@ -852,17 +864,10 @@ footer {
 <!-- =================== NAVBAR (fixed, transparent) =================== -->
 <nav class="navbar">
   <div class="nav-left">
-    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
-      <circle cx="12" cy="12" r="3.5"/>
-      <line x1="12" y1="2" x2="12" y2="6"/>
-      <line x1="12" y1="18" x2="12" y2="22"/>
-      <line x1="2" y1="12" x2="6" y2="12"/>
-      <line x1="18" y1="12" x2="22" y2="12"/>
-      <line x1="4.93" y1="4.93" x2="7.64" y2="7.64"/>
-      <line x1="16.36" y1="16.36" x2="19.07" y2="19.07"/>
-      <line x1="4.93" y1="19.07" x2="7.64" y2="16.36"/>
-      <line x1="16.36" y1="7.64" x2="19.07" y2="4.93"/>
-    </svg>
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;">
+      <span style="color:#fff;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
+    </a>
   </div>
 
   <div class="nav-links">
