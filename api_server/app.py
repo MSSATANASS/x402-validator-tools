@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 from api_server.models import (
@@ -960,6 +960,26 @@ async def create_checkout_session(plan_id: str) -> CheckoutResponse:
             ),
         )
     return CheckoutResponse(plan_id=plan_id, checkout_url=url)
+
+
+@app.get("/create-checkout-session", response_class=RedirectResponse, include_in_schema=False)
+async def create_checkout_session_link(plan_id: str) -> RedirectResponse:
+    """Redirect-friendly GET: lets ``<a href="...plan_id=pro">`` buttons go straight
+    to Stripe. Mirrors the POST handler but returns 302 instead of JSON."""
+    if plan_id not in PLANS:
+        raise HTTPException(400, f"Unknown plan: {plan_id!r}")
+
+    base = os.environ.get("PUBLIC_URL", "https://lastminutestickets.com")
+    url = stripe_integration.create_checkout_session(
+        plan_id,
+        success_url=f"{base}/success",
+        cancel_url=f"{base}/cancel",
+    )
+    if url is not None:
+        return RedirectResponse(url, status_code=303)
+    if PLANS[plan_id].price_cents == 0:
+        return RedirectResponse(f"{base}/success", status_code=303)
+    raise HTTPException(503, "Stripe is not configured (set STRIPE_SECRET_KEY)")
 
 
 class StripeWebhookPayload(BaseModel):

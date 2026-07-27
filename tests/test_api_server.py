@@ -179,6 +179,21 @@ class TestCheckoutSession:
         assert body["checkout_url"] is None
         assert "not configured" in body["note"].lower() or "no checkout" in body["note"].lower()
 
+    def test_get_unknown_plan_rejected(self, client: TestClient) -> None:
+        r = client.get("/create-checkout-session?plan_id=nope", follow_redirects=False)
+        assert r.status_code == 400
+
+    def test_get_free_plan_redirects_to_success(self, client: TestClient) -> None:
+        r = client.get("/create-checkout-session?plan_id=free", follow_redirects=False)
+        assert r.status_code in (301, 302, 303, 307, 308)
+        assert "/success" in r.headers["location"]
+
+    def test_get_paid_plan_without_stripe_returns_503(self, client: TestClient) -> None:
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("STRIPE_SECRET_KEY", None)
+            r = client.get("/create-checkout-session?plan_id=pro", follow_redirects=False)
+        assert r.status_code == 503
+
 
 class TestStripeIntegration:
     def test_create_checkout_session_returns_none_for_free(self) -> None:
