@@ -101,1000 +101,715 @@ _LANDING_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>x402 Validator — REST API for x402 conformance audits</title>
-<meta name="description" content="One POST → 4-check x402 strict-v2 audit. Manifest, CAIP-2, JSON resilience, Bazaar. JSON back. Free, Pro, Enterprise.">
+<title>x402 Validator — REST API for x402 strict-v2 audits</title>
+<meta name="description" content="Audit any x402 merchant URL with one POST. Manifest, CAIP-2, JSON resilience, Bazaar — JSON back in 580 ms. Free, Pro, Enterprise.">
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   Design system: 2026 SaaS — glass + mesh gradient + bento
+   Design system (MotionSites-inspired)
+   - Two-font stack: Geist Sans (body) + General Sans (headline)
+   - Deep dark blue-purple background, blurred glass overlay shape
+   - Liquid-glass utility class for cards / nav
    ============================================================ */
 :root {
-  --bg: #08070a;
-  --bg-soft: #0e0d12;
-  --fg: #f1f3f5;
-  --muted: #8b8d98;
-  --muted2: #5a5c66;
-  --accent: #8b5cf6;   /* violet — primary */
-  --accent2: #6366f1;  /* indigo */
-  --accent3: #ec4899;  /* pink (gradient stop) */
-  --neon: #22d3ee;     /* cyan — secondary */
-  --pass: #10b981;
-  --fail: #ef4444;
-  --warn: #f59e0b;
-  --glass: rgba(255, 255, 255, 0.04);
-  --glass-strong: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --grid: rgba(255, 255, 255, 0.018);
-  --radius: 16px;
+  --background: 260 87% 3%;        /* hsl deep dark blue-purple */
+  --foreground: 40 6% 95%;        /* off-white */
+  --hero-sub:    40 6% 82%;        /* lighter off-white */
+  --gray-950: 260 30% 6%;
+  --accent: #6366f1;              /* indigo (gradient stop 1) */
+  --accent2: #a855f7;             /* purple (gradient stop 2) */
+  --accent3: #fcd34d;             /* amber (gradient stop 3) */
+  --accent-green: #10b981;
+  --accent-red:   #ef4444;
+  --accent-cyan:  #22d3ee;
+  --hero-grad: linear-gradient(to left, #6366f1, #a855f7, #fcd34d);
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-strong: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --grad-fg: 0 0% 100%;
+  --grad-fg-soft: 40 6% 82%;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
-  color: var(--fg);
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(139, 92, 246, 0.30), transparent 70%),
-    radial-gradient(ellipse 60% 60% at 90% 30%, rgba(236, 72, 153, 0.16), transparent 70%),
-    radial-gradient(ellipse 60% 80% at 10% 70%, rgba(34, 211, 238, 0.12), transparent 70%),
-    var(--bg);
-  background-attachment: fixed;
+  font-feature-settings: 'cv02','cv03','cv04','cv11';
   overflow-x: hidden;
 }
 
-body::before {
-  content: '';
-  position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
+h1, h2, h3, h4 {
+  font-family: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: 'ss01';
 }
 
-.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
-
-/* ============================================================
-   Buttons
-   ============================================================ */
-.btn {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.85rem 1.5rem;
-  font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: 10px;
-  text-decoration: none;
+button {
+  font-family: inherit;
   cursor: pointer;
   border: none;
-  font-family: inherit;
-  letter-spacing: -0.005em;
+  background: none;
+  color: inherit;
+}
+
+/* utility for hero copy */
+.text-foreground { color: hsl(var(--foreground)); }
+.text-hero-sub   { color: hsl(var(--hero-sub)); }
+.text-foreground-90 { color: hsl(var(--foreground) / 0.9); }
+.text-foreground-50 { color: hsl(var(--foreground) / 0.5); }
+
+/* ============================================================
+   Liquid-glass (utility used by hero buttons + nav-pill)
+   ============================================================ */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
   position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.btn:hover { transform: translateY(-1px); }
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff;
-  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.35), 0 1px 0 rgba(255,255,255,0.18) inset;
-}
-.btn-primary:hover { box-shadow: 0 12px 40px rgba(139, 92, 246, 0.50), 0 1px 0 rgba(255,255,255,0.2) inset; }
-.btn-lg { padding: 1.05rem 2rem; font-size: 1.05rem; border-radius: 12px; }
-.btn-ghost {
-  background: var(--glass);
-  color: var(--fg);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.btn-ghost:hover { background: var(--glass-strong); border-color: rgba(255,255,255,0.16); }
-
-/* ============================================================
-   Nav
-   ============================================================ */
-nav {
-  position: sticky; top: 0; z-index: 50;
-  padding: 0.75rem 0;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background: rgba(8, 7, 10, 0.6);
-  border-bottom: 1px solid var(--glass-border);
-}
-.nav-inner { display: flex; justify-content: space-between; align-items: center; }
-.nav-brand {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  font-weight: 700; font-size: 1.05rem; color: var(--fg); text-decoration: none; letter-spacing: -0.02em;
-}
-.nav-brand .mark {
-  width: 24px; height: 24px;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  border-radius: 6px;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 800; font-size: 0.78rem;
-  font-family: 'SF Mono', Menlo, monospace;
-}
-.nav-links { display: flex; gap: 1.75rem; align-items: center; }
-.nav-links a { color: var(--muted); text-decoration: none; font-size: 0.92rem; transition: color 0.15s; }
-.nav-links a:hover { color: var(--fg); }
-.nav-links .live {
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  color: var(--pass);
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-.nav-links .live::before {
-  content: '';
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--pass);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
-/* ============================================================
-   Hero
-   ============================================================ */
-.hero { padding: 6rem 0 5rem; position: relative; }
-.hero-grid {
-  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3rem;
-  align-items: center;
-}
-@media (max-width: 880px) {
-  .hero-grid { grid-template-columns: 1fr; gap: 2.5rem; }
-}
-.hero .eyebrow {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-  margin-bottom: 1.25rem;
-  letter-spacing: 0.01em;
-}
-.hero .eyebrow .v {
-  display: inline-block;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-.hero h1 {
-  font-size: clamp(2.4rem, 6vw, 4.2rem);
-  margin: 0 0 1.25rem;
-  letter-spacing: -0.045em;
-  line-height: 1.04;
-  font-weight: 800;
-}
-.hero h1 .grad {
-  background: linear-gradient(135deg, #c084fc 0%, #ec4899 50%, #f97316 100%);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  display: inline-block;
-}
-.hero .sub {
-  color: var(--muted);
-  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
-  max-width: 540px;
-  margin: 0 0 1.75rem;
-  line-height: 1.55;
-}
-.hero .sub strong { color: var(--fg); font-weight: 600; }
-.hero .ctas { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
-.hero .micro {
-  margin-top: 1.25rem;
-  font-size: 0.82rem; color: var(--muted2);
-  display: flex; gap: 1rem; flex-wrap: wrap;
-}
-.hero .micro span { display: inline-flex; align-items: center; gap: 0.3rem; }
-.hero .micro .ok { color: var(--pass); }
-
-/* Floating glass audit cards on the right */
-.hero-art { position: relative; }
-.float-card {
-  background: var(--glass-strong);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  box-shadow: 0 24px 48px -16px rgba(0,0,0,0.5);
-  font-family: 'SF Mono', Menlo, monospace;
-  position: absolute;
-}
-.float-card.fc-1 {
-  left: 4%; top: 4%; width: 78%;
-  padding: 1rem 1.1rem;
-  font-size: 0.78rem;
-  animation: float 7s ease-in-out infinite;
-}
-.float-card.fc-2 {
-  right: 0; top: 38%; width: 60%;
-  padding: 0.75rem 0.9rem;
-  font-size: 0.72rem;
-  animation: float 5s ease-in-out infinite reverse;
-  animation-delay: -2s;
-  display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem;
-  align-items: center;
-}
-.float-card.fc-3 {
-  left: 8%; bottom: 0; width: 70%;
-  padding: 0.7rem 0.9rem;
-  font-size: 0.72rem;
-  display: flex; align-items: center; gap: 0.6rem;
-  animation: float 9s ease-in-out infinite;
-  animation-delay: -4s;
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-.fc-label { color: var(--muted); font-size: 0.68rem; }
-.fc-url { color: var(--fg); font-weight: 600; }
-.fc-line { color: var(--muted); }
-.fc-key { color: var(--accent); }
-.fc-str { color: var(--accent3); }
-.fc-bool { color: var(--pass); }
-.fc-num { color: var(--neon); }
-.pill {
-  display: inline-flex; align-items: center; gap: 0.3rem;
-  padding: 0.15rem 0.45rem; border-radius: 4px;
-  font-weight: 700; font-size: 0.66rem;
-  letter-spacing: 0.02em;
-}
-.pill.pass { background: rgba(16,185,129,0.18); color: var(--pass); }
-.pill.fail { background: rgba(239,68,68,0.18); color: var(--fail); }
-.pill.skip { background: rgba(245,158,11,0.16); color: var(--warn); }
-.pill .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-
-/* Animated background orbs (CSS only) */
-.orb {
-  position: absolute; border-radius: 50%;
-  filter: blur(80px); opacity: 0.55;
-  pointer-events: none; z-index: -1;
-}
-.orb.o1 {
-  width: 320px; height: 320px;
-  background: var(--accent);
-  top: 40px; left: -80px;
-  animation: orbMove 18s ease-in-out infinite;
-}
-.orb.o2 {
-  width: 280px; height: 280px;
-  background: var(--accent3);
-  top: 120px; right: -60px;
-  animation: orbMove 22s ease-in-out infinite reverse;
-}
-@keyframes orbMove {
-  0%, 100% { transform: translate(0, 0); }
-  33% { transform: translate(40px, -30px); }
-  66% { transform: translate(-20px, 40px); }
-}
-
-/* ============================================================
-   Marquee — live ticker
-   ============================================================ */
-.marquee {
-  border-top: 1px solid var(--glass-border);
-  border-bottom: 1px solid var(--glass-border);
-  background: rgba(8,7,10,0.4);
   overflow: hidden;
-  padding: 0.75rem 0;
-  position: relative;
 }
-.marquee::before, .marquee::after {
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ============================================================
+   HeroSecondary button (CTA)
+   ============================================================ */
+.heroSecondary {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  padding: 14px 24px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.heroSecondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(255,255,255,0.12);
+}
+.heroSecondary.sm { padding: 8px 16px; font-size: 0.85rem; }
+
+/* ============================================================
+   HERO SECTION (full screen)
+   ============================================================ */
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+}
+
+/* Background video slot — falls back to a CSS animated gradient
+   when no video URL is wired in (because we can't access the
+   MotionSites CDN url from this template). */
+.hero-section .hero-video-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+.hero-section .hero-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.hero-section .hero-fallback {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 0%, rgba(99,102,241,0.35), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 90% 100%, rgba(168,85,247,0.20), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 10% 100%, rgba(252,211,77,0.10), transparent 60%),
+    hsl(var(--background));
+  animation: driftBg 24s ease-in-out infinite alternate;
+}
+@keyframes driftBg {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  100% { transform: translate3d(-2%, -1%, 0) scale(1.05); }
+}
+
+.hero-section .hero-video-wrap.is-playing .hero-video { opacity: 1; }
+
+/* The blurred overlay shape (decorative, behind content) */
+.hero-blob {
+  width: 984px;
+  height: 527px;
+  opacity: 0.9;
+  background: hsl(var(--gray-950));
+  filter: blur(82px);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ============================================================
+   Hero NAV (top of hero section)
+   ============================================================ */
+.hero-nav {
+  width: 100%;
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 5;
+}
+.hero-nav-logo {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  font-family: 'General Sans', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+.hero-nav-logo .mark {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--hero-grad);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: hsl(var(--background));
+  font-weight: 800;
+  font-size: 0.85rem;
+  font-family: 'Geist', monospace;
+}
+.hero-nav-links {
+  display: flex; gap: 1.75rem; align-items: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  padding: 8px 18px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.hero-nav-links button, .hero-nav-links a {
+  background: none; border: none; cursor: pointer;
+  color: hsl(var(--foreground) / 0.9);
+  font-family: inherit;
+  font-size: 0.88rem;
+  letter-spacing: -0.005em;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 4px 6px;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.hero-nav-links button:hover, .hero-nav-links a:hover { color: hsl(var(--foreground)); }
+.hero-nav-links svg.chev { width: 12px; height: 12px; opacity: 0.7; }
+.hero-nav-links svg.chev polyline,
+.hero-nav-links svg.chev line { stroke: currentColor; stroke-width: 1.5; }
+.hero-nav-cta { display: inline-flex; align-items: center; gap: 0.6rem; }
+
+/* Divider line right below the navbar */
+.hero-divider {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(to right, transparent, hsl(var(--foreground) / 0.20), transparent);
+  margin-top: 3px;
+}
+
+/* ============================================================
+   Hero CONTENT (centered)
+   ============================================================ */
+.hero-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 4;
+  text-align: center;
+  padding: 0 32px;
+}
+.hero-content-inner { max-width: 1400px; }
+.hero-headline {
+  font-family: 'General Sans', sans-serif;
+  font-weight: 400;
+  font-size: clamp(80px, 14vw, 220px);
+  line-height: 1.02;
+  letter-spacing: -0.024em;
+  margin: 0;
+  color: hsl(var(--foreground));
+}
+.hero-headline .accent {
+  background-image: var(--hero-grad);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.hero-sub {
+  color: hsl(var(--hero-sub));
+  font-size: 1.125rem;
+  line-height: 1.55;
+  margin: 9px auto 0;
+  max-width: 28rem;
+  opacity: 0.92;
+}
+.hero-sub span.divide { display: block; }
+
+.hero-cta-row {
+  margin-top: 25px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.hero-trust {
+  margin-top: 1.25rem;
+  color: hsl(var(--foreground) / 0.6);
+  font-size: 0.82rem;
+  display: inline-flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: center;
+}
+.hero-trust span::before { content: '✓  '; color: var(--accent-green); }
+
+/* ============================================================
+   Logo MARQUEE (bottom of hero)
+   ============================================================ */
+.logo-marquee {
+  width: 100%;
+  padding-bottom: 40px;
+  position: relative;
+  z-index: 3;
+}
+.logo-marquee-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex; gap: 3rem; align-items: center;
+}
+.logo-marquee-inner .left {
+  color: hsl(var(--foreground) / 0.5);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.logo-marquee-inner .right { flex: 1; overflow: hidden; position: relative; }
+.logo-marquee-inner .right::before,
+.logo-marquee-inner .right::after {
   content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2;
   pointer-events: none;
 }
-.marquee::before { left: 0; background: linear-gradient(90deg, var(--bg), transparent); }
-.marquee::after  { right: 0; background: linear-gradient(-90deg, var(--bg), transparent); }
+.logo-marquee-inner .right::before { left: 0; background: linear-gradient(90deg, hsl(var(--background)), transparent); }
+.logo-marquee-inner .right::after  { right: 0; background: linear-gradient(-90deg, hsl(var(--background)), transparent); }
 .marquee-track {
-  display: flex; gap: 0.6rem;
+  display: flex; gap: 4rem;
   width: max-content;
-  animation: slide 60s linear infinite;
+  animation: marqueeSlide 20s linear infinite;
 }
-@keyframes slide {
-  from { transform: translateX(0); }
+@keyframes marqueeSlide {
+  from { transform: translateX(0%); }
   to   { transform: translateX(-50%); }
 }
-.mq-item {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.4rem 0.85rem;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  font-family: 'SF Mono', Menlo, monospace;
-  font-size: 0.78rem;
+.logo-cell {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  font-family: 'General Sans', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: hsl(var(--foreground));
   white-space: nowrap;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
 }
-.mq-item .url { color: var(--fg); }
-.mq-item .ms  { color: var(--muted); }
+.logo-cell .mark {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.75rem; font-weight: 700;
+  color: hsl(var(--foreground));
+  font-family: 'Geist', monospace;
+}
 
 /* ============================================================
-   Stats banner
+   Below-hero SECTION (pricing etc.)
    ============================================================ */
-.stats {
-  padding: 4rem 0 3rem;
-  display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  max-width: 1100px; margin: 0 auto;
-}
-.stat {
-  text-align: center;
-  padding: 1rem;
-}
-.stat .n {
-  font-size: clamp(2rem, 4vw, 2.8rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  background: linear-gradient(135deg, var(--fg), var(--neon));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  line-height: 1;
-}
-.stat .l { font-size: 0.82rem; color: var(--muted); margin-top: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
-
-/* ============================================================
-   Section base + bento grid
-   ============================================================ */
-section { padding: 5rem 0; position: relative; }
-.eyebrow-section { display: flex; justify-content: center; margin-bottom: 1rem; }
-.eyebrow-section .pill-tag {
+.section { padding: 6rem 1.5rem; position: relative; }
+.section.eyebrow-row { display: flex; justify-content: center; margin-bottom: 1rem; }
+.section .pill-tag {
   display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.3rem 0.8rem;
+  padding: 0.3rem 0.85rem;
   border-radius: 999px;
-  background: var(--glass);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--glass-border);
-  color: var(--muted);
+  color: hsl(var(--foreground) / 0.7);
   font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
 }
 h2.section-title {
   text-align: center;
-  font-size: clamp(1.7rem, 3.5vw, 2.6rem);
-  margin: 0.4rem 0 0.7rem;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  margin: 0.5rem auto 1rem;
   letter-spacing: -0.035em;
-  font-weight: 800;
-  line-height: 1.1;
+  font-weight: 600;
+  line-height: 1.08;
+  max-width: 32rem;
 }
 h2.section-title .grad {
-  background: linear-gradient(135deg, #c084fc 0%, #ec4899 100%);
-  -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(to left, #6366f1, #a855f7, #fcd34d);
+  background-clip: text;
+  -webkit-background-clip: text;
   color: transparent;
 }
 .section-sub {
   text-align: center;
-  color: var(--muted);
-  max-width: 620px; margin: 0 auto 3rem;
+  color: hsl(var(--foreground) / 0.7);
+  max-width: 36rem; margin: 0 auto 3rem;
   font-size: 1.05rem;
 }
 
-/* Bento grid */
-.bento {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 1rem;
-  max-width: 1100px; margin: 0 auto;
-}
-.bento-cell {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 1.5rem 1.5rem 1.5rem;
-  position: relative;
-  overflow: hidden;
-  transition: background 0.2s, transform 0.2s, border-color 0.2s;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.bento-cell:hover {
-  background: var(--glass-strong);
-  border-color: rgba(255,255,255,0.16);
-  transform: translateY(-2px);
-}
-.bento-cell::after {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-}
-.bento-cell.lg { grid-column: span 4; min-height: 220px; }
-.bento-cell.md { grid-column: span 2; min-height: 220px; }
-.bento-cell.half { grid-column: span 3; min-height: 180px; }
-.bento-cell .label {
-  font-size: 0.72rem; color: var(--accent);
-  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;
-  margin-bottom: 0.6rem;
-}
-.bento-cell h3 { margin: 0 0 0.5rem; font-size: 1.15rem; letter-spacing: -0.02em; font-weight: 700; }
-.bento-cell p { margin: 0; color: var(--muted); font-size: 0.93rem; }
-.bento-cell .icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 10px;
-  margin-bottom: 1rem;
-  color: #fff;
-}
-.bento-cell .icon svg { width: 22px; height: 22px; stroke-width: 1.8; }
-@media (max-width: 880px) {
-  .bento { grid-template-columns: repeat(2, 1fr); }
-  .bento-cell.lg, .bento-cell.md, .bento-cell.half { grid-column: span 1; }
-}
-
-/* ============================================================
-   Sample response card
-   ============================================================ */
-.sample {
-  max-width: 720px; margin: 3rem auto 0;
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 16px;
-  padding: 1.4rem 1.6rem;
-  box-shadow: 0 16px 48px -16px rgba(0,0,0,0.5);
-  font-family: 'SF Mono', Menlo, monospace;
-  font-size: 0.82rem;
-  position: relative;
-  overflow: hidden;
-}
-.sample::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.5), transparent);
-}
-.sample .head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding-bottom: 0.8rem; margin-bottom: 0.8rem;
-  border-bottom: 1px solid var(--glass-border);
-}
-.sample .url { color: var(--fg); font-weight: 600; }
-.sample .latency { color: var(--pass); font-size: 0.74rem; font-weight: 700; }
-.sample .curl { padding: 0.6rem 0; color: var(--muted); font-size: 0.78rem; line-height: 1.6; white-space: pre-wrap; }
-.sample .curl .c-key { color: var(--accent); }
-.sample .curl .c-str { color: var(--accent3); }
-.sample .curl .c-com { color: var(--muted2); }
-.sample .resp { padding-top: 0.8rem; }
-.sample .resp .row { display: flex; align-items: center; padding: 0.3rem 0; gap: 0.6rem; color: var(--muted); }
-.sample .resp .row .name { color: var(--fg); }
-.sample .resp .row .pill { margin-left: auto; min-width: 56px; text-align: center; }
-
-/* ============================================================
-   Pricing — glass + accent gradient border
-   ============================================================ */
 .pricing-grid {
   display: grid; gap: 1.25rem;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   max-width: 1000px; margin: 0 auto;
 }
 .plan {
-  background: var(--glass);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
-  padding: 2rem 1.75rem 1.75rem;
+  padding: 2rem 1.75rem;
   display: flex; flex-direction: column;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
 }
 .plan:hover { transform: translateY(-3px); }
 .plan.featured {
-  background: var(--glass-strong);
   border: 1px solid var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 24px 48px -16px rgba(139,92,246,0.30);
+  box-shadow: 0 0 0 1px var(--accent), 0 24px 48px -16px rgba(99,102,241,0.30);
 }
 .plan.featured::before {
   content: "Most popular";
   position: absolute; top: 14px; right: -32px;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  color: #fff; padding: 0.2rem 2.2rem;
+  background-image: var(--hero-grad);
+  color: hsl(var(--background));
+  padding: 0.2rem 2.2rem;
   font-size: 0.7rem; font-weight: 700;
   letter-spacing: 0.04em;
   transform: rotate(35deg);
-  text-transform: uppercase;
 }
-.plan-name { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
-.plan-desc { color: var(--muted); font-size: 0.86rem; margin: 0 0 1.5rem; line-height: 1.45; }
+.plan-name { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+.plan-desc { color: hsl(var(--foreground) / 0.7); font-size: 0.86rem; margin: 0 0 1.5rem; }
 .plan-price {
-  font-size: 3rem; font-weight: 800;
+  font-size: 3rem; font-weight: 700;
   letter-spacing: -0.04em; margin: 0;
   display: flex; align-items: baseline; gap: 0.3rem;
-  background: linear-gradient(135deg, var(--fg), var(--accent));
-  -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(to left, #ffffff, hsl(var(--foreground)));
+  background-clip: text;
+  -webkit-background-clip: text;
   color: transparent;
 }
-.plan-price small { font-size: 0.95rem; color: var(--muted); font-weight: 400; -webkit-text-fill-color: var(--muted); }
-.plan-period { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+.plan-price small { font-size: 0.95rem; color: hsl(var(--foreground) / 0.7); font-weight: 400; -webkit-text-fill-color: hsl(var(--foreground) / 0.7); }
+.plan-period { font-size: 0.78rem; color: hsl(var(--foreground) / 0.6); margin-top: 0.2rem; }
 .plan-features { list-style: none; padding: 0; margin: 1.5rem 0 0; flex-grow: 1; }
-.plan-features li {
-  padding: 0.5rem 0; color: var(--fg); font-size: 0.92rem;
-  display: flex; align-items: center; gap: 0.6rem;
-  border-bottom: 1px solid var(--glass-border);
-}
+.plan-features li { padding: 0.5rem 0; color: hsl(var(--foreground)); font-size: 0.92rem; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid var(--glass-border); }
 .plan-features li:last-child { border-bottom: none; }
-.plan-features li svg { flex-shrink: 0; color: var(--pass); width: 16px; height: 16px; }
-.plan .btn { width: 100%; justify-content: center; margin-top: 1.5rem; }
-
-/* ============================================================
-   How: 3 steps
-   ============================================================ */
-.how-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  max-width: 1000px; margin: 0 auto;
+.plan-features li svg { flex-shrink: 0; color: var(--accent-green); width: 16px; height: 16px; }
+.plan-cta {
+  width: 100%; justify-content: center; margin-top: 1.5rem;
+  padding: 12px 24px; border-radius: 999px;
+  font-size: 0.95rem; font-weight: 600;
+  border: none; cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.45rem;
 }
-@media (max-width: 760px) { .how-grid { grid-template-columns: 1fr; } }
-.how-step {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  position: relative;
-}
-.how-step .n {
-  position: absolute; top: -16px; left: 1.5rem;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 38px; height: 38px;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  border-radius: 12px;
-  color: #fff; font-weight: 800; font-size: 0.95rem;
-  font-family: 'SF Mono', Menlo, monospace;
-  box-shadow: 0 8px 24px rgba(139,92,246,0.35);
-}
-.how-step h3 { margin: 0.8rem 0 0.5rem; font-size: 1.05rem; }
-.how-step p { color: var(--muted); font-size: 0.92rem; margin: 0 0 1rem; }
-
-/* ============================================================
-   Code block
-   ============================================================ */
-.code-block {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  padding: 0.75rem 0.9rem;
-  font-family: 'SF Mono', Menlo, monospace;
-  font-size: 0.82rem;
-  color: var(--fg);
-  overflow-x: auto;
-  line-height: 1.55;
-  white-space: pre;
-}
-.code-block .c-key { color: var(--accent); }
-.code-block .c-str { color: var(--accent3); }
-.code-block .c-com { color: var(--muted2); }
-
-/* ============================================================
-   CTA final
-   ============================================================ */
-.cta-final { text-align: center; padding: 6rem 0; position: relative; }
-.cta-final h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin-bottom: 0.75rem; letter-spacing: -0.04em; font-weight: 800; line-height: 1.1; }
-.cta-final h2 .grad {
-  background: linear-gradient(135deg, #c084fc, #ec4899, #f97316);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-}
-.cta-final .sub { color: var(--muted); font-size: 1.05rem; max-width: 560px; margin: 0 auto 2rem; }
-.cta-final .ctas { display: flex; gap: 0.85rem; justify-content: center; flex-wrap: wrap; }
-.cta-final .trust {
-  margin-top: 2rem; color: var(--muted2); font-size: 0.82rem;
-  display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap;
-}
-.cta-final .trust span::before { content: '✓ '; color: var(--pass); }
+.plan-cta.solid { background: hsl(var(--foreground)); color: hsl(var(--background)); }
+.plan-cta.outline { background: transparent; color: hsl(var(--foreground)); border: 1px solid var(--glass-border); }
 
 /* ============================================================
    Footer
    ============================================================ */
 footer {
   border-top: 1px solid var(--glass-border);
-  padding: 3rem 0 4rem;
+  padding: 3rem 1.5rem 4rem;
+  color: hsl(var(--foreground) / 0.7);
+  background: hsl(var(--background));
 }
 .foot-grid {
   display: grid; gap: 2rem;
   grid-template-columns: 1.4fr repeat(3, 1fr);
+  max-width: 1100px; margin: 0 auto;
 }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
 .foot-brand .mark {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  border-radius: 7px;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background-image: var(--hero-grad);
   display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 800; font-size: 0.85rem;
-  font-family: 'SF Mono', Menlo, monospace;
+  color: hsl(var(--background));
+  font-weight: 800; font-size: 0.95rem;
+  font-family: 'Geist', monospace;
 }
-.foot-brand .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.4rem; }
-.foot-brand .tag { color: var(--muted); font-size: 0.9rem; max-width: 280px; }
+.foot-brand .name { font-weight: 700; font-size: 1rem; margin: 0.6rem 0 0.4rem; color: hsl(var(--foreground)); }
+.foot-brand .tag { font-size: 0.88rem; max-width: 280px; color: hsl(var(--foreground) / 0.65); }
 .foot-col h4 {
-  font-size: 0.78rem; color: var(--muted);
+  font-size: 0.72rem; color: hsl(var(--foreground) / 0.55);
   text-transform: uppercase; letter-spacing: 0.06em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
 }
 .foot-col a {
-  display: block; color: var(--fg); opacity: 0.85;
+  display: block; color: hsl(var(--foreground) / 0.85);
   text-decoration: none; font-size: 0.9rem;
-  padding: 0.2rem 0;
+  padding: 0.25rem 0;
+  transition: color 0.15s;
 }
-.foot-col a:hover { opacity: 1; color: var(--accent); }
+.foot-col a:hover { color: hsl(var(--foreground)); }
 .foot-bottom {
   border-top: 1px solid var(--glass-border);
   margin-top: 2.5rem;
   padding-top: 1.5rem;
-  color: var(--muted2);
   font-size: 0.82rem;
+  color: hsl(var(--foreground) / 0.5);
   display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  max-width: 1100px; margin-left: auto; margin-right: auto;
 }
 
 @media (max-width: 600px) {
-  .nav-links { gap: 0.75rem; font-size: 0.8rem; }
-  .nav-links .live { display: none; }
-  section { padding: 3.5rem 0; }
-  .hero { padding: 4rem 0 3rem; }
+  .hero-nav { padding: 16px 18px; }
+  .hero-nav-links { display: none; }
+  .logo-marquee-inner { gap: 1rem; }
+  .logo-marquee-inner .left { font-size: 0.78rem; }
+  .marquee-track { gap: 2rem; }
+  .section { padding: 4rem 1.25rem; }
 }
 </style>
 </head>
 <body>
 
-<div class="orb o1"></div>
-<div class="orb o2"></div>
+<!-- =================== HERO SECTION (full screen, MotionSites vibe) =================== -->
+<section class="hero-section">
 
-<nav>
-  <div class="container nav-inner">
-    <a href="/" class="nav-brand">
+  <!-- Background video slot with CSS-animated gradient fallback -->
+  <div class="hero-video-wrap" id="heroVideoWrap">
+    <video class="hero-video" id="heroVideo" muted playsinline preload="auto"
+           poster=""
+           src=""></video>
+    <div class="hero-fallback" id="heroFallback"></div>
+  </div>
+
+  <!-- Centered blurred overlay shape (decorative) -->
+  <div class="hero-blob" aria-hidden="true"></div>
+
+  <!-- NAV -->
+  <nav class="hero-nav">
+    <a href="/" class="hero-nav-logo">
       <span class="mark">x4</span>
       <span>x402 validator</span>
     </a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
+
+    <div class="hero-nav-links liquid-glass">
       <a href="#pricing">Pricing</a>
-      <a href="#how">Docs</a>
-      <span class="live">Live</span>
-      <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">GitHub</a>
+      <button type="button">
+        Tools
+        <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><polyline points="2,4 6,8 10,4" fill="none"/></svg>
+      </button>
+      <button type="button">
+        Docs
+        <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><polyline points="2,4 6,8 10,4" fill="none"/></svg>
+      </button>
+      <a href="/health">Status</a>
     </div>
-  </div>
-</nav>
 
-<!-- =================== HERO =================== -->
-<header class="hero">
-  <div class="container hero-grid">
-    <div>
-      <div class="eyebrow">
-        <span class="v">v0.3.0</span>
-        <span>· 100 % coverage · 167 tests · ~580 ms / audit</span>
-      </div>
-      <h1>
-        Audit any <span class="grad">x402</span><br>
-        endpoint in 580&nbsp;ms.
-      </h1>
-      <p class="sub">
-        One REST call runs the <strong>strict-v2 conformance suite</strong> against
-        your merchant URL. You get back <strong>structured JSON</strong> with one
-        of four verdicts per check, plus an <strong>operator-actionable message</strong>
-        when something is broken.
+    <div class="hero-nav-cta">
+      <a class="heroSecondary sm" href="/create-checkout-session?plan_id=pro">Get API key</a>
+    </div>
+  </nav>
+
+  <div class="hero-divider"></div>
+
+  <!-- Centered CONTENT -->
+  <div class="hero-content">
+    <div class="hero-content-inner">
+      <h1 class="hero-headline">Audit <span class="accent">x402</span> endpoints<span style="display:block"></span></h1>
+      <p class="hero-sub">
+        <span>The fastest strict-v2 conformance suite</span>
+        <span class="divide">for x402 merchants. One POST, structured JSON back.</span>
       </p>
-      <div class="ctas">
-        <a class="btn btn-primary btn-lg" href="/create-checkout-session?plan_id=pro">
-          Start with Pro · $9 / mo →
-        </a>
-        <a class="btn btn-ghost" href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">
-          View on GitHub
-        </a>
-      </div>
-      <div class="micro">
-        <span class="ok">✓ Free tier — 100 audits / month</span>
-        <span class="ok">✓ Cancel anytime from Stripe</span>
-        <span class="ok">✓ No card on Free</span>
-      </div>
-    </div>
 
-    <div class="hero-art">
-      <!-- Floating glass audit cards, pure CSS animation -->
-      <div class="float-card fc-1">
-        <div style="margin-bottom:0.45rem"><span class="pill pass"><span class="dot"></span>OK</span> <span style="color:var(--muted)">POST /validate</span></div>
-        <div class="fc-line"><span class="fc-label">url: </span><span class="fc-url">observer.137-184-67-179.sslip.io</span></div>
-        <div class="fc-line"><span class="fc-label">mode:</span> <span class="fc-str">"standard"</span></div>
-        <div class="fc-line"><span class="fc-label">key: </span><span class="fc-key">"sk_live_****"</span></div>
+      <div class="hero-cta-row">
+        <a class="heroSecondary" href="/create-checkout-session?plan_id=pro">View pricing &nbsp;→</a>
       </div>
 
-      <div class="float-card fc-2">
-        <span class="pill pass"><span class="dot"></span>manifest_discovery</span>
-        <span class="pill pass"><span class="dot"></span>json_resilience</span>
-        <span class="pill pass"><span class="dot"></span>bazaar_compliance</span>
-        <span class="pill fail"><span class="dot"></span>caip2_compliance</span>
-      </div>
-
-      <div class="float-card fc-3">
-        <span style="color:var(--pass); font-weight:700">200 OK</span>
-        <span style="color:var(--muted)">· 580 ms</span>
-        <span style="margin-left:auto; color:var(--muted)"><span style="color:var(--accent)">3/4</span> checks passed</span>
+      <div class="hero-trust">
+        <span>100 % covered engine</span>
+        <span>167 tests passing</span>
+        <span>~580 ms per audit</span>
       </div>
     </div>
   </div>
-</header>
 
-<!-- =================== MARQUEE =================== -->
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <!-- First list of endpoints -->
-    <div class="mq-row">
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">api.x-402.online</span><span class="ms">· 412 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">x402.asterpay.io</span><span class="ms">· 387 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">ozmium.org</span><span class="ms">· 528 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">observer.137-184-67-179.sslip.io</span><span class="ms">· 580 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">api.smartflowproai.com</span><span class="ms">· 491 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">call.kelam.sh</span><span class="ms">· 631 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">mcp.hugen.tokyo</span><span class="ms">· 466 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">defi.hugen.tokyo</span><span class="ms">· 503 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">www.kaspa-402.org</span><span class="ms">· 412 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">apinow.fun</span><span class="ms">· 287 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">toolrail.dev</span><span class="ms">· 392 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">agents.oromi.co.uk</span><span class="ms">· 528 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">data.greeneris.io</span><span class="ms">· 612 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">agent.weatherxm.com</span><span class="ms">· 423 ms</span></span>
-    </div>
-    <!-- Duplicate for seamless loop -->
-    <div class="mq-row">
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">api.x-402.online</span><span class="ms">· 412 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">x402.asterpay.io</span><span class="ms">· 387 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">ozmium.org</span><span class="ms">· 528 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">observer.137-184-67-179.sslip.io</span><span class="ms">· 580 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">api.smartflowproai.com</span><span class="ms">· 491 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">call.kelam.sh</span><span class="ms">· 631 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">mcp.hugen.tokyo</span><span class="ms">· 466 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">defi.hugen.tokyo</span><span class="ms">· 503 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">www.kaspa-402.org</span><span class="ms">· 412 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">apinow.fun</span><span class="ms">· 287 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">toolrail.dev</span><span class="ms">· 392 ms</span></span>
-      <span class="mq-item"><span class="pill fail"><span class="dot"></span>FAIL</span><span class="url">agents.oromi.co.uk</span><span class="ms">· 528 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">data.greeneris.io</span><span class="ms">· 612 ms</span></span>
-      <span class="mq-item"><span class="pill pass"><span class="dot"></span>PASS</span><span class="url">agent.weatherxm.com</span><span class="ms">· 423 ms</span></span>
+  <!-- Logo MARQUEE → real endpoints audited (treated as customers) -->
+  <div class="logo-marquee">
+    <div class="logo-marquee-inner">
+      <div class="left">Audited on real<br>merchants · 2026</div>
+      <div class="right">
+        <div class="marquee-track">
+          <span class="logo-cell"><span class="mark">A</span>Asterpay</span>
+          <span class="logo-cell"><span class="mark">H</span>Hugen</span>
+          <span class="logo-cell"><span class="mark">O</span>Observer</span>
+          <span class="logo-cell"><span class="mark">X</span>x402 Online</span>
+          <span class="logo-cell"><span class="mark">G</span>Greeneris</span>
+          <span class="logo-cell"><span class="mark">S</span>SmartFlow</span>
+          <span class="logo-cell"><span class="mark">A</span>API Now</span>
+          <span class="logo-cell"><span class="mark">W</span>Web3 ID</span>
+          <span class="logo-cell"><span class="mark">B</span>Bazaar Viridis</span>
+          <span class="logo-cell"><span class="mark">S</span>Stable Travel</span>
+          <!-- Duplicate for seamless loop -->
+          <span class="logo-cell"><span class="mark">A</span>Asterpay</span>
+          <span class="logo-cell"><span class="mark">H</span>Hugen</span>
+          <span class="logo-cell"><span class="mark">O</span>Observer</span>
+          <span class="logo-cell"><span class="mark">X</span>x402 Online</span>
+          <span class="logo-cell"><span class="mark">G</span>Greeneris</span>
+          <span class="logo-cell"><span class="mark">S</span>SmartFlow</span>
+          <span class="logo-cell"><span class="mark">A</span>API Now</span>
+          <span class="logo-cell"><span class="mark">W</span>Web3 ID</span>
+          <span class="logo-cell"><span class="mark">B</span>Bazaar Viridis</span>
+          <span class="logo-cell"><span class="mark">S</span>Stable Travel</span>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- =================== STATS =================== -->
-<section style="padding:3rem 0 1rem">
-  <div class="container stats">
-    <div class="stat"><div class="n">27</div><div class="l">endpoints audited</div></div>
-    <div class="stat"><div class="n">4</div><div class="l">conformance checks</div></div>
-    <div class="stat"><div class="n">~580 ms</div><div class="l">avg audit latency</div></div>
-    <div class="stat"><div class="n">100 %</div><div class="l">engine test coverage</div></div>
-    <div class="stat"><div class="n">167</div><div class="l">engine tests passing</div></div>
-  </div>
 </section>
 
-<!-- =================== FEATURES =================== -->
-<section id="features">
-  <div class="container">
-    <div class="eyebrow-section"><span class="pill-tag">The four checks</span></div>
-    <h2 class="section-title">Run a real <span class="grad">strict-v2</span> audit,<br>not a checkbox.</h2>
-    <p class="section-sub">Each check returns one of <code>PASS</code> / <code>FAIL</code> /
-    <code>CRITICAL_FAIL</code> / <code>ERROR</code> with a message an operator can act on.
-    No "check failed" — only "Payment-Required header missing. Expected: 'X-Payment-Required:'. Found: none."</p>
+<!-- =================== PRICING (compact, weighted) =================== -->
+<section id="pricing" class="section">
+  <div class="section eyebrow-row"><span class="pill-tag">Pricing</span></div>
+  <h2 class="section-title">Pick a plan. <span class="grad">Cancel anytime.</span></h2>
+  <p class="section-sub">Stripe billed through lastminutestickets.com. No long-term contract.</p>
 
-    <div class="bento">
-      <!-- Big card -->
-      <div class="bento-cell lg">
-        <span class="icon">__SVG_BAZAAR__</span>
-        <div class="label">Largest concern</div>
-        <h3>The 610-endpoint corpus</h3>
-        <p>Per the x402 spec, the canonical wire location for PaymentRequired is the
-        <code>PAYMENT-REQUIRED</code> HTTP header — not the response body. Many
-        merchants ship the header with a fully-formed v2 payload while leaving the
-        body empty. The validator distinguishes those channels and scores them correctly.</p>
-      </div>
-
-      <!-- Four check cells -->
-      <div class="bento-cell md">
-        <span class="icon">__SVG_MANIFEST__</span>
-        <div class="label">Check 01</div>
-        <h3>manifest_discovery</h3>
-        <p><code>GET /.well-known/x402</code> must return valid JSON with an <code>accepts</code> or <code>products</code> payload.</p>
-      </div>
-
-      <div class="bento-cell md" style="min-height:220px">
-        <span class="icon">__SVG_CAIP2__</span>
-        <div class="label">Check 02</div>
-        <h3>caip2_compliance</h3>
-        <p>A payment header carries a valid CAIP-2 network identifier — caught before wallets reject it.</p>
-      </div>
-
-      <div class="bento-cell md">
-        <span class="icon">__SVG_JSON__</span>
-        <div class="label">Check 03</div>
-        <h3>json_resilience</h3>
-        <p>HTTP 402 body is a JSON object — not a primitive that crashes the reference verifier downstream.</p>
-      </div>
-
-      <div class="bento-cell md">
-        <span class="icon">__SVG_BAZAAR__</span>
-        <div class="label">Check 04</div>
-        <h3>bazaar_compliance</h3>
-        <p><code>extensions.bazaar</code> has <code>method=POST</code>, <code>serviceName</code> set, <code>tags</code> non-empty.</p>
-      </div>
+  <div class="pricing-grid">
+    <div class="plan">
+      <h3 class="plan-name">Free</h3>
+      <p class="plan-desc">For trying it out on a single merchant.</p>
+      <div class="plan-price">$0<small>/mo</small></div>
+      <div class="plan-period">100 audits / month · forever</div>
+      <ul class="plan-features">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 4 conformance checks</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>JSON response</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Community support</li>
+      </ul>
+      <a class="plan-cta outline" href="/create-checkout-session?plan_id=free">Start free</a>
     </div>
 
-    <!-- Live sample response card showing what they GET -->
-    <div class="sample">
-      <div class="head">
-        <span class="url">https://observer.137-184-67-179.sslip.io</span>
-        <span class="latency">200 OK · 580 ms</span>
-      </div>
-      <div class="curl"><span class="c-com"># POST /validate { url: "..." }</span>
-curl <span class="c-key">https://lastminutestickets.com/validate</span> \
-  <span class="c-com">-H</span> <span class="c-str">"X-API-Key: <span class="c-key">$YOUR_KEY</span>"</span> \
-  <span class="c-com">-d</span> <span class="c-str">'{"url":"https://observer.137-184-67-179.sslip.io"}'</span></div>
-      <div class="resp">
-        <div class="row"><span class="pill pass"><span class="dot"></span>PASS</span> <span class="name">manifest_discovery</span></div>
-        <div class="row"><span class="pill pass"><span class="dot"></span>PASS</span> <span class="name">json_resilience</span></div>
-        <div class="row"><span class="pill pass"><span class="dot"></span>PASS</span> <span class="name">bazaar_compliance</span></div>
-        <div class="row"><span class="pill fail"><span class="dot"></span>FAIL</span> <span class="name">caip2_compliance</span><span class="pill" style="background:rgba(0,0,0,0.3); color:var(--muted)">missing header</span></div>
-      </div>
+    <div class="plan featured">
+      <h3 class="plan-name">Pro</h3>
+      <p class="plan-desc">For shipping x402 merchants.</p>
+      <div class="plan-price">$9<small>/mo</small></div>
+      <div class="plan-period">500 audits / month</div>
+      <ul class="plan-features">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Free</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>marketplace mode</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Operator-actionable errors</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Email support</li>
+      </ul>
+      <a class="plan-cta solid" href="/create-checkout-session?plan_id=pro">Buy Pro — $9 / mo</a>
     </div>
-  </div>
-</section>
 
-<!-- =================== HOW =================== -->
-<section id="how">
-  <div class="container">
-    <div class="eyebrow-section"><span class="pill-tag">3 steps · 30 seconds</span></div>
-    <h2 class="section-title">From <span class="grad">checkout</span> to <span class="grad">calling /validate</span>.</h2>
-    <p class="section-sub">Stripe checkout, then one curl. That's it.</p>
-
-    <div class="how-grid">
-      <div class="how-step">
-        <div class="n">1</div>
-        <h3>Pick a plan</h3>
-        <p>Stripe checkout with card / Apple Pay / Google Pay. €0 spend on Free, $9 on Pro.</p>
-      </div>
-      <div class="how-step">
-        <div class="n">2</div>
-        <h3>Receive key in seconds</h3>
-        <p>Backed by a persistent key store. Need more? Just ask — we bump quotas on demand.</p>
-        <div class="code-block"><span class="c-key">X-API-Key:</span> <span class="c-str">abc123XYZ...</span></div>
-      </div>
-      <div class="how-step">
-        <div class="n">3</div>
-        <h3>POST /validate</h3>
-        <p>Drop into CI, cron, or a Slack alert. Returns structured JSON, ~580 ms.</p>
-        <div class="code-block">POST /validate
-{
-  <span class="c-key">"url"</span>: <span class="c-str">"https://yoursite.com"</span>,
-  <span class="c-key">"mode"</span>: <span class="c-str">"standard"</span>
-}</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- =================== PRICING =================== -->
-<section id="pricing" style="padding-top:3rem">
-  <div class="container">
-    <div class="eyebrow-section"><span class="pill-tag">Pricing</span></div>
-    <h2 class="section-title">Priced for indie devs, <span class="grad">not enterprises.</span></h2>
-    <p class="section-sub">Cancel from your Stripe dashboard any time. No long-term contract.</p>
-
-    <div class="pricing-grid">
-      <!-- Free -->
-      <div class="plan">
-        <h3 class="plan-name">Free</h3>
-        <p class="plan-desc">For trying it out on a single merchant.</p>
-        <div class="plan-price">$0<small>/mo</small></div>
-        <div class="plan-period">100 audits / month · forever</div>
-        <ul class="plan-features">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 4 conformance checks</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>JSON response</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Community support</li>
-        </ul>
-        <a class="btn btn-ghost" href="/create-checkout-session?plan_id=free">Start free</a>
-      </div>
-
-      <!-- Pro (featured) -->
-      <div class="plan featured">
-        <h3 class="plan-name">Pro</h3>
-        <p class="plan-desc">For shipping x402 merchants.</p>
-        <div class="plan-price">$9<small>/mo</small></div>
-        <div class="plan-period">500 audits / month</div>
-        <ul class="plan-features">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Free</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><strong>marketplace mode</strong> + per-product walks</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Operator-actionable errors</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Email support (&lt;24 h)</li>
-        </ul>
-        <a class="btn btn-primary" href="/create-checkout-session?plan_id=pro">Buy Pro — $9 / mo</a>
-      </div>
-
-      <!-- Enterprise -->
-      <div class="plan">
-        <h3 class="plan-name">Enterprise</h3>
-        <p class="plan-desc">For higher-volume / catalogue compliance.</p>
-        <div class="plan-price">$49<small>/mo</small></div>
-        <div class="plan-period">5,000 audits / month</div>
-        <ul class="plan-features">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Pro</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Bulk endpoints (beta)</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Priority support (&lt;4 h)</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Volume rebate (talk to us)</li>
-        </ul>
-        <a class="btn btn-ghost" href="/create-checkout-session?plan_id=enterprise">Buy Enterprise — $49 / mo</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- =================== CTA FINAL =================== -->
-<section class="cta-final">
-  <div class="container">
-    <h2>Run a real audit on your<br><span class="grad">merchant URL today.</span></h2>
-    <p class="sub">Free plan: 100 audits / month. Enough to validate your whole catalogue, then upgrade if you need more.</p>
-    <div class="ctas">
-      <a class="btn btn-primary btn-lg" href="/create-checkout-session?plan_id=pro">Start with Pro · $9 / mo →</a>
-      <a class="btn btn-ghost" href="/create-checkout-session?plan_id=free">Or start free</a>
-    </div>
-    <div class="trust">
-      <span>100 % covered engine</span>
-      <span>Open source</span>
-      <span>Cancel anytime</span>
+    <div class="plan">
+      <h3 class="plan-name">Enterprise</h3>
+      <p class="plan-desc">For higher-volume catalog compliance.</p>
+      <div class="plan-price">$49<small>/mo</small></div>
+      <div class="plan-period">5,000 audits / month</div>
+      <ul class="plan-features">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Pro</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Bulk (beta)</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Priority support</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Volume rebate</li>
+      </ul>
+      <a class="plan-cta outline" href="/create-checkout-session?plan_id=enterprise">Buy Enterprise — $49 / mo</a>
     </div>
   </div>
 </section>
 
 <!-- =================== FOOTER =================== -->
 <footer>
-  <div class="container">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <div class="mark">x4</div>
-        <div class="name" style="margin-top:0.6rem">x402 validator</div>
-        <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
-      </div>
-      <div class="foot-col">
-        <h4>Product</h4>
-        <a href="#features">Features</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#how">How it works</a>
-        <a href="/plans">Plans API</a>
-        <a href="/health">Status</a>
-      </div>
-      <div class="foot-col">
-        <h4>Code</h4>
-        <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">Tools (this site)</a>
-        <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">Engine fork</a>
-        <a href="https://github.com/smartflowproai-lang/x402-endpoint-validator" rel="noopener">Upstream</a>
-        <a href="https://pypi.org/project/x402-validator/" rel="noopener">pip install x402-validator</a>
-      </div>
-      <div class="foot-col">
-        <h4>Contact</h4>
-        <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>
-        <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">File an issue</a>
-        <a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>
-      </div>
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <div class="mark">x4</div>
+      <div class="name">x402 validator</div>
+      <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
     </div>
-    <div class="foot-bottom">
-      <div>© 2026 x402 validator · Apache-2.0</div>
-      <div>stripes handled by Stripe · key store in <code>api_keys.json</code></div>
+    <div class="foot-col">
+      <h4>Product</h4>
+      <a href="#pricing">Pricing</a>
+      <a href="/plans">Plans API</a>
+      <a href="/health">Status</a>
+      <a href="mailto:support@lastminutestickets.com">Support</a>
+    </div>
+    <div class="foot-col">
+      <h4>Code</h4>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">Tools (this site)</a>
+      <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">Engine fork</a>
+      <a href="https://github.com/smartflowproai-lang/x402-endpoint-validator" rel="noopener">Upstream</a>
+      <a href="https://pypi.org/project/x402-validator/" rel="noopener">pip install</a>
+    </div>
+    <div class="foot-col">
+      <h4>Contact</h4>
+      <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">GitHub issues</a>
+      <a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>
     </div>
   </div>
+  <div class="foot-bottom">
+    <div>© 2026 x402 validator · Apache-2.0</div>
+    <div>stripe • persistent key store in <code>api_keys.json</code></div>
+  </div>
 </footer>
+
+<script>
+// Background video fade-in/out loop (matches the motionsites reference).
+// Falls back to the CSS gradient overlay if the video fails (404 / blocked).
+(function () {
+  const wrap = document.getElementById('heroVideoWrap');
+  const vid  = document.getElementById('heroVideo');
+  const fb   = document.getElementById('heroFallback');
+  // No <source src=...> wired in this template — the fallback shows.
+  // The fade-in/out loop is left in place for future use:
+  function fadeLoop(video) {
+    const fadeIn  = () => { video.style.opacity = '1'; };
+    const fadeOut = () => {
+      video.style.opacity = '0';
+      setTimeout(() => { video.currentTime = 0; fadeIn(); }, 100);
+    };
+    video.addEventListener('ended', fadeOut);
+  }
+  if (vid && vid.querySelector('source')?.src) {
+    fadeLoop(vid);
+  }
+  if (fb) fb.style.opacity = '1';
+})();
+</script>
 
 </body>
 </html>

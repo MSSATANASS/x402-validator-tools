@@ -60,34 +60,50 @@ class TestLanding:
         r = client.get("/")
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
+        # Headline copy
+        assert "Audit" in r.text
         assert "x402" in r.text
-        # All three price points present
+        # Hero gradient text class
+        assert 'class="accent"' in r.text
+        # Pricing plans rendered
         assert "$9" in r.text
         assert "$49" in r.text
-        # Stripe checkout paths present
+        # Stripe checkout links intact
         assert "/create-checkout-session?plan_id=pro" in r.text
         assert "/create-checkout-session?plan_id=enterprise" in r.text
         assert "/create-checkout-session?plan_id=free" in r.text
-        # All four check names referenced
-        for c in ("manifest_discovery", "caip2_compliance", "json_resilience", "bazaar_compliance"):
-            assert c in r.text
-        # Section anchors
-        for s in ("#features", "#pricing", "#how"):
-            assert s in r.text
-        # SVG icon defs replaced (float-card svg icons come from _SVG_*)
-        # marquee + pill components rendered
-        assert "class=\"marquee-track\"" in r.text
-        assert "class=\"pill pass\"" in r.text
+        # Liquid-glass utility class is in stylesheet
+        assert ".liquid-glass" in r.text
+        # Liquid-glass ::before with mask-composite
+        assert "mask-composite: exclude" in r.text
+        # Two design-system fonts loaded (Geist + General Sans)
+        assert "Geist" in r.text
+        assert "General Sans" in r.text
+        assert "fonts.googleapis.com" in r.text
+        assert "api.fontshare.com" in r.text
+        # Theme variables present (HSL space)
+        assert "260 87% 3%" in r.text   # deep purple background
+        assert "40 6% 95%" in r.text    # foreground
+        # Hero gradient (indigo→purple→amber)
+        assert "#6366f1" in r.text
+        assert "#a855f7" in r.text
+        assert "#fcd34d" in r.text
+        # Hero video slot present
+        assert "hero-video-wrap" in r.text
+        assert "hero-fallback" in r.text
+        assert "hero-blob" in r.text
+        # Logo marquee + real endpoint names rolling
+        assert "marquee-track" in r.text
+        for name in ("Asterpay", "Hugen", "Observer", "Greeneris", "SmartFlow", "x402 Online"):
+            assert name in r.text
+        # Hero CTA wired to /create-checkout-session
+        assert "View pricing" in r.text
+        # Animation drift for the background fallback
+        assert "driftBg" in r.text
+        # Logo marquee animation
+        assert "marqueeSlide" in r.text
+        # Most popular ribbon kept
         assert "Most popular" in r.text
-        # bento grid present (4 checks + 1 large callout)
-        assert "class=\"bento\"" in r.text
-        # Stats banner numbers
-        assert ">100 %<" in r.text
-        assert ">167<" in r.text
-        # background-clip gradient text is being applied
-        assert "background-clip: text" in r.text or "background-clip:text" in r.text
-        # Live indicator
-        assert "class=\"live\">Live" in r.text
 
 
 class TestPlans:
