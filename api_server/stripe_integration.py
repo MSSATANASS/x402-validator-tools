@@ -1,4 +1,4 @@
-"""Stripe integration for the x402-validator API.
+"""Stripe integration for the x402 conformance API.
 
 Only the checkout-session create / retrieve / webhook verify helpers live
 here; the FastAPI app delegates everything else. Stripe is lazy-imported so

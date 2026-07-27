@@ -1,4 +1,4 @@
-"""Flask dashboard for browsing x402-validator audit history.
+"""Flask dashboard for browsing x402 conformance audit history.
 
 Three routes:
 
@@ -77,7 +77,7 @@ def _record(report) -> dict:
 
 def _run_audit_sync(url: str, mode: str = "standard"):
     """Run the async audit and return the report (sync wrapper for Flask)."""
-    from x402_validator._engine import run_audit  # lazy import
+    from x402_conformance_suite._engine import run_audit  # lazy import
     return asyncio.run(run_audit(url, timeout=10.0, mode=mode))
 
 

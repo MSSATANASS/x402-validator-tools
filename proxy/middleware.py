@@ -76,7 +76,7 @@ class ProxyConfig:
 async def _validate_upstream(url: str, timeout: float) -> dict:
     """Run the x402 audit on ``url`` and return a JSON-friendly dict."""
     try:
-        from x402_validator._engine import X402Auditor
+        from x402_conformance_suite._engine import X402Auditor
         async with X402Auditor(timeout=timeout) as auditor:
             report = await auditor.run_full_audit(url)
         return {

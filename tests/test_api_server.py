@@ -201,7 +201,7 @@ class TestValidate:
         async def fake_run_audit(url: str, mode: str = "standard", **_kw):
             return _make_fake_audit_report()
 
-        with patch("x402_validator._engine.run_audit", side_effect=fake_run_audit):
+        with patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run_audit):
             r = client.post(
                 "/validate",
                 json={"url": "https://example.com", "mode": "standard"},
@@ -421,7 +421,7 @@ class TestAdminEndpoints:
         async def fake_run_audit(url: str, mode: str = "standard", **_kw):
             return _make_fake_audit_report()
 
-        with patch("x402_validator._engine.run_audit", side_effect=fake_run_audit):
+        with patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run_audit):
             r = client.post(
                 "/admin/keys",
                 json={"plan_id": "enterprise"},
@@ -636,7 +636,7 @@ class TestAuditPublic:
         async def fake_run(url, mode, **_kw):
             return _make_fake_audit_report()
 
-        with patch("x402_validator._engine.run_audit", side_effect=fake_run):
+        with patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run):
             r = client.post(
                 "/audit-public",
                 json={"url": "https://x402-merchant.example.com"},
@@ -654,7 +654,7 @@ class TestAuditPublic:
         async def fake_run(url, mode, **_kw):
             return _make_fake_audit_report()
 
-        with patch("x402_validator._engine.run_audit", side_effect=fake_run):
+        with patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run):
             for _ in range(3):
                 r = client.post("/audit-public", json={"url": "https://x.example"})
                 assert r.status_code == 200
@@ -669,7 +669,7 @@ class TestAuditPublic:
         async def fake_run(url, mode, **_kw):
             return _make_fake_audit_report()
 
-        with patch("x402_validator._engine.run_audit", side_effect=fake_run):
+        with patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run):
             r1 = client.post("/audit-public", json={"url": "https://x.example"})
             r2 = client.post("/audit-public", json={"url": "https://x.example"})
         assert r1.json()["remaining_today"] == 4
@@ -682,7 +682,7 @@ class TestAuditPublic:
         async def boom(url, mode, **_kw):
             raise RuntimeError("engine died")
 
-        with patch("x402_validator._engine.run_audit", side_effect=boom):
+        with patch("x402_conformance_suite._engine.run_audit", side_effect=boom):
             r = client.post("/audit-public", json={"url": "https://x.example"})
         assert r.status_code == 502
         assert "engine died" in r.json()["detail"]

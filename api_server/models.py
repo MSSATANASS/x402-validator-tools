@@ -1,7 +1,7 @@
-"""Pydantic models for the x402-validator API.
+"""Pydantic models for the x402 conformance API.
 
 These models are the public response shape. The internal AuditReport from
-``x402_validator`` is flattened into a JSON-friendly form here.
+``x402_conformance_suite`` is flattened into a JSON-friendly form here.
 """
 
 from __future__ import annotations

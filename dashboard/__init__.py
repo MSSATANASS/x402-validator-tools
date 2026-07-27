@@ -1,4 +1,4 @@
-"""Flask dashboard for browsing x402-validator audit history.
+"""Flask dashboard for browsing x402 conformance audit history.
 """
 
 __all__ = ["app", "main"]

@@ -1,4 +1,4 @@
-"""FastAPI app exposing x402-validator as a paid API.
+"""FastAPI app exposing the x402 conformance suite as a paid API.
 
 Endpoints
 ---------
@@ -68,7 +68,7 @@ if _STATIC_DIR.is_dir():
 
 async def _run_audit(url: str, mode: str, timeout: float = 10.0):
     """Run the x402 audit and return the report."""
-    from x402_validator._engine import run_audit  # lazy import
+    from x402_conformance_suite._engine import run_audit  # lazy import
     return await run_audit(url, timeout=timeout, mode=mode)
 
 
@@ -1042,7 +1042,7 @@ footer {
       <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">Tools (this site)</a>
       <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">Engine fork</a>
       <a href="https://github.com/smartflowproai-lang/x402-endpoint-validator" rel="noopener">Upstream</a>
-      <a href="https://pypi.org/project/x402-validator/" rel="noopener">pip install</a>
+      <a href="https://pypi.org/project/x402-conformance-suite/" rel="noopener">pip install</a>
     </div>
     <div class="foot-col">
       <h4>Contact</h4>
