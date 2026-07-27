@@ -1,0 +1,93 @@
+"""Pydantic models for the x402-validator API.
+
+These models are the public response shape. The internal AuditReport from
+``x402_validator`` is flattened into a JSON-friendly form here.
+"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+# ---------------------------------------------------------------------------
+# Plan catalog (single source of truth)
+# ---------------------------------------------------------------------------
+
+
+class Plan(BaseModel):
+    """A subscription plan exposed by the API."""
+
+    id: str
+    name: str
+    requests_per_month: int
+    price_cents: int
+    stripe_price_id: Optional[str] = None
+
+
+PLANS: dict[str, Plan] = {
+    "free": Plan(
+        id="free",
+        name="Free",
+        requests_per_month=100,
+        price_cents=0,
+    ),
+    "pro": Plan(
+        id="pro",
+        name="Pro",
+        requests_per_month=500,
+        price_cents=900,
+        stripe_price_id="price_1Tx1OnPHIgVqi7nd5pNOrW7V",
+    ),
+    "enterprise": Plan(
+        id="enterprise",
+        name="Enterprise",
+        requests_per_month=5000,
+        price_cents=4900,
+        stripe_price_id="price_1Tx1OnPHIgVqi7ndsmtLf1P2",
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
+# Request / response
+# ---------------------------------------------------------------------------
+
+
+class ValidateRequest(BaseModel):
+    """Client request: audit a single URL."""
+
+    url: str = Field(..., description="Target base URL to audit")
+    mode: str = Field(
+        default="standard",
+        description="standard | marketplace",
+    )
+
+
+class CheckResultItem(BaseModel):
+    """One check result, flattened for JSON consumers."""
+
+    name: str
+    status: str
+    message: str
+    details: Optional[dict] = None
+
+
+class ValidateResponse(BaseModel):
+    """Audit response."""
+
+    url: str
+    overall: str
+    summary: str
+    checks: list[CheckResultItem]
+    latency_ms: Optional[float] = None
+    timestamp: str
+
+
+class CheckoutResponse(BaseModel):
+    """Stripe checkout session creation response."""
+
+    checkout_url: Optional[str] = None
+    note: Optional[str] = None
+    plan_id: str

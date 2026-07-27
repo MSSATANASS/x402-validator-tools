@@ -1,25 +1,42 @@
-version: "3.9"
-
+# All three components share one network. Each is one container in this repo,
+# but the image supports a COMPONENT env override so you can also run them
+# individually in other environments.
 services:
-  proxy:
+  api:
     build: .
-    command: ["python", "main.py", "proxy"]
+    image: x402-validator-tools:ci
+    container_name: x402-api
+    environment:
+      COMPONENT: api
+      PORT: "8000"
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8000}
     ports:
-      - "8080:8080"
-    volumes:
-      - ./proxy_config.yaml:/app/proxy_config.yaml
-    networks:
-      - x402-net
+      - "8000:8000"
 
   dashboard:
     build: .
-    command: ["python", "main.py", "dashboard", "0.0.0.0", "5000"]
+    image: x402-validator-tools:ci
+    container_name: x402-dashboard
+    environment:
+      COMPONENT: dashboard
+      FLASK_DEBUG: "0"
+      PORT: "5000"
     ports:
       - "5000:5000"
-    volumes:
-      - ./data:/app/data
-    networks:
-      - x402-net
+    depends_on:
+      - api
 
-networks:
-  x402-net:
+  proxy:
+    build: .
+    image: x402-validator-tools:ci
+    container_name: x402-proxy
+    environment:
+      COMPONENT: proxy
+    volumes:
+      - ./proxy/config.yaml.example:/app/proxy/config.yaml:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api

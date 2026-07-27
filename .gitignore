@@ -1,2 +1,13 @@
-*.pyc
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+.coverage
+.pytest_cache/
+dashboard/data/
+node_modules/
