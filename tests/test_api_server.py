@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -10,14 +11,41 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """Reload the app module for each test so api_keys changes don't leak."""
+def client(tmp_path, monkeypatch):
+    """Reload the app module for each test and point KeyStore at tmp."""
     import importlib
-    import api_server.app as app_mod
+    import sys
+    monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "api_keys.json"))
+    monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
+    # Force-load the modules first so they're registered in sys.modules
+    import api_server.keystore  # noqa: F401
+    import api_server.app  # noqa: F401
+    keystore_mod = sys.modules["api_server.keystore"]
+    app_mod = sys.modules["api_server.app"]
+    importlib.reload(keystore_mod)
     importlib.reload(app_mod)
-    app_mod.api_keys["test-key-free"] = "free"
-    app_mod.api_keys["test-key-pro"] = "pro"
+    # Mint a key
+    app_mod.get_store().issue("pro")
     return TestClient(app_mod.app)
+
+
+def _make_fake_audit_report():
+    class _Check:
+        def __init__(self, name, status, message, details=None):
+            self.check_name = name
+            self.status = status
+            self.message = message
+            self.details = details
+
+    class _Report:
+        def __init__(self):
+            self.target_url = "https://example.com"
+            self.overall_status = "PASS"
+            self.summary = "4/4 checks passed"
+            self.timestamp = datetime(2026, 7, 27, 12, 0, 0, tzinfo=timezone.utc)
+            self.checks = [_Check("manifest_discovery", "PASS", "ok", None)]
+
+    return _Report()
 
 
 class TestHealth:
@@ -25,6 +53,16 @@ class TestHealth:
         r = client.get("/health")
         assert r.status_code == 200
         assert r.json() == {"status": "ok"}
+
+
+class TestLanding:
+    def test_renders_html(self, client: TestClient) -> None:
+        r = client.get("/")
+        assert r.status_code == 200
+        assert "text/html" in r.headers["content-type"]
+        assert "x402 Validator" in r.text
+        assert "$9" in r.text
+        assert "/create-checkout-session" in r.text
 
 
 class TestPlans:
@@ -43,7 +81,7 @@ class TestPlans:
 
 
 class TestValidate:
-    def test_requires_api_key(self, client: TestClient) -> None:
+    def test_requires_api_key_header(self, client: TestClient) -> None:
         r = client.post("/validate", json={"url": "https://example.com"})
         assert r.status_code == 422  # FastAPI: missing required header
 
@@ -56,32 +94,22 @@ class TestValidate:
         assert r.status_code == 401
 
     def test_runs_audit_with_valid_key(self, client: TestClient) -> None:
-        class _Check:
-            def __init__(self, name, status, message, details=None):
-                self.check_name = name
-                self.status = status
-                self.message = message
-                self.details = details
-
-        class _Report:
-            def __init__(self):
-                self.target_url = "https://example.com"
-                self.overall_status = "PASS"
-                self.summary = "4/4 checks passed"
-                from datetime import datetime, timezone
-                self.timestamp = datetime(2026, 7, 27, 12, 0, 0, tzinfo=timezone.utc)
-                self.checks = [
-                    _Check("manifest_discovery", "PASS", "ok", None),
-                ]
+        # Find the key that the fixture minted
+        from api_server.keystore import get_store
+        keys = [
+            k for k, p in get_store().all().items() if p == "pro"
+        ]
+        assert keys, "fixture should have minted a pro key"
+        pro_key = keys[0]
 
         async def fake_run_audit(url: str, mode: str = "standard", **_kw):
-            return _Report()
+            return _make_fake_audit_report()
 
         with patch("x402_validator._engine.run_audit", side_effect=fake_run_audit):
             r = client.post(
                 "/validate",
                 json={"url": "https://example.com", "mode": "standard"},
-                headers={"X-API-Key": "test-key-pro"},
+                headers={"X-API-Key": pro_key},
             )
         assert r.status_code == 200
         body = r.json()
@@ -103,7 +131,6 @@ class TestCheckoutSession:
         assert r.json()["checkout_url"] is None
 
     def test_paid_plan_without_stripe(self, client: TestClient) -> None:
-        # No STRIPE_SECRET_KEY in env → note about unconfigured
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("STRIPE_SECRET_KEY", None)
             r = client.post("/create-checkout-session?plan_id=pro")
@@ -142,3 +169,114 @@ class TestStripeIntegration:
                 cancel_url="https://x/cancel",
             )
         assert url is None
+
+
+class TestKeyStore:
+    def test_issue_persists_to_disk(self, tmp_path) -> None:
+        from api_server.keystore import KeyStore
+        store = KeyStore(tmp_path / "ks.json")
+        token = store.issue("pro")
+        assert store.get(token) == "pro"
+        # Reload from disk
+        store2 = KeyStore(tmp_path / "ks.json")
+        assert store2.get(token) == "pro"
+
+    def test_revoke_removes(self, tmp_path) -> None:
+        from api_server.keystore import KeyStore
+        store = KeyStore(tmp_path / "ks.json")
+        token = store.issue("pro")
+        assert store.revoke(token) is True
+        assert store.revoke(token) is False  # second call idempotent
+
+    def test_empty_file_returns_empty(self, tmp_path) -> None:
+        from api_server.keystore import KeyStore
+        store = KeyStore(tmp_path / "missing.json")
+        assert store.all() == {}
+
+
+class TestAdminEndpoints:
+    def test_issue_requires_admin_secret(self, client: TestClient) -> None:
+        r = client.post("/admin/keys", json={"plan_id": "pro"})
+        assert r.status_code == 422
+
+    def test_issue_wrong_secret(self, client: TestClient) -> None:
+        r = client.post(
+            "/admin/keys",
+            json={"plan_id": "pro"},
+            headers={"X-Admin-Secret": "wrong"},
+        )
+        assert r.status_code == 401
+
+    def test_issue_mints_key(self, client: TestClient) -> None:
+        r = client.post(
+            "/admin/keys",
+            json={"plan_id": "pro"},
+            headers={"X-Admin-Secret": "test-admin-secret"},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["plan_id"] == "pro"
+        assert body["api_key"].startswith("eyJ") or len(body["api_key"]) > 20
+
+    def test_list_keys(self, client: TestClient) -> None:
+        r = client.get(
+            "/admin/keys",
+            headers={"X-Admin-Secret": "test-admin-secret"},
+        )
+        assert r.status_code == 200
+        assert r.json()["count"] >= 1
+
+    def test_revoke_key(self, client: TestClient) -> None:
+        # First issue one
+        r = client.post(
+            "/admin/keys",
+            json={"plan_id": "pro"},
+            headers={"X-Admin-Secret": "test-admin-secret"},
+        )
+        key = r.json()["api_key"]
+        # Then revoke
+        r = client.delete(
+            f"/admin/keys/{key}",
+            headers={"X-Admin-Secret": "test-admin-secret"},
+        )
+        assert r.status_code == 200
+        assert r.json()["revoked"] is True
+
+    def test_revoke_unknown_key(self, client: TestClient) -> None:
+        r = client.delete(
+            "/admin/keys/never-issued-key",
+            headers={"X-Admin-Secret": "test-admin-secret"},
+        )
+        assert r.status_code == 404
+
+    def test_full_flow_issued_key_works_for_validate(self, client: TestClient) -> None:
+        async def fake_run_audit(url: str, mode: str = "standard", **_kw):
+            return _make_fake_audit_report()
+
+        with patch("x402_validator._engine.run_audit", side_effect=fake_run_audit):
+            r = client.post(
+                "/admin/keys",
+                json={"plan_id": "enterprise"},
+                headers={"X-Admin-Secret": "test-admin-secret"},
+            )
+            assert r.status_code == 200
+            new_key = r.json()["api_key"]
+
+            r = client.post(
+                "/validate",
+                json={"url": "https://example.com"},
+                headers={"X-API-Key": new_key},
+            )
+            assert r.status_code == 200
+
+
+class TestSuccessCancel:
+    def test_success_page(self, client: TestClient) -> None:
+        r = client.get("/success")
+        assert r.status_code == 200
+        assert "Payment received" in r.text
+
+    def test_cancel_page(self, client: TestClient) -> None:
+        r = client.get("/cancel")
+        assert r.status_code == 200
+        assert "cancelled" in r.text.lower()
