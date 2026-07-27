@@ -60,11 +60,10 @@ class TestLanding:
         r = client.get("/")
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
-        # Headline copy
-        assert "Audit" in r.text
-        assert "x402" in r.text
-        # Hero gradient text class
-        assert 'class="accent"' in r.text
+        # Headline copy (motion-style spec)
+        assert "Design at the speed of thought" in r.text  # pre-headline (serif)
+        assert "Build Faster" in r.text  # main headline (gradient)
+        assert "SEO-optimized websites" in r.text  # subheadline copy
         # Pricing plans rendered
         assert "$9" in r.text
         assert "$49" in r.text
@@ -72,38 +71,61 @@ class TestLanding:
         assert "/create-checkout-session?plan_id=pro" in r.text
         assert "/create-checkout-session?plan_id=enterprise" in r.text
         assert "/create-checkout-session?plan_id=free" in r.text
-        # Liquid-glass utility class is in stylesheet
-        assert ".liquid-glass" in r.text
-        # Liquid-glass ::before with mask-composite
-        assert "mask-composite: exclude" in r.text
-        # Two design-system fonts loaded (Geist + General Sans)
-        assert "Geist" in r.text
-        assert "General Sans" in r.text
+        # Two design-system fonts loaded from Google Fonts (replaces Geist/General Sans)
+        assert "Instrument+Sans" in r.text
+        assert "Instrument+Serif" in r.text
         assert "fonts.googleapis.com" in r.text
-        assert "api.fontshare.com" in r.text
-        # Theme variables present (HSL space)
-        assert "260 87% 3%" in r.text   # deep purple background
-        assert "40 6% 95%" in r.text    # foreground
-        # Hero gradient (indigo→purple→amber)
-        assert "#6366f1" in r.text
-        assert "#a855f7" in r.text
-        assert "#fcd34d" in r.text
-        # Hero video slot present
+        # Old theme system (purple/HSL) is fully gone
+        assert "260 87% 3%" not in r.text
+        assert "General Sans" not in r.text
+        assert "Geist" not in r.text
+        # Old MotionSites pieces are gone
+        assert ".liquid-glass" not in r.text
+        assert "mask-composite" not in r.text
+        assert "marquee-track" not in r.text
+        assert "driftBg" not in r.text
+        assert "marqueeSlide" not in r.text
+        assert "hero-blob" not in r.text
+        for name in ("Asterpay", "Hugen", "Observer", "Greeneris", "SmartFlow"):
+            assert name not in r.text
+        # Dark-mode spec markers
+        assert "background: #000000" in r.text  # pure black hero bg (CSS rule)
+        assert "#3054ff" in r.text  # accent blue for the CTA arrow
+        assert "#2040e0" in r.text  # accent hover
+        assert "#b4c0ff" in r.text  # gradient end on main headline
+        assert "#0a0400" in r.text  # primary button text color
+        # Pre-headline uses Instrument Serif in CSS
+        assert "Instrument Serif" in r.text
+        # Main headline gradient (bg-clip-text + b4c0ff)
+        assert "background-clip: text" in r.text
+        # Hero video slot present (HLS bg + poster fallback)
         assert "hero-video-wrap" in r.text
-        assert "hero-fallback" in r.text
-        assert "hero-blob" in r.text
-        # Logo marquee + real endpoint names rolling
-        assert "marquee-track" in r.text
-        for name in ("Asterpay", "Hugen", "Observer", "Greeneris", "SmartFlow", "x402 Online"):
-            assert name in r.text
-        # Hero CTA wired to /create-checkout-session
-        assert "View pricing" in r.text
-        # Animation drift for the background fallback
-        assert "driftBg" in r.text
-        # Logo marquee animation
-        assert "marqueeSlide" in r.text
-        # Most popular ribbon kept
+        assert 'id="heroVideo"' in r.text
+        # HLS.js loaded from CDN
+        assert "hls.js" in r.text
+        # Mux video URL
+        assert "stream.mux.com/T6oQJQ02cQ6N01TR6iHwZkKFkbepS34dkkIc9iukgy400g.m3u8" in r.text
+        # Unsplash poster fallback
+        assert "images.unsplash.com" in r.text
+        # Decorative gradients (blue-900 ≈ #1e3a8a, indigo-900 ≈ #312e81, alpha 0.20)
+        assert "rgba(30,58,138,0.20)" in r.text
+        assert "rgba(49,46,129,0.20)" in r.text
+        assert "blur(120px)" in r.text
+        assert "mix-blend-mode: screen" in r.text
+        # Hero CTA — primary "Start Building Free" + secondary "See Examples"
+        assert "Start Building Free" in r.text
+        assert "See Examples" in r.text
+        # Animation keyframes (motion-style timing)
+        assert "@keyframes fadeUp" in r.text
+        assert "@keyframes scaleIn" in r.text
+        assert "@keyframes fade70" in r.text
+        # Most popular ribbon kept on Pro pricing card
         assert "Most popular" in r.text
+        # Navbar sunburst icon (24x24 white SVG with center circle + radial lines)
+        assert "<svg" in r.text
+        # Stripped of unused _SVG_* placeholder substitutions
+        assert "__SVG_MANIFEST__" not in r.text
+        assert "__SVG_BAZAAR__" not in r.text
 
 
 class TestPlans:

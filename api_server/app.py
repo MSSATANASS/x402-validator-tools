@@ -101,392 +101,315 @@ _LANDING_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>x402 Validator — REST API for x402 strict-v2 audits</title>
-<meta name="description" content="Audit any x402 merchant URL with one POST. Manifest, CAIP-2, JSON resilience, Bazaar — JSON back in 580 ms. Free, Pro, Enterprise.">
-<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<title>x402 Validator — strict-v2 conformance audits</title>
+<meta name="description" content="Design at the speed of thought. Audit x402 merchant conformance in seconds with our AI-driven engine.">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://stream.mux.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.min.js"></script>
 <style>
 /* ============================================================
-   Design system (MotionSites-inspired)
-   - Two-font stack: Geist Sans (body) + General Sans (headline)
-   - Deep dark blue-purple background, blurred glass overlay shape
-   - Liquid-glass utility class for cards / nav
+   Design system: dark / black, two-font stack
+   - Body:    Instrument Sans (Google Fonts)
+   - Editorial: Instrument Serif for pre-headline serif accent
+   - Accent:  #3054ff blue arrow on white pill; #b4c0ff gradient end
    ============================================================ */
 :root {
-  --background: 260 87% 3%;        /* hsl deep dark blue-purple */
-  --foreground: 40 6% 95%;        /* off-white */
-  --hero-sub:    40 6% 82%;        /* lighter off-white */
-  --gray-950: 260 30% 6%;
-  --accent: #6366f1;              /* indigo (gradient stop 1) */
-  --accent2: #a855f7;             /* purple (gradient stop 2) */
-  --accent3: #fcd34d;             /* amber (gradient stop 3) */
-  --accent-green: #10b981;
-  --accent-red:   #ef4444;
-  --accent-cyan:  #22d3ee;
+  --bg: #000000;
+  --fg: #ffffff;
+  --fg-80: rgba(255,255,255,0.80);
+  --fg-70: rgba(255,255,255,0.70);
+  --fg-60: rgba(255,255,255,0.60);
+  --fg-50: rgba(255,255,255,0.50);
+  --accent: #3054ff;
+  --accent-hover: #2040e0;
+  --gradient-end: #b4c0ff;
+  --primary-text-dark: #0a0400;
+  --glass-border: rgba(255,255,255,0.10);
   --hero-grad: linear-gradient(to left, #6366f1, #a855f7, #fcd34d);
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-bg-strong: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.10);
-  --grad-fg: 0 0% 100%;
-  --grad-fg-soft: 40 6% 82%;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; background: #000; }
 
 body {
-  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
-  line-height: 1.55;
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  color: var(--fg);
+  background: #000;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv02','cv03','cv04','cv11';
+  line-height: 1.5;
   overflow-x: hidden;
 }
 
-h1, h2, h3, h4 {
-  font-family: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-feature-settings: 'ss01';
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: inherit;
-}
-
-/* utility for hero copy */
-.text-foreground { color: hsl(var(--foreground)); }
-.text-hero-sub   { color: hsl(var(--hero-sub)); }
-.text-foreground-90 { color: hsl(var(--foreground) / 0.9); }
-.text-foreground-50 { color: hsl(var(--foreground) / 0.5); }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+a { color: inherit; }
 
 /* ============================================================
-   Liquid-glass (utility used by hero buttons + nav-pill)
+   NAVBAR (fixed, transparent)
    ============================================================ */
-.liquid-glass {
-  background: rgba(255, 255, 255, 0.01);
-  background-blend-mode: luminosity;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: none;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  position: relative;
-  overflow: hidden;
+.navbar {
+  position: fixed; top: 0; left: 0; width: 100%;
+  z-index: 50;
+  background: transparent;
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.liquid-glass::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.4px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
+.nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
+.nav-left .icon { width: 24px; height: 24px; display: block; }
 
-/* ============================================================
-   HeroSecondary button (CTA)
-   ============================================================ */
-.heroSecondary {
-  background: hsl(var(--foreground));
-  color: hsl(var(--background));
-  padding: 14px 24px;
+.nav-links {
+  display: none;
+  align-items: center; gap: 32px;
+}
+.nav-links a {
+  color: var(--fg-80); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  transition: color 0.15s;
+  display: inline-flex; align-items: center; gap: 4px;
+  letter-spacing: -0.005em;
+}
+.nav-links a:hover { color: var(--fg); }
+.nav-links svg.chev { width: 14px; height: 14px; opacity: 0.7; }
+
+.book-demo {
+  display: none;
+  color: var(--fg-80); font-size: 14px; font-weight: 500;
+  text-decoration: none; transition: color 0.15s;
+}
+.book-demo:hover { color: var(--fg); }
+
+.btn-primary-pill {
+  background: var(--fg); color: var(--primary-text-dark);
+  padding: 10px 20px;
   border-radius: 999px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 14px; font-weight: 600;
+  text-decoration: none;
   letter-spacing: -0.01em;
-  transition: transform 0.15s, box-shadow 0.2s;
+  transition: box-shadow 0.2s, transform 0.15s;
+  display: inline-block;
 }
-.heroSecondary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(255,255,255,0.12);
-}
-.heroSecondary.sm { padding: 8px 16px; font-size: 0.85rem; }
+.btn-primary-pill:hover { box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+
+@media (min-width: 640px) { .book-demo { display: inline-flex; } }
+@media (min-width: 768px) { .nav-links { display: flex; } }
 
 /* ============================================================
-   HERO SECTION (full screen)
+   HERO SECTION (full screen) — motion-style
    ============================================================ */
-.hero-section {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+.hero {
   position: relative;
-  overflow: visible;
-  isolation: isolate;
+  width: 100%;
+  min-height: 100vh;
+  background: #000000;
+  color: var(--fg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
 }
 
-/* Background video slot — falls back to a CSS animated gradient
-   when no video URL is wired in (because we can't access the
-   MotionSites CDN url from this template). */
-.hero-section .hero-video-wrap {
-  position: absolute;
-  inset: 0;
+.hero-video-wrap {
+  position: absolute; inset: 0;
+  z-index: 0;
   overflow: hidden;
-  z-index: -1;
 }
-.hero-section .hero-video {
+.hero-video {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 0.5s ease;
+  object-fit: cover; opacity: 0.6;
 }
-.hero-section .hero-fallback {
+
+.hero-overlay {
   position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 60% 45% at 50% 0%, rgba(99,102,241,0.35), transparent 60%),
-    radial-gradient(ellipse 50% 60% at 90% 100%, rgba(168,85,247,0.20), transparent 60%),
-    radial-gradient(ellipse 50% 60% at 10% 100%, rgba(252,211,77,0.10), transparent 60%),
-    hsl(var(--background));
-  animation: driftBg 24s ease-in-out infinite alternate;
-}
-@keyframes driftBg {
-  0%   { transform: translate3d(0,0,0) scale(1); }
-  100% { transform: translate3d(-2%, -1%, 0) scale(1.05); }
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1;
 }
 
-.hero-section .hero-video-wrap.is-playing .hero-video { opacity: 1; }
-
-/* The blurred overlay shape (decorative, behind content) */
-.hero-blob {
-  width: 984px;
-  height: 527px;
-  opacity: 0.9;
-  background: hsl(var(--gray-950));
-  filter: blur(82px);
+.hero-decor {
   position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  filter: blur(120px);
+  mix-blend-mode: screen;
   pointer-events: none;
-  z-index: -1;
+  z-index: 2;
+}
+.hero-decor.tl {
+  top: -20%; left: 20%;
+  width: 600px; height: 600px;
+  background: rgba(30,58,138,0.20);  /* blue-900/20 */
+}
+.hero-decor.br {
+  bottom: -10%; right: 20%;
+  width: 500px; height: 500px;
+  background: rgba(49,46,129,0.20);  /* indigo-900/20 */
 }
 
-/* ============================================================
-   Hero NAV (top of hero section)
-   ============================================================ */
-.hero-nav {
-  width: 100%;
-  padding: 20px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  z-index: 5;
-}
-.hero-nav-logo {
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: hsl(var(--foreground));
-  text-decoration: none;
-  font-family: 'General Sans', sans-serif;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.02em;
-}
-.hero-nav-logo .mark {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--hero-grad);
-  display: inline-flex; align-items: center; justify-content: center;
-  color: hsl(var(--background));
-  font-weight: 800;
-  font-size: 0.85rem;
-  font-family: 'Geist', monospace;
-}
-.hero-nav-links {
-  display: flex; gap: 1.75rem; align-items: center;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 999px;
-  padding: 8px 18px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.hero-nav-links button, .hero-nav-links a {
-  background: none; border: none; cursor: pointer;
-  color: hsl(var(--foreground) / 0.9);
-  font-family: inherit;
-  font-size: 0.88rem;
-  letter-spacing: -0.005em;
-  display: inline-flex; align-items: center; gap: 0.25rem;
-  padding: 4px 6px;
-  text-decoration: none;
-  transition: color 0.15s;
-}
-.hero-nav-links button:hover, .hero-nav-links a:hover { color: hsl(var(--foreground)); }
-.hero-nav-links svg.chev { width: 12px; height: 12px; opacity: 0.7; }
-.hero-nav-links svg.chev polyline,
-.hero-nav-links svg.chev line { stroke: currentColor; stroke-width: 1.5; }
-.hero-nav-cta { display: inline-flex; align-items: center; gap: 0.6rem; }
-
-/* Divider line right below the navbar */
-.hero-divider {
-  height: 1px;
-  width: 100%;
-  background: linear-gradient(to right, transparent, hsl(var(--foreground) / 0.20), transparent);
-  margin-top: 3px;
-}
-
-/* ============================================================
-   Hero CONTENT (centered)
-   ============================================================ */
 .hero-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
-  z-index: 4;
+  z-index: 10;
+  max-width: 64rem; /* max-w-5xl */
+  margin: 0 auto;
+  width: 100%;
+  padding: 144px 24px 64px;
   text-align: center;
-  padding: 0 32px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 48px;
 }
-.hero-content-inner { max-width: 1400px; }
-.hero-headline {
-  font-family: 'General Sans', sans-serif;
+
+/* ============================================================
+   HeroCopy — pre-headline (serif), main (gradient), sub
+   ============================================================ */
+.pre-headline {
+  font-family: 'Instrument Serif', 'Instrument Sans', serif;
   font-weight: 400;
-  font-size: clamp(80px, 14vw, 220px);
-  line-height: 1.02;
-  letter-spacing: -0.024em;
+  font-size: 1.875rem;  /* text-3xl mobile */
+  line-height: 1.1;
+  color: var(--fg);
   margin: 0;
-  color: hsl(var(--foreground));
+  letter-spacing: -0.01em;
 }
-.hero-headline .accent {
-  background-image: var(--hero-grad);
-  background-clip: text;
+
+.main-headline {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 3.75rem;  /* text-6xl mobile */
+  line-height: 0.9;
+  letter-spacing: -0.05em;  /* tracking-tighter */
+  margin: 0;
+  background: linear-gradient(to bottom, #ffffff, #ffffff, #b4c0ff);
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
-.hero-sub {
-  color: hsl(var(--hero-sub));
-  font-size: 1.125rem;
-  line-height: 1.55;
-  margin: 9px auto 0;
-  max-width: 28rem;
-  opacity: 0.92;
-}
-.hero-sub span.divide { display: block; }
 
-.hero-cta-row {
-  margin-top: 25px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
+.sub-headline {
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 1.125rem;  /* text-lg mobile */
+  line-height: 1.65;
+  color: var(--fg);
+  opacity: 0.7;
+  margin: 0;
+  max-width: 36rem;  /* max-w-xl */
+  letter-spacing: -0.005em;
 }
-.hero-trust {
-  margin-top: 1.25rem;
-  color: hsl(var(--foreground) / 0.6);
-  font-size: 0.82rem;
-  display: inline-flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: center;
-}
-.hero-trust span::before { content: '✓  '; color: var(--accent-green); }
 
-/* ============================================================
-   Logo MARQUEE (bottom of hero)
-   ============================================================ */
-.logo-marquee {
-  width: 100%;
-  padding-bottom: 40px;
-  position: relative;
-  z-index: 3;
+@media (min-width: 640px) {
+  .pre-headline { font-size: 3rem; }
+  .main-headline { font-size: 6rem; }
+  .sub-headline  { font-size: 1.25rem; }
 }
-.logo-marquee-inner {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-  display: flex; gap: 3rem; align-items: center;
-}
-.logo-marquee-inner .left {
-  color: hsl(var(--foreground) / 0.5);
-  font-size: 0.85rem;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.logo-marquee-inner .right { flex: 1; overflow: hidden; position: relative; }
-.logo-marquee-inner .right::before,
-.logo-marquee-inner .right::after {
-  content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2;
-  pointer-events: none;
-}
-.logo-marquee-inner .right::before { left: 0; background: linear-gradient(90deg, hsl(var(--background)), transparent); }
-.logo-marquee-inner .right::after  { right: 0; background: linear-gradient(-90deg, hsl(var(--background)), transparent); }
-.marquee-track {
-  display: flex; gap: 4rem;
-  width: max-content;
-  animation: marqueeSlide 20s linear infinite;
-}
-@keyframes marqueeSlide {
-  from { transform: translateX(0%); }
-  to   { transform: translateX(-50%); }
-}
-.logo-cell {
-  display: inline-flex; align-items: center; gap: 0.6rem;
-  font-family: 'General Sans', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  color: hsl(var(--foreground));
-  white-space: nowrap;
-}
-.logo-cell .mark {
-  width: 24px; height: 24px;
-  border-radius: 6px;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  font-size: 0.75rem; font-weight: 700;
-  color: hsl(var(--foreground));
-  font-family: 'Geist', monospace;
+@media (min-width: 1024px) {
+  .pre-headline { font-size: 48px; }
+  .main-headline { font-size: 136px; }
 }
 
 /* ============================================================
-   Below-hero SECTION (pricing etc.)
+   Hero CTAs
    ============================================================ */
-.section { padding: 6rem 1.5rem; position: relative; }
-.section.eyebrow-row { display: flex; justify-content: center; margin-bottom: 1rem; }
-.section .pill-tag {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.3rem 0.85rem;
+.hero-ctas {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 24px;
+}
+@media (min-width: 640px) { .hero-ctas { flex-direction: row; } }
+
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 8px 8px 24px;
+  background: var(--fg);
   border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.cta-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255,255,255,0.30);
+}
+.cta-primary .label {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 500;
+  font-size: 1.125rem;
+  color: var(--primary-text-dark);
+  padding-right: 16px;
+  letter-spacing: -0.01em;
+}
+.cta-primary .arrow {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg);
+  transition: background 0.2s;
+}
+.cta-primary:hover .arrow { background: var(--accent-hover); }
+.cta-primary .arrow svg { width: 20px; height: 20px; }
+
+.cta-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  color: var(--fg-70);
+  text-decoration: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: -0.005em;
+}
+.cta-secondary:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--fg);
+}
+.cta-secondary svg {
+  transition: transform 0.2s ease-out;
+  width: 16px; height: 16px;
+}
+.cta-secondary:hover svg { transform: translateX(4px); }
+
+/* ============================================================
+   Below-hero (pricing & footer)
+   ============================================================ */
+.pricing-section {
+  padding: 96px 24px;
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.pricing-pill {
+  display: inline-block;
+  padding: 6px 14px;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--glass-border);
-  color: hsl(var(--foreground) / 0.7);
-  font-size: 0.78rem;
-  font-weight: 500;
+  color: var(--fg-80);
+  border-radius: 999px;
+  font-size: 13px; font-weight: 500;
 }
-h2.section-title {
-  text-align: center;
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  margin: 0.5rem auto 1rem;
-  letter-spacing: -0.035em;
+.pricing-eyebrow-row { display: flex; justify-content: center; margin-bottom: 16px; }
+.pricing-headline {
+  font-family: 'Instrument Sans', sans-serif;
   font-weight: 600;
-  line-height: 1.08;
-  max-width: 32rem;
-}
-h2.section-title .grad {
-  background-image: linear-gradient(to left, #6366f1, #a855f7, #fcd34d);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-}
-.section-sub {
+  font-size: clamp(1.875rem, 4vw, 3rem);
+  letter-spacing: -0.025em;
   text-align: center;
-  color: hsl(var(--foreground) / 0.7);
-  max-width: 36rem; margin: 0 auto 3rem;
-  font-size: 1.05rem;
+  margin: 0 auto 24px;
+  max-width: 32rem;
+  line-height: 1.08;
+}
+.pricing-sub {
+  text-align: center;
+  color: var(--fg-70);
+  max-width: 36rem;
+  margin: 0 auto 48px;
+  font-size: 1rem;
 }
 
 .pricing-grid {
-  display: grid; gap: 1.25rem;
+  display: grid; gap: 20px;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   max-width: 1000px; margin: 0 auto;
 }
@@ -494,68 +417,70 @@ h2.section-title .grad {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
-  padding: 2rem 1.75rem;
+  padding: 32px 28px;
   display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  position: relative; overflow: hidden;
   transition: transform 0.2s, border-color 0.2s;
 }
 .plan:hover { transform: translateY(-3px); }
 .plan.featured {
   border: 1px solid var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 24px 48px -16px rgba(99,102,241,0.30);
+  box-shadow: 0 16px 48px -16px rgba(48,84,255,0.35);
 }
 .plan.featured::before {
   content: "Most popular";
   position: absolute; top: 14px; right: -32px;
   background-image: var(--hero-grad);
-  color: hsl(var(--background));
-  padding: 0.2rem 2.2rem;
-  font-size: 0.7rem; font-weight: 700;
-  letter-spacing: 0.04em;
+  color: #000;
+  padding: 4px 36px;
+  font-size: 11px; font-weight: 700;
   transform: rotate(35deg);
+  letter-spacing: 0.04em;
 }
-.plan-name { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
-.plan-desc { color: hsl(var(--foreground) / 0.7); font-size: 0.86rem; margin: 0 0 1.5rem; }
-.plan-price {
-  font-size: 3rem; font-weight: 700;
-  letter-spacing: -0.04em; margin: 0;
-  display: flex; align-items: baseline; gap: 0.3rem;
-  background-image: linear-gradient(to left, #ffffff, hsl(var(--foreground)));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+.plan-name { font-family: 'Instrument Sans', sans-serif; font-size: 1.1rem; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; }
+.plan-desc { color: var(--fg-70); font-size: 0.875rem; margin: 0 0 24px; }
+.plan-value { display: flex; align-items: baseline; gap: 6px; }
+.plan-price { font-family: 'Instrument Sans', sans-serif; font-size: 3rem; font-weight: 700; line-height: 1; letter-spacing: -0.04em; }
+.plan-period-small { font-size: 1rem; color: var(--fg-70); font-weight: 400; }
+.plan-period-line { font-size: 0.8rem; color: var(--fg-60); margin: 6px 0 0; }
+
+.plan-features { list-style: none; padding: 0; margin: 24px 0 0; flex-grow: 1; }
+.plan-features li {
+  padding: 10px 0;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.92rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
-.plan-price small { font-size: 0.95rem; color: hsl(var(--foreground) / 0.7); font-weight: 400; -webkit-text-fill-color: hsl(var(--foreground) / 0.7); }
-.plan-period { font-size: 0.78rem; color: hsl(var(--foreground) / 0.6); margin-top: 0.2rem; }
-.plan-features { list-style: none; padding: 0; margin: 1.5rem 0 0; flex-grow: 1; }
-.plan-features li { padding: 0.5rem 0; color: hsl(var(--foreground)); font-size: 0.92rem; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid var(--glass-border); }
-.plan-features li:last-child { border-bottom: none; }
-.plan-features li svg { flex-shrink: 0; color: var(--accent-green); width: 16px; height: 16px; }
+.plan-features li:last-child { border-bottom: 1px solid rgba(255,255,255,0.08); }
+.plan-features li svg { flex-shrink: 0; color: #10b981; width: 16px; height: 16px; }
+
 .plan-cta {
-  width: 100%; justify-content: center; margin-top: 1.5rem;
-  padding: 12px 24px; border-radius: 999px;
+  width: 100%; padding: 12px 24px; margin-top: 24px;
+  border-radius: 999px;
+  font-family: 'Instrument Sans', sans-serif;
   font-size: 0.95rem; font-weight: 600;
   border: none; cursor: pointer;
-  font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
   text-decoration: none;
-  display: inline-flex; align-items: center; gap: 0.45rem;
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: -0.01em;
 }
-.plan-cta.solid { background: hsl(var(--foreground)); color: hsl(var(--background)); }
-.plan-cta.outline { background: transparent; color: hsl(var(--foreground)); border: 1px solid var(--glass-border); }
+.plan-cta:hover { transform: translateY(-1px); }
+.plan-cta.solid { background: var(--fg); color: var(--primary-text-dark); }
+.plan-cta.outline { background: transparent; color: var(--fg); border: 1px solid rgba(255,255,255,0.15); }
 
 /* ============================================================
    Footer
    ============================================================ */
 footer {
-  border-top: 1px solid var(--glass-border);
-  padding: 3rem 1.5rem 4rem;
-  color: hsl(var(--foreground) / 0.7);
-  background: hsl(var(--background));
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 64px 24px 80px;
+  color: var(--fg-70);
 }
 .foot-grid {
-  display: grid; gap: 2rem;
+  display: grid; gap: 32px;
   grid-template-columns: 1.4fr repeat(3, 1fr);
   max-width: 1100px; margin: 0 auto;
 }
@@ -563,157 +488,139 @@ footer {
 .foot-brand .mark {
   width: 32px; height: 32px;
   border-radius: 8px;
-  background-image: var(--hero-grad);
+  background: var(--hero-grad);
   display: inline-flex; align-items: center; justify-content: center;
-  color: hsl(var(--background));
-  font-weight: 800; font-size: 0.95rem;
-  font-family: 'Geist', monospace;
+  color: #000; font-weight: 800;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 0.85rem;
 }
-.foot-brand .name { font-weight: 700; font-size: 1rem; margin: 0.6rem 0 0.4rem; color: hsl(var(--foreground)); }
-.foot-brand .tag { font-size: 0.88rem; max-width: 280px; color: hsl(var(--foreground) / 0.65); }
+.foot-brand .name { font-weight: 700; font-size: 1rem; margin: 10px 0 6px; color: var(--fg); font-family: 'Instrument Sans', sans-serif; }
+.foot-brand .tag { font-size: 0.875rem; max-width: 280px; color: var(--fg-50); }
+
 .foot-col h4 {
-  font-size: 0.72rem; color: hsl(var(--foreground) / 0.55);
+  font-size: 0.72rem; color: var(--fg-50);
   text-transform: uppercase; letter-spacing: 0.06em;
-  margin-bottom: 0.8rem;
-  font-weight: 600;
+  margin: 0 0 14px; font-weight: 600;
+  font-family: 'Instrument Sans', sans-serif;
 }
 .foot-col a {
-  display: block; color: hsl(var(--foreground) / 0.85);
-  text-decoration: none; font-size: 0.9rem;
-  padding: 0.25rem 0;
+  display: block; color: var(--fg-80);
+  text-decoration: none; font-size: 0.875rem;
+  padding: 4px 0;
   transition: color 0.15s;
 }
-.foot-col a:hover { color: hsl(var(--foreground)); }
+.foot-col a:hover { color: var(--fg); }
 .foot-bottom {
-  border-top: 1px solid var(--glass-border);
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  font-size: 0.82rem;
-  color: hsl(var(--foreground) / 0.5);
-  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-  max-width: 1100px; margin-left: auto; margin-right: auto;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 40px auto 0; padding-top: 20px;
+  max-width: 1100px;
+  font-size: 0.8rem; color: var(--fg-50);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
 }
+.foot-bottom code { color: var(--fg-80); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ============================================================
+   Animations (pure CSS, motion-style timing)
+   ============================================================ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes fade70 {
+  from { opacity: 0; }
+  to   { opacity: 0.7; }
+}
+.anim-fade-up       { animation: fadeUp 0.6s ease-out both; }
+.anim-scale         { animation: scaleIn 0.6s ease-out 0.2s both; }
+.anim-fade70        { animation: fade70 0.6s ease-out 0.4s both; }
+.anim-fade-up-late  { animation: fadeUp 0.5s ease-out 0.6s both; }
 
 @media (max-width: 600px) {
-  .hero-nav { padding: 16px 18px; }
-  .hero-nav-links { display: none; }
-  .logo-marquee-inner { gap: 1rem; }
-  .logo-marquee-inner .left { font-size: 0.78rem; }
-  .marquee-track { gap: 2rem; }
-  .section { padding: 4rem 1.25rem; }
+  .navbar { padding: 12px 18px; }
+  .pricing-section { padding: 64px 20px; }
+  .hero-content { padding-top: 100px; }
 }
 </style>
 </head>
 <body>
 
-<!-- =================== HERO SECTION (full screen, MotionSites vibe) =================== -->
-<section class="hero-section">
-
-  <!-- Background video slot with CSS-animated gradient fallback -->
-  <div class="hero-video-wrap" id="heroVideoWrap">
-    <video class="hero-video" id="heroVideo" muted playsinline preload="auto"
-           poster=""
-           src=""></video>
-    <div class="hero-fallback" id="heroFallback"></div>
+<!-- =================== NAVBAR (fixed, transparent) =================== -->
+<nav class="navbar">
+  <div class="nav-left">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="12" cy="12" r="3.5"/>
+      <line x1="12" y1="2" x2="12" y2="6"/>
+      <line x1="12" y1="18" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="6" y2="12"/>
+      <line x1="18" y1="12" x2="22" y2="12"/>
+      <line x1="4.93" y1="4.93" x2="7.64" y2="7.64"/>
+      <line x1="16.36" y1="16.36" x2="19.07" y2="19.07"/>
+      <line x1="4.93" y1="19.07" x2="7.64" y2="16.36"/>
+      <line x1="16.36" y1="7.64" x2="19.07" y2="4.93"/>
+    </svg>
   </div>
 
-  <!-- Centered blurred overlay shape (decorative) -->
-  <div class="hero-blob" aria-hidden="true"></div>
-
-  <!-- NAV -->
-  <nav class="hero-nav">
-    <a href="/" class="hero-nav-logo">
-      <span class="mark">x4</span>
-      <span>x402 validator</span>
+  <div class="nav-links">
+    <a href="#pricing">Products
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </a>
+    <a href="#stories">Customer Stories</a>
+    <a href="/docs">Resources</a>
+    <a href="#pricing">Pricing</a>
+  </div>
 
-    <div class="hero-nav-links liquid-glass">
-      <a href="#pricing">Pricing</a>
-      <button type="button">
-        Tools
-        <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><polyline points="2,4 6,8 10,4" fill="none"/></svg>
-      </button>
-      <button type="button">
-        Docs
-        <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><polyline points="2,4 6,8 10,4" fill="none"/></svg>
-      </button>
-      <a href="/health">Status</a>
-    </div>
+  <div class="nav-right">
+    <a class="book-demo" href="#pricing">Book A Demo</a>
+    <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
+  </div>
+</nav>
 
-    <div class="hero-nav-cta">
-      <a class="heroSecondary sm" href="/create-checkout-session?plan_id=pro">Get API key</a>
-    </div>
-  </nav>
+<!-- =================== HERO SECTION (motion-style) =================== -->
+<section class="hero">
+  <!-- HLS video bg with poster fallback -->
+  <div class="hero-video-wrap">
+    <video id="heroVideo" class="hero-video" muted loop playsinline preload="auto"
+           poster="https://images.unsplash.com/photo-1647356191320-d7a1f80ca777?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhcmslMjB0ZWNobm9sb2d5JTIwbmV1cmFsJTIwbmV0d29ya3xlbnwxfHx8fDE3Njg5NzIyNTV8MA&ixlib=rb-4.1.0&q=80&w=1080"></video>
+  </div>
+  <div class="hero-overlay"></div>
+  <div class="hero-decor tl"></div>
+  <div class="hero-decor br"></div>
 
-  <div class="hero-divider"></div>
-
-  <!-- Centered CONTENT -->
   <div class="hero-content">
-    <div class="hero-content-inner">
-      <h1 class="hero-headline">Audit <span class="accent">x402</span> endpoints<span style="display:block"></span></h1>
-      <p class="hero-sub">
-        <span>The fastest strict-v2 conformance suite</span>
-        <span class="divide">for x402 merchants. One POST, structured JSON back.</span>
-      </p>
-
-      <div class="hero-cta-row">
-        <a class="heroSecondary" href="/create-checkout-session?plan_id=pro">View pricing &nbsp;→</a>
-      </div>
-
-      <div class="hero-trust">
-        <span>100 % covered engine</span>
-        <span>167 tests passing</span>
-        <span>~580 ms per audit</span>
-      </div>
+    <p class="pre-headline anim-fade-up">Design at the speed of thought</p>
+    <h1 class="main-headline anim-scale">Build Faster</h1>
+    <p class="sub-headline">Create fully functional, SEO-optimized websites in seconds with our advanced AI engine.</p>
+    <div class="hero-ctas anim-fade-up-late">
+      <a class="cta-primary" href="/create-checkout-session?plan_id=pro">
+        <span class="label">Start Building Free</span>
+        <span class="arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
+      </a>
+      <a class="cta-secondary" href="#pricing">
+        See Examples
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
     </div>
   </div>
-
-  <!-- Logo MARQUEE → real endpoints audited (treated as customers) -->
-  <div class="logo-marquee">
-    <div class="logo-marquee-inner">
-      <div class="left">Audited on real<br>merchants · 2026</div>
-      <div class="right">
-        <div class="marquee-track">
-          <span class="logo-cell"><span class="mark">A</span>Asterpay</span>
-          <span class="logo-cell"><span class="mark">H</span>Hugen</span>
-          <span class="logo-cell"><span class="mark">O</span>Observer</span>
-          <span class="logo-cell"><span class="mark">X</span>x402 Online</span>
-          <span class="logo-cell"><span class="mark">G</span>Greeneris</span>
-          <span class="logo-cell"><span class="mark">S</span>SmartFlow</span>
-          <span class="logo-cell"><span class="mark">A</span>API Now</span>
-          <span class="logo-cell"><span class="mark">W</span>Web3 ID</span>
-          <span class="logo-cell"><span class="mark">B</span>Bazaar Viridis</span>
-          <span class="logo-cell"><span class="mark">S</span>Stable Travel</span>
-          <!-- Duplicate for seamless loop -->
-          <span class="logo-cell"><span class="mark">A</span>Asterpay</span>
-          <span class="logo-cell"><span class="mark">H</span>Hugen</span>
-          <span class="logo-cell"><span class="mark">O</span>Observer</span>
-          <span class="logo-cell"><span class="mark">X</span>x402 Online</span>
-          <span class="logo-cell"><span class="mark">G</span>Greeneris</span>
-          <span class="logo-cell"><span class="mark">S</span>SmartFlow</span>
-          <span class="logo-cell"><span class="mark">A</span>API Now</span>
-          <span class="logo-cell"><span class="mark">W</span>Web3 ID</span>
-          <span class="logo-cell"><span class="mark">B</span>Bazaar Viridis</span>
-          <span class="logo-cell"><span class="mark">S</span>Stable Travel</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </section>
 
-<!-- =================== PRICING (compact, weighted) =================== -->
-<section id="pricing" class="section">
-  <div class="section eyebrow-row"><span class="pill-tag">Pricing</span></div>
-  <h2 class="section-title">Pick a plan. <span class="grad">Cancel anytime.</span></h2>
-  <p class="section-sub">Stripe billed through lastminutestickets.com. No long-term contract.</p>
+<!-- =================== PRICING (kept, restyled to dark theme) =================== -->
+<section id="pricing" class="pricing-section">
+  <div class="pricing-eyebrow-row"><span class="pricing-pill">Pricing</span></div>
+  <h2 class="pricing-headline">Audit at the speed of thought. <br/>Pick a plan below.</h2>
+  <p class="pricing-sub">Stripe-billed. No long-term contract. Cancel from your dashboard anytime.</p>
 
   <div class="pricing-grid">
     <div class="plan">
       <h3 class="plan-name">Free</h3>
       <p class="plan-desc">For trying it out on a single merchant.</p>
-      <div class="plan-price">$0<small>/mo</small></div>
-      <div class="plan-period">100 audits / month · forever</div>
+      <div class="plan-value"><div class="plan-price">$0</div><span class="plan-period-small">/mo</span></div>
+      <div class="plan-period-line">100 audits / month · forever</div>
       <ul class="plan-features">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 4 conformance checks</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>JSON response</li>
@@ -725,8 +632,8 @@ footer {
     <div class="plan featured">
       <h3 class="plan-name">Pro</h3>
       <p class="plan-desc">For shipping x402 merchants.</p>
-      <div class="plan-price">$9<small>/mo</small></div>
-      <div class="plan-period">500 audits / month</div>
+      <div class="plan-value"><div class="plan-price">$9</div><span class="plan-period-small">/mo</span></div>
+      <div class="plan-period-line">500 audits / month</div>
       <ul class="plan-features">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Free</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>marketplace mode</li>
@@ -739,8 +646,8 @@ footer {
     <div class="plan">
       <h3 class="plan-name">Enterprise</h3>
       <p class="plan-desc">For higher-volume catalog compliance.</p>
-      <div class="plan-price">$49<small>/mo</small></div>
-      <div class="plan-period">5,000 audits / month</div>
+      <div class="plan-value"><div class="plan-price">$49</div><span class="plan-period-small">/mo</span></div>
+      <div class="plan-period-line">5,000 audits / month</div>
       <ul class="plan-features">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Pro</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Bulk (beta)</li>
@@ -788,26 +695,29 @@ footer {
 </footer>
 
 <script>
-// Background video fade-in/out loop (matches the motionsites reference).
-// Falls back to the CSS gradient overlay if the video fails (404 / blocked).
+// === HLS.js video loader with Safari fallback ===
+// Spec contract: muted, loop, playsInline, object-fit cover, opacity 0.6,
+// poster fallback if HLS fails / unsupported.
 (function () {
-  const wrap = document.getElementById('heroVideoWrap');
-  const vid  = document.getElementById('heroVideo');
-  const fb   = document.getElementById('heroFallback');
-  // No <source src=...> wired in this template — the fallback shows.
-  // The fade-in/out loop is left in place for future use:
-  function fadeLoop(video) {
-    const fadeIn  = () => { video.style.opacity = '1'; };
-    const fadeOut = () => {
-      video.style.opacity = '0';
-      setTimeout(() => { video.currentTime = 0; fadeIn(); }, 100);
-    };
-    video.addEventListener('ended', fadeOut);
+  const video = document.getElementById('heroVideo');
+  if (!video) return;
+  const src = 'https://stream.mux.com/T6oQJQ02cQ6N01TR6iHwZkKFkbepS34dkkIc9iukgy400g.m3u8';
+
+  function play() {
+    video.play().catch(function (e) { console.log('Auto-play prevented:', e); });
   }
-  if (vid && vid.querySelector('source')?.src) {
-    fadeLoop(vid);
+
+  if (window.Hls && Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(src);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, play);
+    window.addEventListener('beforeunload', function () { hls.destroy(); });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = src;
+    video.addEventListener('loadedmetadata', play);
   }
-  if (fb) fb.style.opacity = '1';
+  // else: poster image stays as the visual fallback.
 })();
 </script>
 
@@ -816,87 +726,9 @@ footer {
 """
 
 
-# ---------------------------------------------------------------------------
-# Inline SVG assets (kept as module constants so we don't repeat them inline
-# in the HTML and so engineers can swap them out centrally).
-# ---------------------------------------------------------------------------
-
-
-_SVG_STROKE = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
-
-
-_SVG_MANIFEST = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<path d="M5 3h11l3 3v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
-<path d="M15 3v4h4"/>
-<path d="M8 11h8"/><path d="M8 15h8"/><path d="M8 19h5"/>
-</svg>'''
-
-
-_SVG_CAIP2 = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<circle cx="6" cy="6" r="2.5"/>
-<circle cx="18" cy="6" r="2.5"/>
-<circle cx="12" cy="18" r="2.5"/>
-<path d="M8.5 6h7"/><path d="M7.3 8.1l3.7 7.8"/><path d="M16.7 8.1l-3.7 7.8"/>
-</svg>'''
-
-
-_SVG_JSON = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<path d="M9 4c-2 0-3 1-3 3v3c0 1.5-.7 2-2 2 1.3 0 2 .5 2 2v3c0 2 1 3 3 3"/>
-<path d="M15 4c2 0 3 1 3 3v3c0 1.5.7 2 2 2-1.3 0-2 .5-2 2v3c0 2-1 3-3 3"/>
-</svg>'''
-
-
-_SVG_BAZAAR = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<path d="M14.5 3l5.5 5.5L9 19.5l-3.5.5L6 16.5z"/>
-<circle cx="16" cy="8" r="1.6"/>
-</svg>'''
-
-
-# ---------------------------------------------------------------------------
-# Inline SVG assets (kept as module constants so we don't repeat them inline
-# in the HTML and so engineers can swap them out centrally).
-# ---------------------------------------------------------------------------
-
-
-_SVG_STROKE = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
-
-
-_SVG_MANIFEST = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<path d="M5 3h11l3 3v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
-<path d="M15 3v4h4"/>
-<path d="M8 11h8"/><path d="M8 15h8"/><path d="M8 19h5"/>
-</svg>'''
-
-
-_SVG_CAIP2 = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<circle cx="6" cy="6" r="2.5"/>
-<circle cx="18" cy="6" r="2.5"/>
-<circle cx="12" cy="18" r="2.5"/>
-<path d="M8.5 6h7"/><path d="M7.3 8.1l3.7 7.8"/><path d="M16.7 8.1l-3.7 7.8"/>
-</svg>'''
-
-
-_SVG_JSON = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<path d="M9 4c-2 0-3 1-3 3v3c0 1.5-.7 2-2 2 1.3 0 2 .5 2 2v3c0 2 1 3 3 3"/>
-<path d="M15 4c2 0 3 1 3 3v3c0 1.5.7 2 2 2-1.3 0-2 .5-2 2v3c0 2-1 3-3 3"/>
-</svg>'''
-
-
-_SVG_BAZAAR = f'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {_SVG_STROKE}>
-<path d="M14.5 3l5.5 5.5L9 19.5l-3.5.5L6 16.5z"/>
-<circle cx="16" cy="8" r="1.6"/>
-</svg>'''
-
-
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def landing() -> HTMLResponse:
-    return HTMLResponse(
-        _LANDING_HTML
-        .replace("__SVG_MANIFEST__", _SVG_MANIFEST)
-        .replace("__SVG_CAIP2__", _SVG_CAIP2)
-        .replace("__SVG_JSON__", _SVG_JSON)
-        .replace("__SVG_BAZAAR__", _SVG_BAZAAR)
-    )
+    return HTMLResponse(_LANDING_HTML)
 
 
 # ---------------------------------------------------------------------------
