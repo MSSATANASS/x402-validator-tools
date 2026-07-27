@@ -18,9 +18,16 @@ services:
     healthCheckPath: /health
     autoDeploy: yes
 
+    disk:
+      name: keystore-data
+      mountPath: /var/data
+      sizeGB: 1
+
     envVars:
       - key: PUBLIC_URL
         value: https://lastminutestickets.com
+      - key: API_KEYS_FILE
+        value: /var/data/api_keys.json
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

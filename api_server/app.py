@@ -110,7 +110,6 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://lastminutestickets.com/">
 <meta property="og:site_name" content="x402 validator">
-<meta property="og:image" content="https://lastminutestickets.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="x402 Validator — strict-v2 conformance audits">
 <meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
@@ -867,16 +866,14 @@ footer {
   </div>
 
   <div class="nav-links">
-    <a href="#pricing">Products
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </a>
-    <a href="#stories">Customer Stories</a>
-    <a href="/docs">Resources</a>
+    <a href="#audit">Try It Free</a>
     <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="/health">Status</a>
   </div>
 
   <div class="nav-right">
-    <a class="book-demo" href="#pricing">Book A Demo</a>
+    <a class="book-demo" href="mailto:support@lastminutestickets.com">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
   </div>
 </nav>
@@ -938,7 +935,7 @@ footer {
 <!-- =================== PRICING (kept, restyled to dark theme) =================== -->
 <section id="pricing" class="pricing-section">
   <div class="pricing-eyebrow-row"><span class="pricing-pill">Pricing</span></div>
-  <h2 class="pricing-headline">Audit at the speed of thought. <br/>Pick a plan below.</h2>
+  <h2 class="pricing-headline">Simple pricing. <br/>Cancel anytime.</h2>
   <p class="pricing-sub">Stripe-billed. No long-term contract. Cancel from your dashboard anytime.</p>
 
   <div class="pricing-grid">
@@ -1453,8 +1450,10 @@ a{color:var(--accent);text-decoration:none;}
 <body>
 <div class="card">
   <h1>Payment received</h1>
-  <p>Your key has been emailed to you. If you don't see it within 5 minutes,
-     check spam or contact <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>.</p>
+  <p>Your key is still being issued — our webhook usually finishes within a
+     few seconds. Refresh this page in a moment, or contact
+     <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>
+     with your Stripe receipt if it doesn't show up.</p>
   <p>You can also return to the <a href="/">home page</a>.</p>
 </div>
 </body>

@@ -140,6 +140,19 @@ class TestLanding:
         # Section anchors so navbar Pricing scrolls
         assert 'id="pricing"' in r.text
         assert 'id="audit"' in r.text
+        # og:image removed until a real asset exists (was 404ing)
+        assert "og-image.png" not in r.text
+        # Navbar only links to sections/routes that actually exist —
+        # no dead links to #stories, /docs, or a non-existent "Book A Demo"
+        assert "#stories" not in r.text
+        assert 'href="/docs"' not in r.text
+        assert "Book A Demo" not in r.text
+        assert "Customer Stories" not in r.text
+        assert 'href="#audit">Try It Free</a>' in r.text
+        assert 'href="#faq">FAQ</a>' in r.text
+        assert 'href="/health">Status</a>' in r.text
+        # Pricing headline no longer repeats the "at the speed of thought" tic
+        assert "at the speed of thought" not in r.text
 
 
 class TestPlans:
@@ -570,12 +583,12 @@ class TestSuccessPageRender:
     def test_with_unknown_session_falls_back(self, client: TestClient) -> None:
         r = client.get("/success?session_id=never_existed")
         assert r.status_code == 200
-        assert "emailed" in r.text.lower()
+        assert "still being issued" in r.text.lower()
 
     def test_without_session_falls_back(self, client: TestClient) -> None:
         r = client.get("/success")
         assert r.status_code == 200
-        assert "emailed" in r.text.lower()
+        assert "still being issued" in r.text.lower()
 
     def test_marks_claim_as_claimed_on_first_view(self, client: TestClient) -> None:
         from api_server.keystore import get_store
@@ -591,7 +604,7 @@ class TestSuccessPageRender:
         get_store().revoke(token)
         r = client.get("/success?session_id=cs_rev")
         assert r.status_code == 200
-        assert "emailed" in r.text.lower()
+        assert "still being issued" in r.text.lower()
         assert token not in r.text
 
     def test_does_not_escape_unreserved_chars_in_api_key(self, client: TestClient) -> None:
