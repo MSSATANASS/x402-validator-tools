@@ -1,0 +1,27 @@
+# Render Blueprint for x402-validator-tools.
+#
+# Re-applies the service config so the runtime matches the new monorepo
+# layout. Goes alongside the existing dashboard-managed service as a
+# declarative source of truth.
+
+services:
+  - type: web
+    name: x402-validator-tools
+    runtime: python
+    plan: starter
+    region: oregon
+    branch: main
+    repo: https://github.com/MSSATANASS/x402-validator-tools
+    rootDir: ""
+    buildCommand: pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn api_server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: yes
+
+    envVars:
+      - key: PUBLIC_URL
+        value: https://lastminutestickets.com
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
