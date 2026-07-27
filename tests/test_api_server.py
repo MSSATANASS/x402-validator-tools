@@ -60,9 +60,16 @@ class TestLanding:
         r = client.get("/")
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
-        assert "x402 Validator" in r.text
+        assert "x402" in r.text
         assert "$9" in r.text
-        assert "/create-checkout-session" in r.text
+        assert "$49" in r.text
+        assert "/create-checkout-session?plan_id=pro" in r.text
+        assert "/create-checkout-session?plan_id=enterprise" in r.text
+        # SVG icons and hero art must be inline (not external)
+        assert '<svg' in r.text
+        assert 'manifest_discovery' in r.text
+        # Pricing cards exist
+        assert "Most popular" in r.text
 
 
 class TestPlans:
