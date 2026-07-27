@@ -1,14 +1,14 @@
 """Stripe integration for the x402-validator API.
 
-Only the checkout-session create + webhook verify helpers live here; the FastAPI
-app delegates everything else. Stripe is lazy-imported so the package can be
-loaded in environments without a key (tests, CI).
+Only the checkout-session create / retrieve / webhook verify helpers live
+here; the FastAPI app delegates everything else. Stripe is lazy-imported so
+the package can be loaded in environments without a key (tests, CI).
 """
 
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from api_server.models import PLANS, Plan
 
@@ -48,6 +48,9 @@ def create_checkout_session(
 ) -> Optional[str]:
     """Create a Stripe Checkout session for ``plan_id`` and return its URL.
 
+    Embeds ``metadata.plan_id`` so the webhook handler can route the paid
+    checkout back to the correct tier without trusting the price.
+
     Returns ``None`` if the plan is free or Stripe is not configured.
     Raises ``ValueError`` for unknown plans.
     """
@@ -68,8 +71,31 @@ def create_checkout_session(
         mode="subscription",
         success_url=success_url,
         cancel_url=cancel_url,
+        metadata={"plan_id": plan_id},
     )
     return session.url
+
+
+def retrieve_session(session_id: str) -> Optional[dict[str, Any]]:
+    """Fetch a checkout session by id and return a plain dict for our webhook handler.
+
+    Returns ``None`` if Stripe is unconfigured or the lookup fails.
+    """
+    stripe = _get_stripe()
+    if stripe is None:
+        return None
+    try:
+        sess = stripe.checkout.Session.retrieve(session_id)
+    except Exception:
+        return None
+    return {
+        "id": getattr(sess, "id", session_id),
+        "customer": getattr(sess, "customer", None),
+        "amount_total": getattr(sess, "amount_total", None),
+        "subscription": getattr(sess, "subscription", None),
+        "mode": getattr(sess, "mode", None),
+        "metadata": dict(getattr(sess, "metadata", {}) or {}),
+    }
 
 
 def verify_webhook(payload: bytes, signature: str) -> Optional[dict]:

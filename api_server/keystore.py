@@ -1,11 +1,23 @@
-"""Persistent storage for API keys.
+"""Persistent storage for API keys + per-session claims.
 
-Each key → plan_id mapping lives in a JSON file on disk (Render's working
-directory by default, /opt/render/project/src/api_keys.json in practice).
-The file is read on import and rewritten on every mutation.
+On-disk shape (JSON)::
 
-This is intentionally simple; for production multi-replica deployments
-swap this for PostgreSQL / Redis. The interface stays the same.
+    {
+      "keys":   { "<token>": "<plan_id>", ... },
+      "claims": { "<checkout_session_id>": {
+                     "plan_id":     "pro",
+                     "api_key":     "<token>",
+                     "customer_id": "cus_...",
+                     "issued_at":   "2026-07-27T12:00:00+00:00",
+                     "claimed_at":  null
+                  }, ... }
+    }
+
+Legacy flat shape ``{"<token>": "<plan_id>", ...}`` is auto-migrated on
+next load. Atomic writes (tmp + rename) keep the file crash-safe.
+
+For production multi-replica deployments swap this for PostgreSQL / Redis.
+The interface stays the same.
 """
 
 from __future__ import annotations
@@ -13,29 +25,60 @@ from __future__ import annotations
 import json
 import os
 import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock
-from typing import Optional
+from typing import Any, Optional, Union
 
 
 _LOCK = RLock()
 _DEFAULT_PATH = Path(os.environ.get("API_KEYS_FILE", "api_keys.json"))
 
 
-def _load(path: Path = _DEFAULT_PATH) -> dict[str, str]:
-    """Read the keys file. Returns empty dict if missing."""
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _migrate(raw: Union[dict, Any]) -> dict:
+    """Normalize any on-disk shape into the wrapped ``{"keys", "claims"}`` shape.
+
+    Accepts the legacy ``{token: plan_id_str}`` flat format too.
+    """
+    if not isinstance(raw, dict):
+        return {"keys": {}, "claims": {}}
+
+    looks_legacy = "keys" not in raw and "claims" not in raw and all(
+        isinstance(v, str) for v in raw.values()
+    )
+    if looks_legacy:
+        return {"keys": {str(k): str(v) for k, v in raw.items()}, "claims": {}}
+
+    return {
+        "keys": {
+            str(k): str(v)
+            for k, v in raw.get("keys", {}).items()
+            if isinstance(v, str)
+        },
+        "claims": {
+            str(k): v
+            for k, v in raw.get("claims", {}).items()
+            if isinstance(v, dict)
+        },
+    }
+
+
+def _load(path: Path = _DEFAULT_PATH) -> dict:
+    """Read the keys file. Migrates legacy flat shape on read."""
     if not path.exists():
-        return {}
+        return {"keys": {}, "claims": {}}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            return {}
-        return {str(k): str(v) for k, v in data.items()}
+        raw = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return {}
+        return {"keys": {}, "claims": {}}
+    return _migrate(raw)
 
 
-def _save(data: dict[str, str], path: Path = _DEFAULT_PATH) -> None:
+def _save(data: dict, path: Path = _DEFAULT_PATH) -> None:
     """Atomically write the keys file."""
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
@@ -43,7 +86,7 @@ def _save(data: dict[str, str], path: Path = _DEFAULT_PATH) -> None:
 
 
 class KeyStore:
-    """Thread-safe, JSON-backed key → plan store."""
+    """Thread-safe, JSON-backed key+claims store."""
 
     def __init__(self, path: Optional[Path] = None) -> None:
         self._path = Path(path) if path else _DEFAULT_PATH
@@ -54,34 +97,84 @@ class KeyStore:
     def path(self) -> Path:
         return self._path
 
+    # ----- key lookup (used by validation gate) -----
+
     def __contains__(self, key: str) -> bool:
-        return key in self._data
+        return key in self._data["keys"]
 
     def __getitem__(self, key: str) -> str:
-        return self._data[key]
+        return self._data["keys"][key]
 
     def get(self, key: str) -> Optional[str]:
-        return self._data.get(key)
+        return self._data["keys"].get(key)
 
     def all(self) -> dict[str, str]:
-        return dict(self._data)
+        """Flat ``{token: plan_id}`` view for the admin endpoint."""
+        return dict(self._data["keys"])
 
-    def issue(self, plan_id: str) -> str:
-        """Mint a new random API key for the given plan; persist it; return the key."""
+    # ----- issuance -----
+
+    def issue(
+        self,
+        plan_id: str,
+        *,
+        customer_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> str:
+        """Mint a new random API key for ``plan_id``; persist it; return the key.
+
+        If ``session_id`` is provided, also persist a claim so ``/success`` can
+        look the key up by ``session_id``.
+        """
         token = secrets.token_urlsafe(32)
         with _LOCK:
-            self._data[token] = plan_id
+            self._data["keys"][token] = plan_id
+            if session_id:
+                self._data["claims"][session_id] = {
+                    "plan_id": plan_id,
+                    "api_key": token,
+                    "customer_id": customer_id,
+                    "issued_at": _now(),
+                    "claimed_at": None,
+                }
             _save(self._data, self._path)
         return token
 
     def revoke(self, key: str) -> bool:
-        """Remove a key. Returns True if it existed."""
+        """Remove a key; drops any claims pointing at the key. Returns True if it existed."""
         with _LOCK:
-            if key not in self._data:
+            if key not in self._data["keys"]:
                 return False
-            del self._data[key]
+            del self._data["keys"][key]
+            self._data["claims"] = {
+                sid: c
+                for sid, c in self._data["claims"].items()
+                if c.get("api_key") != key
+            }
             _save(self._data, self._path)
         return True
+
+    # ----- claim lookup (used by /success) -----
+
+    def claim_by_session(self, session_id: Optional[str]) -> Optional[dict[str, Any]]:
+        """Return the persisted claim for ``session_id`` (or ``None``)."""
+        if not session_id:
+            return None
+        return self._data["claims"].get(session_id)
+
+    def mark_claimed(self, session_id: str) -> bool:
+        """Stamp ``claimed_at`` on the claim. Returns True if it existed."""
+        with _LOCK:
+            claim = self._data["claims"].get(session_id)
+            if not claim:
+                return False
+            claim["claimed_at"] = _now()
+            _save(self._data, self._path)
+            return True
+
+    def claims_all(self) -> dict[str, dict[str, Any]]:
+        """Operator view of every persisted claim (debug / admin)."""
+        return dict(self._data["claims"])
 
 
 # Default in-memory instance — the FastAPI app talks to this.
