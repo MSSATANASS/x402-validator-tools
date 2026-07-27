@@ -61,9 +61,9 @@ class TestLanding:
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
         # Headline copy (motion-style spec)
-        assert "Design at the speed of thought" in r.text  # pre-headline (serif)
-        assert "Build Faster" in r.text  # main headline (gradient)
-        assert "SEO-optimized websites" in r.text  # subheadline copy
+        assert "Ship x402 endpoints with confidence" in r.text  # pre-headline (serif)
+        assert "Audit x402 in Seconds" in r.text  # main headline (gradient)
+        assert "operator-actionable errors" in r.text  # subheadline copy
         # Pricing plans rendered
         assert "$9" in r.text
         assert "$49" in r.text
@@ -99,8 +99,8 @@ class TestLanding:
         assert "blur(120px)" in r.text
         assert "mix-blend-mode: screen" in r.text
         # Hero CTAs
-        assert "Start Building Free" in r.text
-        assert "See Examples" in r.text
+        assert "Get Your API Key" in r.text
+        assert "Try It Free" in r.text
         # Animations
         assert "@keyframes fadeUp" in r.text
         assert "@keyframes scaleIn" in r.text

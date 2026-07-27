@@ -893,18 +893,18 @@ footer {
   <div class="hero-decor br"></div>
 
   <div class="hero-content">
-    <p class="pre-headline anim-fade-up">Design at the speed of thought</p>
-    <h1 class="main-headline anim-scale">Build Faster</h1>
-    <p class="sub-headline">Create fully functional, SEO-optimized websites in seconds with our advanced AI engine.</p>
+    <p class="pre-headline anim-fade-up">Ship x402 endpoints with confidence</p>
+    <h1 class="main-headline anim-scale">Audit x402 in Seconds</h1>
+    <p class="sub-headline">Manifest, CAIP-2, JSON resilience, and Bazaar compliance — checked against any merchant URL in ~580 ms, with operator-actionable errors.</p>
     <div class="hero-ctas anim-fade-up-late">
       <a class="cta-primary" href="/create-checkout-session?plan_id=pro">
-        <span class="label">Start Building Free</span>
+        <span class="label">Get Your API Key</span>
         <span class="arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </span>
       </a>
-      <a class="cta-secondary" href="#pricing">
-        See Examples
+      <a class="cta-secondary" href="#audit">
+        Try It Free
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
     </div>
