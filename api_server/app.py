@@ -98,22 +98,22 @@ def _require_admin(x_admin_secret: str = Header(..., alias="X-Admin-Secret")) ->
 
 
 _LANDING_HTML = """<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>x402 Validator — auditorías strict-v2 · Manifest, CAIP-2, JSON, Bazaar</title>
-<meta name="description" content="Audita cualquier endpoint x402 para conformidad strict-v2 en ~580 ms. Demo en vivo, sin registro · Free, Pro ($9/mes), Enterprise ($49/mes). Hosteado por Gael L Chulim.">
+<title>x402 Validator — strict-v2 conformance audits · Manifest, CAIP-2, JSON, Bazaar</title>
+<meta name="description" content="Audit any x402 merchant endpoint for strict-v2 conformance in ~580 ms. Live demo, no signup · Free, Pro ($9/mo), Enterprise ($49/mo). Hosted by Gael L Chulim.">
 <link rel="canonical" href="https://lastminutestickets.com/">
-<meta property="og:title" content="x402 Validator — auditorías strict-v2">
-<meta property="og:description" content="Manifest, CAIP-2, JSON resilience, Bazaar. Resultados accionables en ~580 ms. Demo + API Pro.">
+<meta property="og:title" content="x402 Validator — strict-v2 conformance audits">
+<meta property="og:description" content="Manifest, CAIP-2, JSON resilience, Bazaar compliance. Operator-actionable results in ~580 ms. Free demo + Pro API.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://lastminutestickets.com/">
 <meta property="og:site_name" content="x402 validator">
 <meta property="og:image" content="https://lastminutestickets.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="x402 Validator — auditorías strict-v2">
-<meta name="twitter:description" content="Audita cualquier merchant x402 en ~580 ms. Demo gratis + API Pro. Hosteado en Render · Facturado vía Stripe.">
+<meta name="twitter:title" content="x402 Validator — strict-v2 conformance audits">
+<meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
 <meta name="robots" content="index, follow">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%233054ff'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700' font-size='14'>x4</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
@@ -133,11 +133,11 @@ _LANDING_HTML = """<!DOCTYPE html>
       "applicationCategory": "DeveloperApplication",
       "applicationSubCategory": "API Service / Testing Tool",
       "operatingSystem": "Any (hosted REST API)",
-      "description": "API de auditoría de conformidad para endpoints x402 strict-v2. Ejecuta Manifest, CAIP-2, JSON resilience y Bazaar contra cualquier URL y devuelve JSON accionable para el operador.",
+      "description": "Conformance audit API for x402 strict-v2 merchant endpoints. Runs Manifest, CAIP-2, JSON resilience, and Bazaar compliance checks against any URL and returns operator-actionable JSON.",
       "offers": [
-        {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "100 auditorías / mes · siempre · sin registro"},
-        {"@type": "Offer", "name": "Pro", "price": "9", "priceCurrency": "USD", "description": "500 auditorías / mes · API key · modo marketplace · soporte por email"},
-        {"@type": "Offer", "name": "Enterprise", "price": "49", "priceCurrency": "USD", "description": "5,000 auditorías / mes · batch · soporte prioritario · descuento por volumen"}
+        {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "100 audits / month · forever · no signup"},
+        {"@type": "Offer", "name": "Pro", "price": "9", "priceCurrency": "USD", "description": "500 audits / month · API key · marketplace mode · email support"},
+        {"@type": "Offer", "name": "Enterprise", "price": "49", "priceCurrency": "USD", "description": "5,000 audits / month · bulk · priority support · volume rebate"}
       ],
       "creator": {"@type": "Person", "name": "Gael L Chulim", "email": "gael@lastminutestickets.com"},
       "license": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -145,16 +145,16 @@ _LANDING_HTML = """<!DOCTYPE html>
     {
       "@type": "FAQPage",
       "mainEntity": [
-        {"@type": "Question", "name": "¿Qué es conformidad x402 y por qué debería importarme?",
-         "acceptedAnswer": {"@type": "Answer", "text": "x402 es el protocolo de pagos basado en HTTP 402 de Coinbase. Conformidad strict-v2 significa que tu endpoint merchant expone un manifest compatible con Bazaar, publica identificadores CAIP-2 de red/asset, devuelve JSON resiliente, y expone el canal 402 que necesitan tus compradores. Si alguno falla, los gateways no te listan y tus clientes ven errores crípticos. Esta API ejecuta los cuatro checks en ~580 ms y devuelve mensajes accionables."}},
-        {"@type": "Question", "name": "¿Qué revisa exactamente la demo pública?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Los mismos cuatro checks que /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance. Limitado a 5 auditorías por IP por día."}},
-        {"@type": "Question", "name": "¿Cuánto tarda una auditoría?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Mediana ~580 ms de extremo a extremo. Golpea tu endpoint, parsea la respuesta, ejecuta los cuatro checks en paralelo cuando son independientes."}},
-        {"@type": "Question", "name": "¿Puedo cancelar mi plan Pro / Enterprise?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Sí — cancela desde tu dashboard Stripe en cualquier momento; mantienes el acceso hasta el final del periodo facturado."}},
-        {"@type": "Question", "name": "¿Qué pasa si mi endpoint falla una auditoría?",
-         "acceptedAnswer": {"@type": "Answer", "text": "La respuesta incluye el nombre del check FAIL más un mensaje diciéndote qué arreglar. Sin revisar logs, sin ida y vuelta por email."}}
+        {"@type": "Question", "name": "What is x402 conformance and why should I care?",
+         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all four checks in ~580 ms and returns actionable operator errors."}},
+        {"@type": "Question", "name": "What does the public demo actually check?",
+         "acceptedAnswer": {"@type": "Answer", "text": "The same four checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance. Rate-limited to 5 audits per IP per day."}},
+        {"@type": "Question", "name": "How long does an audit take?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all four checks in parallel where independent."}},
+        {"@type": "Question", "name": "Can I cancel a Pro / Enterprise plan?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Yes — cancel from your Stripe dashboard any time; you keep access until the end of the billing period."}},
+        {"@type": "Question", "name": "What happens if my endpoint fails an audit?",
+         "acceptedAnswer": {"@type": "Answer", "text": "The response includes the FAIL check name plus a message telling you what to fix. No log scraping, no email back-and-forth."}}
       ]
     }
   ]
@@ -481,7 +481,7 @@ a { color: inherit; }
   box-shadow: 0 16px 48px -16px rgba(48,84,255,0.35);
 }
 .plan.featured::before {
-  content: "Más popular";
+  content: "Most popular";
   position: absolute; top: 14px; right: -32px;
   background-image: var(--hero-grad);
   color: #000;
@@ -867,17 +867,17 @@ footer {
   </div>
 
   <div class="nav-links">
-    <a href="#pricing">Productos
+    <a href="#pricing">Products
       <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </a>
-    <a href="#stories">Casos reales</a>
-    <a href="/docs">Recursos</a>
-    <a href="#pricing">Precios</a>
+    <a href="#stories">Customer Stories</a>
+    <a href="/docs">Resources</a>
+    <a href="#pricing">Pricing</a>
   </div>
 
   <div class="nav-right">
-    <a class="book-demo" href="#pricing">Agendar demo</a>
-    <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Empezar</a>
+    <a class="book-demo" href="#pricing">Book A Demo</a>
+    <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
   </div>
 </nav>
 
@@ -893,18 +893,18 @@ footer {
   <div class="hero-decor br"></div>
 
   <div class="hero-content">
-    <p class="pre-headline anim-fade-up">Diseña a la velocidad del pensamiento</p>
-    <h1 class="main-headline anim-scale">Crea más rápido</h1>
-    <p class="sub-headline">Crea sitios totalmente funcionales y optimizados para SEO en segundos con nuestro motor AI avanzado.</p>
+    <p class="pre-headline anim-fade-up">Design at the speed of thought</p>
+    <h1 class="main-headline anim-scale">Build Faster</h1>
+    <p class="sub-headline">Create fully functional, SEO-optimized websites in seconds with our advanced AI engine.</p>
     <div class="hero-ctas anim-fade-up-late">
       <a class="cta-primary" href="/create-checkout-session?plan_id=pro">
-        <span class="label">Empieza gratis</span>
+        <span class="label">Start Building Free</span>
         <span class="arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </span>
       </a>
-      <a class="cta-secondary" href="/docs">
-        Ver ejemplos
+      <a class="cta-secondary" href="#pricing">
+        See Examples
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
     </div>
@@ -913,23 +913,23 @@ footer {
 
 <!-- =================== AUDIT DEMO (interactive, free, rate-limited) =================== -->
 <section id="audit" class="audit-demo-section">
-  <div class="pricing-eyebrow-row"><span class="pricing-pill">Demo en vivo · Sin registro</span></div>
-  <h2 class="audit-demo-headline">Audita un endpoint x402 ahora mismo</h2>
-  <p class="audit-demo-sub">Pega cualquier URL de merchant. Ejecutamos los checks de Manifest, CAIP-2, JSON resilience y Bazaar. Sin API key, sin registro. <strong>5 auditorías por IP por día</strong> en la demo pública.</p>
+  <div class="pricing-eyebrow-row"><span class="pricing-pill">Live demo · No signup</span></div>
+  <h2 class="audit-demo-headline">Audit an x402 endpoint right now</h2>
+  <p class="audit-demo-sub">Paste any merchant URL. We run Manifest, CAIP-2, JSON resilience, and Bazaar compliance checks against it. No API key, no signup. <strong>5 audits per IP per day</strong> on the public demo.</p>
 
   <form id="auditForm" class="audit-form" autocomplete="off">
     <div class="audit-input-row">
       <input type="url" id="auditUrl" name="url" required
              value="https://observer.137-184-67-179.sslip.io"
-             placeholder="https://tu-merchant.com"
-             aria-label="URL del merchant x402 a auditar" />
-      <select id="auditMode" name="mode" aria-label="modo de auditoría">
-        <option value="standard">Estándar</option>
+             placeholder="https://your-merchant.com"
+             aria-label="x402 merchant URL to audit" />
+      <select id="auditMode" name="mode" aria-label="audit mode">
+        <option value="standard">Standard</option>
         <option value="marketplace">Marketplace</option>
       </select>
-      <button type="submit" class="audit-submit">Auditar gratis</button>
+      <button type="submit" class="audit-submit">Audit free</button>
     </div>
-    <p class="audit-hint" id="auditHint">Endpoints auditados reales: <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">observer</a> · <a href="#" onclick="fillUrl('https://defi.hugen.tokyo');return false">hugen</a> · <a href="#" onclick="fillUrl('https://stabletravel.dev');return false">travel</a></p>
+    <p class="audit-hint" id="auditHint">Real audited endpoints: <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">observer</a> · <a href="#" onclick="fillUrl('https://defi.hugen.tokyo');return false">hugen</a> · <a href="#" onclick="fillUrl('https://stabletravel.dev');return false">travel</a></p>
   </form>
 
   <div id="auditResults" class="audit-results" aria-live="polite" hidden></div>
@@ -937,85 +937,85 @@ footer {
 
 <!-- =================== PRICING (kept, restyled to dark theme) =================== -->
 <section id="pricing" class="pricing-section">
-  <div class="pricing-eyebrow-row"><span class="pricing-pill">Precios</span></div>
-  <h2 class="pricing-headline">Audita a la velocidad del pensamiento. <br/>Elige un plan.</h2>
-  <p class="pricing-sub">Facturado vía Stripe. Sin contratos largos. Cancela desde tu dashboard en cualquier momento.</p>
+  <div class="pricing-eyebrow-row"><span class="pricing-pill">Pricing</span></div>
+  <h2 class="pricing-headline">Audit at the speed of thought. <br/>Pick a plan below.</h2>
+  <p class="pricing-sub">Stripe-billed. No long-term contract. Cancel from your dashboard anytime.</p>
 
   <div class="pricing-grid">
     <div class="plan">
       <h3 class="plan-name">Free</h3>
-      <p class="plan-desc">Para probarlo con un solo merchant.</p>
-      <div class="plan-value"><div class="plan-price">$0</div><span class="plan-period-small">/mes</span></div>
-      <div class="plan-period-line">100 auditorías / mes · siempre</div>
+      <p class="plan-desc">For trying it out on a single merchant.</p>
+      <div class="plan-value"><div class="plan-price">$0</div><span class="plan-period-small">/mo</span></div>
+      <div class="plan-period-line">100 audits / month · forever</div>
       <ul class="plan-features">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Los 4 checks de conformidad</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Respuesta en JSON</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Soporte de comunidad</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 4 conformance checks</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>JSON response</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Community support</li>
       </ul>
-      <a class="plan-cta outline" href="/create-checkout-session?plan_id=free">Empezar gratis</a>
+      <a class="plan-cta outline" href="/create-checkout-session?plan_id=free">Start free</a>
     </div>
 
     <div class="plan featured">
       <h3 class="plan-name">Pro</h3>
-      <p class="plan-desc">Para merchants x402 en producción.</p>
-      <div class="plan-value"><div class="plan-price">$9</div><span class="plan-period-small">/mes</span></div>
-      <div class="plan-period-line">500 auditorías / mes</div>
+      <p class="plan-desc">For shipping x402 merchants.</p>
+      <div class="plan-value"><div class="plan-price">$9</div><span class="plan-period-small">/mo</span></div>
+      <div class="plan-period-line">500 audits / month</div>
       <ul class="plan-features">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Todo lo del Free</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Modo marketplace</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Errores accionables para el operador</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Soporte por email</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Free</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>marketplace mode</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Operator-actionable errors</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Email support</li>
       </ul>
-      <a class="plan-cta solid" href="/create-checkout-session?plan_id=pro">Comprar Pro — $9/mes</a>
+      <a class="plan-cta solid" href="/create-checkout-session?plan_id=pro">Buy Pro — $9 / mo</a>
     </div>
 
     <div class="plan">
       <h3 class="plan-name">Enterprise</h3>
-      <p class="plan-desc">Para catálogos de alto volumen.</p>
-      <div class="plan-value"><div class="plan-price">$49</div><span class="plan-period-small">/mes</span></div>
-      <div class="plan-period-line">5,000 auditorías / mes</div>
+      <p class="plan-desc">For higher-volume catalog compliance.</p>
+      <div class="plan-value"><div class="plan-price">$49</div><span class="plan-period-small">/mo</span></div>
+      <div class="plan-period-line">5,000 audits / month</div>
       <ul class="plan-features">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Todo lo del Pro</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Lotes (beta)</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Soporte prioritario</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Descuento por volumen</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Everything in Pro</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Bulk (beta)</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Priority support</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Volume rebate</li>
       </ul>
-      <a class="plan-cta outline" href="/create-checkout-session?plan_id=enterprise">Comprar Enterprise — $49/mes</a>
+      <a class="plan-cta outline" href="/create-checkout-session?plan_id=enterprise">Buy Enterprise — $49 / mo</a>
     </div>
   </div>
 </section>
 
 <!-- =================== FAQ =================== -->
 <section id="faq" class="faq-section">
-  <h2 class="faq-headline">Preguntas frecuentes</h2>
+  <h2 class="faq-headline">Frequently asked questions</h2>
   <div class="faq-list">
     <details class="faq-item">
-      <summary>¿Qué es conformidad x402 y por qué debería importarme?</summary>
-      <p>x402 es el protocolo de pagos basado en HTTP 402 de Coinbase. Conformidad strict-v2 significa que tu endpoint merchant expone un manifest compatible con Bazaar, publica identificadores CAIP-2 de red/asset, devuelve JSON resiliente, y expone el canal 402 que necesitan tus compradores. Si alguno de esos checks falla, los gateways no te listan y tus clientes ven errores crípticos. Esta API ejecuta los cuatro checks en ~580 ms y devuelve mensajes accionables para el operador.</p>
+      <summary>What is x402 conformance and why should I care?</summary>
+      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all four checks in ~580 ms and returns actionable operator errors.</p>
     </details>
     <details class="faq-item">
-      <summary>¿Qué revisa exactamente la demo pública?</summary>
-      <p>Los mismos cuatro checks que <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>. La demo está limitada a 5 auditorías por IP por día — suficiente para convencerte, no suficiente para abusar. Compra una llave Pro para 500 auditorías/mes; Enterprise te da 5,000.</p>
+      <summary>What does the public demo actually check?</summary>
+      <p>The same four checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>. The demo is rate-limited to 5 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
     </details>
     <details class="faq-item">
-      <summary>¿La demo pública es realmente gratis? ¿Y mis datos?</summary>
-      <p>Sí, la demo es gratis y no requiere registro. Solo registramos la URL que envías y tu IP para detectar abuso (que aplica el límite). No vendemos, compartimos ni persistimos los resultados de auditoría en ningún lado. Compra una llave y el mismo motor corre contra tus endpoints; los resultados solo se devuelven a ti.</p>
+      <summary>Is the public demo really free? What about my data?</summary>
+      <p>Yes, the demo is free and requires no signup. We log the URL you submit and your IP only for abuse detection (matching the rate limit). We do not sell, share, or persist the audit results anywhere. Buy a key and the same engine runs against your merchant endpoints; results are returned to you only.</p>
     </details>
     <details class="faq-item">
-      <summary>¿Cuánto tarda una auditoría?</summary>
-      <p>Mediana <strong>~580 ms</strong> de extremo a extremo. Golpeamos tu endpoint, parseamos la respuesta, ejecutamos los cuatro checks en paralelo cuando son independientes, y devolvemos JSON estructurado. Los checks que fallan traen mensajes accionables, no stack traces.</p>
+      <summary>How long does an audit take?</summary>
+      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all four checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
     </details>
     <details class="faq-item">
-      <summary>¿Puedo cancelar mi plan Pro / Enterprise?</summary>
-      <p>Sí — cancela desde tu dashboard Stripe en cualquier momento; mantienes acceso hasta el final del periodo facturado. No te atamos. Los reembolsos del ciclo actual se procesan según la política estándar de reembolso de suscripciones de Stripe; contacta soporte para casos especiales.</p>
+      <summary>Can I cancel a Pro / Enterprise plan?</summary>
+      <p>Yes — cancel from your Stripe dashboard any time; you keep access until the end of the billing period. We do not lock you in. Refunds for the current cycle are handled per Stripe's standard subscription refund policy; contact support for special cases.</p>
     </details>
     <details class="faq-item">
-      <summary>¿Qué pasa si mi endpoint falla una auditoría?</summary>
-      <p>La respuesta incluye el nombre del check <code>FAIL</code> más un mensaje diciéndote qué arreglar. Ejemplo: <code>"Payment-Required header missing"</code> para el check CAIP-2. Sin revisar logs, sin ida y vuelta por email — solo pega el output en el canal del equipo.</p>
+      <summary>What happens if my endpoint fails an audit?</summary>
+      <p>The response includes the <code>FAIL</code> check name plus a message telling you what to fix. Example: <code>"Payment-Required header missing"</code> for the CAIP-2 check. No log scraping, no email back-and-forth — just paste the output into your team's channel.</p>
     </details>
     <details class="faq-item">
-      <summary>¿Quiénes somos?</summary>
-      <p>x402 validator es construido y operado por Gael L Chulim (<a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>). El motor es Apache-2.0 y código abierto (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); la API de auditoría es un servicio hosteado en Render y facturado a través de Stripe.</p>
+      <summary>Who runs this?</summary>
+      <p>x402 validator is built and operated by Gael L Chulim (<a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Render and billed through Stripe.</p>
     </details>
   </div>
 </section>
@@ -1026,32 +1026,32 @@ footer {
     <div class="foot-brand">
       <div class="mark">x4</div>
       <div class="name">x402 validator</div>
-      <div class="tag">API REST que ejecuta el suite de conformidad x402 strict-v2 contra cualquier URL.</div>
+      <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
     </div>
     <div class="foot-col">
-      <h4>Producto</h4>
-      <a href="#pricing">Precios</a>
-      <a href="/plans">API de planes</a>
-      <a href="/health">Estado</a>
-      <a href="mailto:support@lastminutestickets.com">Soporte</a>
+      <h4>Product</h4>
+      <a href="#pricing">Pricing</a>
+      <a href="/plans">Plans API</a>
+      <a href="/health">Status</a>
+      <a href="mailto:support@lastminutestickets.com">Support</a>
     </div>
     <div class="foot-col">
-      <h4>Código</h4>
-      <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">Tools (este sitio)</a>
-      <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">Fork del motor</a>
+      <h4>Code</h4>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">Tools (this site)</a>
+      <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">Engine fork</a>
       <a href="https://github.com/smartflowproai-lang/x402-endpoint-validator" rel="noopener">Upstream</a>
       <a href="https://pypi.org/project/x402-validator/" rel="noopener">pip install</a>
     </div>
     <div class="foot-col">
-      <h4>Contacto</h4>
+      <h4>Contact</h4>
       <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>
-      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">Issues en GitHub</a>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">GitHub issues</a>
       <a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>
     </div>
   </div>
   <div class="foot-bottom">
     <div>© 2026 x402 validator · Apache-2.0</div>
-    <div>stripe • almacén de llaves persistente en <code>api_keys.json</code></div>
+    <div>stripe • persistent key store in <code>api_keys.json</code></div>
   </div>
 </footer>
 
@@ -1095,14 +1095,14 @@ footer {
     if (!el) return;
     if (status === 429) {
       el.innerHTML =
-        '<div class="audit-rate">Límite diario alcanzado (5 por IP). ' +
-        'Obtén auditorías ilimitadas con Pro — ' +
-        '<a href="/create-checkout-session?plan_id=pro">comprar Pro ($9/mes)</a>.</div>';
+        '<div class="audit-rate">Daily limit reached (5 per IP). ' +
+        'Get unlimited audits with Pro — ' +
+        '<a href="/create-checkout-session?plan_id=pro">buy Pro ($9/mo)</a>.</div>';
       return;
     }
     if (!body || body.detail) {
       el.innerHTML =
-        '<div class="audit-error">' + esc(body && body.detail || 'Auditoría falló') + '</div>';
+        '<div class="audit-error">' + esc(body && body.detail || 'Audit failed') + '</div>';
       return;
     }
     var checksHTML = (body.checks || []).map(function (c) {
@@ -1122,9 +1122,9 @@ footer {
       '</div>' +
       checksHTML +
       '<p style="text-align:center;margin-top:18px;font-size:0.85rem;color:var(--fg-50);">' +
-        '¿Quieres esto en cada merchant de tu catálogo? ' +
-        '<a href="/create-checkout-session?plan_id=pro" style="color:var(--accent);">Comprar Pro</a> · ' +
-        (body.remaining_today != null ? esc(body.remaining_today) + ' auditorías gratis hoy' : '') +
+        'Want this on every merchant in your catalog? ' +
+        '<a href="/create-checkout-session?plan_id=pro" style="color:var(--accent);">Buy Pro</a> · ' +
+        (body.remaining_today != null ? esc(body.remaining_today) + ' free audits left today' : '') +
       '</p>';
   }
 
@@ -1142,7 +1142,7 @@ footer {
       submitBtn.disabled = true;
       results.hidden = false;
       results.innerHTML =
-        '<div class="audit-loading"><span class="spinner"></span>Auditando ' + esc(url) + '…</div>';
+        '<div class="audit-loading"><span class="spinner"></span>Auditing ' + esc(url) + '…</div>';
       fetch('/audit-public', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1155,7 +1155,7 @@ footer {
           renderResults(results, resp.body, resp.status);
         })
         .catch(function (e) {
-          results.innerHTML = '<div class="audit-error">Error de red: ' + esc(e.message) + '</div>';
+          results.innerHTML = '<div class="audit-error">Network error: ' + esc(e.message) + '</div>';
         })
         .then(function () { submitBtn.disabled = false; });
     });
@@ -1433,10 +1433,10 @@ async def admin_revoke_key(key: str) -> dict:
 
 
 _SUCCESS_FALLBACK_HTML = """<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Pago recibido · x402 validator</title>
+<title>Payment received · x402 validator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1452,20 +1452,20 @@ a{color:var(--accent);text-decoration:none;}
 </head>
 <body>
 <div class="card">
-  <h1>Pago recibido</h1>
-  <p>Tu llave ha sido enviada por email. Si no la ves en 5 minutos,
-     revisa spam o contacta a <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>.</p>
-  <p>También puedes volver a la <a href="/">página principal</a>.</p>
+  <h1>Payment received</h1>
+  <p>Your key has been emailed to you. If you don't see it within 5 minutes,
+     check spam or contact <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>.</p>
+  <p>You can also return to the <a href="/">home page</a>.</p>
 </div>
 </body>
 </html>"""
 
 
 _SUCCESS_WITH_KEY_HTML = """<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Pago recibido · x402 validator</title>
+<title>Payment received · x402 validator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1486,14 +1486,14 @@ a{color:var(--accent);text-decoration:none;}
 </head>
 <body>
 <div class="card">
-  <span class="tag">Plan __PLAN_LABEL__</span>
-  <h1>Pago recibido</h1>
-  <p class="lede">Guarda esta llave de API — no la mostraremos de nuevo.</p>
+  <span class="tag">__PLAN_LABEL__ plan</span>
+  <h1>Payment received</h1>
+  <p class="lede">Save this API key — we will not show it again.</p>
   <div class="key-box" id="keyBox">__API_KEY__</div>
-  <button class="copy-btn" id="copyBtn" type="button">Copiar llave</button>
-  <p class="warn">⚠ Trátala como una contraseña. Recargar esta página la elimina de nuestra
-     vista; si la pierdes, genera una nueva desde tu dashboard
-     o contacta a <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>.</p>
+  <button class="copy-btn" id="copyBtn" type="button">Copy key</button>
+  <p class="warn">⚠ Treat it like a password. Refreshing this page removes it from our
+     view; if you lose it, mint a replacement from your dashboard
+     or contact <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>.</p>
 </div>
 <script>
 (function(){
@@ -1501,9 +1501,9 @@ a{color:var(--accent);text-decoration:none;}
   if(!btn || !navigator.clipboard) return;
   btn.addEventListener('click', function(){
     navigator.clipboard.writeText(document.getElementById('keyBox').innerText).then(function(){
-      btn.innerText = 'Copiada ✓';
-      setTimeout(function(){ btn.innerText = 'Copiar llave'; }, 2000);
-    }).catch(function(){ btn.innerText = 'Selecciona + ⌘C'; });
+      btn.innerText = 'Copied ✓';
+      setTimeout(function(){ btn.innerText = 'Copy key'; }, 2000);
+    }).catch(function(){ btn.innerText = 'Select + ⌘C'; });
   });
 })();
 </script>
@@ -1511,7 +1511,7 @@ a{color:var(--accent);text-decoration:none;}
 </html>"""
 
 
-_PLAN_LABELS = {"free": "Gratis", "pro": "Pro", "enterprise": "Empresa"}
+_PLAN_LABELS = {"free": "Free", "pro": "Pro", "enterprise": "Enterprise"}
 
 
 def _success_html(api_key: str, plan_id: str, session_id: str) -> HTMLResponse:

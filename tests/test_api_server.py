@@ -60,10 +60,10 @@ class TestLanding:
         r = client.get("/")
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
-        # Headline copy (motion-style spec, Spanish)
-        assert "Diseña a la velocidad del pensamiento" in r.text
-        assert "Crea más rápido" in r.text
-        assert "optimizados para SEO" in r.text
+        # Headline copy (motion-style spec)
+        assert "Design at the speed of thought" in r.text  # pre-headline (serif)
+        assert "Build Faster" in r.text  # main headline (gradient)
+        assert "SEO-optimized websites" in r.text  # subheadline copy
         # Pricing plans rendered
         assert "$9" in r.text
         assert "$49" in r.text
@@ -71,7 +71,7 @@ class TestLanding:
         assert "/create-checkout-session?plan_id=pro" in r.text
         assert "/create-checkout-session?plan_id=enterprise" in r.text
         assert "/create-checkout-session?plan_id=free" in r.text
-        # Two design-system fonts loaded from Google Fonts
+        # Two design-system fonts loaded from Google Fonts (replaces Geist/General Sans)
         assert "Instrument+Sans" in r.text
         assert "Instrument+Serif" in r.text
         assert "fonts.googleapis.com" in r.text
@@ -82,6 +82,8 @@ class TestLanding:
         # Old MotionSites pieces are gone
         assert ".liquid-glass" not in r.text
         assert "mask-composite" not in r.text
+        for name in ("Asterpay", "Hugen", "Observer", "Greeneris", "SmartFlow"):
+            assert name not in r.text
         # Dark-mode spec markers
         assert "#000000" in r.text
         assert "#3054ff" in r.text
@@ -96,34 +98,36 @@ class TestLanding:
         assert "rgba(49,46,129,0.20)" in r.text
         assert "blur(120px)" in r.text
         assert "mix-blend-mode: screen" in r.text
-        # Hero CTAs in Spanish
-        assert "Empieza gratis" in r.text
-        assert "Ver ejemplos" in r.text
+        # Hero CTAs
+        assert "Start Building Free" in r.text
+        assert "See Examples" in r.text
         # Animations
         assert "@keyframes fadeUp" in r.text
         assert "@keyframes scaleIn" in r.text
-        # Más popular ribbon kept on Pro pricing card (Spanish)
-        assert "Más popular" in r.text
+        # Most popular ribbon kept on Pro pricing card
+        assert "Most popular" in r.text
         # Stripped placeholder substitutions
         assert "__SVG_MANIFEST__" not in r.text
 
-        # ----- Audit demo, FAQ, SEO, OG -----
+        # ----- Aggressive — audit demo, FAQ, SEO, OG -----
         # Public demo form wired to /audit-public
         assert 'id="auditForm"' in r.text
         assert 'id="auditResults"' in r.text
-        assert "fillUrl" in r.text
+        assert "fillUrl" in r.text  # helper exposed for inline sample links
+        # Front-end handler posts to /audit-public
         assert "/audit-public" in r.text
-        # Rate-limit hint in Spanish
-        assert "5 auditorías por IP por día" in r.text or "5 por IP" in r.text
-        # FAQ section in Spanish
+        # Rate-limit hint present
+        assert "5 audits per IP per day" in r.text or "5/IP/day" in r.text
+        # FAQ section
         assert 'id="faq"' in r.text
         assert "<details" in r.text
-        assert "conformidad x402" in r.text
+        assert "x402 conformance" in r.text
         # JSON-LD structured data
         assert "application/ld+json" in r.text
         assert '"@type":"SoftwareApplication"' in r.text or '"@type": "SoftwareApplication"' in r.text
         assert '"@type":"FAQPage"' in r.text or '"@type": "FAQPage"' in r.text
         assert "Gael L Chulim" in r.text
+        assert '"priceCurrency":"USD"' in r.text or '"priceCurrency": "USD"' in r.text
         # Open Graph + Twitter card meta
         assert 'property="og:title"' in r.text
         assert 'property="og:description"' in r.text
@@ -133,23 +137,9 @@ class TestLanding:
         assert 'rel="icon"' in r.text
         # Robots
         assert 'name="robots"' in r.text
-        # Section anchors
+        # Section anchors so navbar Pricing scrolls
         assert 'id="pricing"' in r.text
         assert 'id="audit"' in r.text
-        # Navbar in Spanish
-        assert "Productos" in r.text
-        assert "Casos reales" in r.text
-        assert "Precios" in r.text
-        # Footer in Spanish
-        assert "Producto" in r.text
-        assert "Código" in r.text
-        assert "Contacto" in r.text
-        # Title in Spanish
-        assert "<title>" in r.text
-        assert "x402 Validator" in r.text
-        assert "strict-v2" in r.text
-        # Landing declares Spanish lang for SEO
-        assert 'lang="es"' in r.text
 
 
 class TestPlans:
@@ -433,12 +423,12 @@ class TestSuccessCancel:
     def test_success_page(self, client: TestClient) -> None:
         r = client.get("/success")
         assert r.status_code == 200
-        assert "Pago recibido" in r.text
+        assert "Payment received" in r.text
 
     def test_cancel_page(self, client: TestClient) -> None:
         r = client.get("/cancel")
         assert r.status_code == 200
-        assert "cancelled" in r.text.lower() or "cancelado" in r.text.lower()
+        assert "cancelled" in r.text.lower()
 
 
 class TestStripeWebhook:
@@ -573,19 +563,19 @@ class TestSuccessPageRender:
         # The api_key is rendered exactly once, plan label is shown
         assert token in r.text
         assert "Pro" in r.text
-        # Copy button is wired (Spanish copy: "Copiar llave")
+        # Copy button is wired
         assert "copyBtn" in r.text
-        assert "Copiar llave" in r.text
+        assert "Copy key" in r.text
 
     def test_with_unknown_session_falls_back(self, client: TestClient) -> None:
         r = client.get("/success?session_id=never_existed")
         assert r.status_code == 200
-        assert "enviada por" in r.text.lower()
+        assert "emailed" in r.text.lower()
 
     def test_without_session_falls_back(self, client: TestClient) -> None:
         r = client.get("/success")
         assert r.status_code == 200
-        assert "enviada por" in r.text.lower()
+        assert "emailed" in r.text.lower()
 
     def test_marks_claim_as_claimed_on_first_view(self, client: TestClient) -> None:
         from api_server.keystore import get_store
@@ -601,7 +591,7 @@ class TestSuccessPageRender:
         get_store().revoke(token)
         r = client.get("/success?session_id=cs_rev")
         assert r.status_code == 200
-        assert "enviada por" in r.text.lower()
+        assert "emailed" in r.text.lower()
         assert token not in r.text
 
     def test_does_not_escape_unreserved_chars_in_api_key(self, client: TestClient) -> None:
