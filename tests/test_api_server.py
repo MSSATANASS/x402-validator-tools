@@ -61,15 +61,33 @@ class TestLanding:
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
         assert "x402" in r.text
+        # All three price points present
         assert "$9" in r.text
         assert "$49" in r.text
+        # Stripe checkout paths present
         assert "/create-checkout-session?plan_id=pro" in r.text
         assert "/create-checkout-session?plan_id=enterprise" in r.text
-        # SVG icons and hero art must be inline (not external)
-        assert '<svg' in r.text
-        assert 'manifest_discovery' in r.text
-        # Pricing cards exist
+        assert "/create-checkout-session?plan_id=free" in r.text
+        # All four check names referenced
+        for c in ("manifest_discovery", "caip2_compliance", "json_resilience", "bazaar_compliance"):
+            assert c in r.text
+        # Section anchors
+        for s in ("#features", "#pricing", "#how"):
+            assert s in r.text
+        # SVG icon defs replaced (float-card svg icons come from _SVG_*)
+        # marquee + pill components rendered
+        assert "class=\"marquee-track\"" in r.text
+        assert "class=\"pill pass\"" in r.text
         assert "Most popular" in r.text
+        # bento grid present (4 checks + 1 large callout)
+        assert "class=\"bento\"" in r.text
+        # Stats banner numbers
+        assert ">100 %<" in r.text
+        assert ">167<" in r.text
+        # background-clip gradient text is being applied
+        assert "background-clip: text" in r.text or "background-clip:text" in r.text
+        # Live indicator
+        assert "class=\"live\">Live" in r.text
 
 
 class TestPlans:
