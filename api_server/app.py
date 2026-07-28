@@ -157,11 +157,11 @@ _LANDING_HTML = """<!DOCTYPE html>
       "@type": "FAQPage",
       "mainEntity": [
         {"@type": "Question", "name": "What is x402 conformance and why should I care?",
-         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all four checks in ~580 ms and returns actionable operator errors."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all seven checks in ~580 ms and returns actionable operator errors."}},
         {"@type": "Question", "name": "What does the public demo actually check?",
-         "acceptedAnswer": {"@type": "Answer", "text": "The same four checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance. Rate-limited to 5 audits per IP per day."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "The same seven checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance, bot_wall, accepts_completeness, discovery_resource_listing. Rate-limited to 3 audits per IP per day."}},
         {"@type": "Question", "name": "How long does an audit take?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all four checks in parallel where independent."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all seven checks in parallel where independent."}},
         {"@type": "Question", "name": "Can I cancel a Pro / Enterprise plan?",
          "acceptedAnswer": {"@type": "Answer", "text": "Yes — cancel from your Stripe dashboard any time; you keep access until the end of the billing period."}},
         {"@type": "Question", "name": "What happens if my endpoint fails an audit?",
@@ -917,7 +917,7 @@ footer {
 <section id="audit" class="audit-demo-section">
   <div class="pricing-eyebrow-row"><span class="pricing-pill">Live demo · No signup</span></div>
   <h2 class="audit-demo-headline">Audit an x402 endpoint right now</h2>
-  <p class="audit-demo-sub">Paste any merchant URL. We run Manifest, CAIP-2, JSON resilience, and Bazaar compliance checks against it. No API key, no signup. <strong>5 audits per IP per day</strong> on the public demo.</p>
+  <p class="audit-demo-sub">Paste any merchant URL. We run seven checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, and discovery listing. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
 
   <form id="auditForm" class="audit-form" autocomplete="off">
     <div class="audit-input-row">
@@ -993,11 +993,11 @@ footer {
   <div class="faq-list">
     <details class="faq-item">
       <summary>What is x402 conformance and why should I care?</summary>
-      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all four checks in ~580 ms and returns actionable operator errors.</p>
+      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all seven checks in ~580 ms and returns actionable operator errors.</p>
     </details>
     <details class="faq-item">
       <summary>What does the public demo actually check?</summary>
-      <p>The same four checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>. The demo is rate-limited to 5 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
+      <p>The same seven checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>, <code>bot_wall</code>, <code>accepts_completeness</code>, <code>discovery_resource_listing</code>. The demo is rate-limited to 3 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
     </details>
     <details class="faq-item">
       <summary>Is the public demo really free? What about my data?</summary>
@@ -1005,7 +1005,7 @@ footer {
     </details>
     <details class="faq-item">
       <summary>How long does an audit take?</summary>
-      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all four checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
+      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all seven checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
     </details>
     <details class="faq-item">
       <summary>Can I cancel a Pro / Enterprise plan?</summary>
@@ -1097,7 +1097,7 @@ footer {
     if (!el) return;
     if (status === 429) {
       el.innerHTML =
-        '<div class="audit-rate">Daily limit reached (5 per IP). ' +
+        '<div class="audit-rate">Daily limit reached (3 per IP). ' +
         'Get unlimited audits with Pro — ' +
         '<a href="/create-checkout-session?plan_id=pro">buy Pro ($9/mo)</a>.</div>';
       return;
@@ -1220,7 +1220,7 @@ async def validate(
     )
 
 
-_DEFAULT_PUBLIC_DAILY_LIMIT = 5
+_DEFAULT_PUBLIC_DAILY_LIMIT = 3
 
 
 @app.post("/audit-public")

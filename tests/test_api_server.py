@@ -117,7 +117,7 @@ class TestLanding:
         # Front-end handler posts to /audit-public
         assert "/audit-public" in r.text
         # Rate-limit hint present
-        assert "5 audits per IP per day" in r.text or "5/IP/day" in r.text
+        assert "3 audits per IP per day" in r.text or "3/IP/day" in r.text
         # FAQ section
         assert 'id="faq"' in r.text
         assert "<details" in r.text
@@ -644,7 +644,7 @@ class TestAuditPublic:
         assert r.status_code == 200
         body = r.json()
         assert body["overall"] == "PASS"
-        assert body["remaining_today"] == 4  # default 5, one used
+        assert body["remaining_today"] == 2  # default 3, one used
         assert isinstance(body["latency_ms"], (int, float))
         assert body["checks"][0]["name"] == "manifest_discovery"
 
