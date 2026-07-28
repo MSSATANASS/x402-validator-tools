@@ -873,6 +873,8 @@ footer {
   <div class="nav-links">
     <a href="#audit">Try It Free</a>
     <a href="#pricing">Pricing</a>
+    <a href="/vs-x402-doctor">Compare</a>
+    <a href="/open">Open</a>
     <a href="#faq">FAQ</a>
     <a href="/health">Status</a>
   </div>
@@ -1033,6 +1035,8 @@ footer {
     <div class="foot-col">
       <h4>Product</h4>
       <a href="#pricing">Pricing</a>
+      <a href="/vs-x402-doctor">vs x402 Doctor</a>
+      <a href="/open">Open metrics</a>
       <a href="/plans">Plans API</a>
       <a href="/health">Status</a>
       <a href="mailto:support@lastminutestickets.com">Support</a>
@@ -1178,10 +1182,309 @@ footer {
 </html>
 """
 
+_PAGE_CSS = """
+:root {
+  --bg: #000000;
+  --fg: #ffffff;
+  --fg-70: rgba(255,255,255,0.70);
+  --fg-60: rgba(255,255,255,0.60);
+  --fg-50: rgba(255,255,255,0.50);
+  --accent: #3054ff;
+  --accent-hover: #2040e0;
+  --glass-border: rgba(255,255,255,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: 'Instrument Sans', sans-serif;
+  line-height: 1.6;
+}
+.serif { font-family: 'Instrument Serif', serif; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 96px 24px 64px; }
+nav.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--glass-border);
+}
+.nav-links { display: flex; gap: 22px; }
+.nav-links a, .nav-right a {
+  color: var(--fg-70); text-decoration: none; font-size: 0.92rem;
+}
+.nav-links a:hover, .nav-right a:hover { color: var(--fg); }
+.nav-right { display: flex; gap: 14px; align-items: center; }
+.btn-primary-pill {
+  background: var(--accent); color: #fff !important;
+  padding: 8px 18px; border-radius: 999px; font-weight: 600;
+}
+.btn-primary-pill:hover { background: var(--accent-hover); }
+h1 { font-size: 2.4rem; line-height: 1.15; margin-bottom: 14px; font-weight: 400; }
+h2 { font-size: 1.35rem; margin: 40px 0 14px; font-weight: 600; }
+p, li { color: var(--fg-70); margin-bottom: 12px; }
+li { margin-left: 20px; margin-bottom: 8px; }
+code {
+  background: rgba(255,255,255,0.07); border-radius: 6px;
+  padding: 1px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg);
+}
+a { color: var(--accent); }
+table.cmp { width: 100%; border-collapse: collapse; margin: 18px 0 8px; }
+table.cmp th, table.cmp td {
+  text-align: left; padding: 10px 12px; font-size: 0.92rem;
+  border-bottom: 1px solid var(--glass-border); vertical-align: top;
+}
+table.cmp th { color: var(--fg); font-weight: 600; }
+table.cmp td { color: var(--fg-70); }
+table.cmp td.y { color: #7ee787; }
+table.cmp td.n { color: var(--fg-50); }
+.kicker {
+  color: var(--accent); font-weight: 600; font-size: 0.85rem;
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+}
+.note {
+  border: 1px solid var(--glass-border); border-radius: 12px;
+  background: rgba(255,255,255,0.04); padding: 16px 18px; margin: 18px 0;
+}
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 22px 0; }
+.stat {
+  border: 1px solid var(--glass-border); border-radius: 12px;
+  padding: 16px; background: rgba(255,255,255,0.03);
+}
+.stat .num { font-size: 1.6rem; font-weight: 700; color: var(--fg); }
+.stat .lbl { font-size: 0.85rem; color: var(--fg-60); margin-top: 4px; }
+footer {
+  border-top: 1px solid var(--glass-border); margin-top: 64px;
+  padding: 28px 24px; text-align: center;
+  color: var(--fg-50); font-size: 0.85rem;
+}
+footer a { color: var(--fg-60); text-decoration: none; }
+footer a:hover { color: var(--fg); }
+"""
+
+_PAGE_NAV = """
+<nav class="navbar">
+  <div class="nav-left">
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;">
+      <span style="color:#fff;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
+    </a>
+  </div>
+  <div class="nav-links">
+    <a href="/#audit">Try It Free</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/vs-x402-doctor">Compare</a>
+    <a href="/open">Open</a>
+    <a href="/health">Status</a>
+  </div>
+  <div class="nav-right">
+    <a href="mailto:support@lastminutestickets.com">Contact</a>
+    <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
+  </div>
+</nav>
+"""
+
+_PAGE_FOOTER = """
+<footer>
+  <div>© 2026 x402 validator · Apache-2.0 ·
+    <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">engine</a> ·
+    <a href="https://pypi.org/project/x402-conformance-suite/" rel="noopener">pip install</a> ·
+    <a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>
+  </div>
+</footer>
+"""
+
+_VS_DOCTOR_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>x402 Validator vs x402 Doctor — checker depth, compared honestly</title>
+<meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 7 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
+<link rel="canonical" href="https://lastminutestickets.com/vs-x402-doctor">
+<meta property="og:title" content="x402 Validator vs x402 Doctor">
+<meta property="og:description" content="Quick checker vs strict-v2 conformance engine. What each one actually runs, verified against both products' own docs.">
+<meta property="og:type" content="article">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/png" href="/static/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>__PAGE_CSS__</style>
+</head>
+<body>
+__PAGE_NAV__
+
+<div class="wrap">
+  <div class="kicker">Comparison · verified 2026-07-27</div>
+  <h1 class="serif">x402 Validator vs x402 Doctor</h1>
+  <p><a href="https://stelardigital.com/x402-doctor" rel="noopener">x402 Doctor</a> by Stelar Digital
+     is a free, quick endpoint checker. x402 Validator (this service) is a strict-v2
+     conformance engine. They overlap on the basics and diverge on depth.
+     Everything below comes from both products' own public pages and repos.</p>
+
+  <h2>What each one runs</h2>
+  <table class="cmp">
+    <tr><th>Capability</th><th>x402 Doctor</th><th>x402 Validator</th></tr>
+    <tr><td>Reachability probe</td><td class="y">✓</td><td class="y">✓ (every check)</td></tr>
+    <tr><td>Bot-wall / Cloudflare challenge detection</td><td class="y">✓</td><td class="y">✓ <code>bot_wall</code> <span style="color:var(--fg-50)">(added in 0.5.0 — credit where due: their writeup identified this failure mode well)</span></td></tr>
+    <tr><td>Returns HTTP 402</td><td class="y">✓</td><td class="y">✓</td></tr>
+    <tr><td>402 body parses as JSON object</td><td class="y">✓</td><td class="y">✓ <code>json_resilience</code> (CRITICAL_FAIL on primitives)</td></tr>
+    <tr><td><code>x402Version</code> present / recognized</td><td class="y">✓</td><td class="y">✓ <code>accepts_completeness</code></td></tr>
+    <tr><td><code>accepts[]</code> completeness (scheme, network, amount, payTo, resource)</td><td class="y">✓ presence</td><td class="y">✓ presence + <strong>atomic-units validation</strong> (flags <code>"0.005"</code> as dollars, off by 10⁶) + <code>resource.url</code> must match the probed URL</td></tr>
+    <tr><td>CAIP-2 network validation</td><td class="y">✓</td><td class="y">✓ <code>caip2_compliance</code> — reads v2 <code>accepts[].network</code> (not just top level) and falls back to manifest-declared networks on free-discovery roots</td></tr>
+    <tr><td>Bazaar input schema (<code>extensions.bazaar.info.input</code>)</td><td class="y">✓ presence</td><td class="y">✓ shape-validated against real production captures, per paid product</td></tr>
+    <tr><td>Discovery doc (<code>/.well-known/x402</code>) exists</td><td class="y">✓</td><td class="y">✓ <code>manifest_discovery</code> + <code>discovery_resource_listing</code> (paid resource must actually be <em>listed</em> in it)</td></tr>
+    <tr><td>Marketplace catalog walk (per-product 402 validation)</td><td class="n">—</td><td class="y">✓ marketplace mode: every product in the manifest gets its own endpoint audit + bazaar check</td></tr>
+    <tr><td>Batch audits (many endpoints, one call)</td><td class="n">—</td><td class="y">✓ CLI + API</td></tr>
+    <tr><td>Embeddable engine (PyPI package)</td><td class="n">—</td><td class="y">✓ <code>pip install x402-conformance-suite</code></td></tr>
+    <tr><td>MCP server (agent-native tool)</td><td class="n">—</td><td class="y">✓ <code>x402-mcp</code></td></tr>
+    <tr><td>GitHub Action (CI conformance gate)</td><td class="n">—</td><td class="y">✓</td></tr>
+    <tr><td>Free tier</td><td class="y">10 checks/min</td><td class="y">3 audits/day per IP, then Pro from $9/mo</td></tr>
+    <tr><td>Open source engine</td><td class="n">checker not published</td><td class="y">Apache-2.0, <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">full repo</a>, 203 tests</td></tr>
+  </table>
+
+  <h2>Where x402 Doctor wins</h2>
+  <ul>
+    <li><strong>Free tier generosity.</strong> 10 checks/minute beats our 3 audits/day for quick iteration. Their checker is the fastest way to sanity-check a fresh endpoint.</li>
+    <li><strong>Content.</strong> Their pricing research and honest-numbers pages are some of the best reading in the x402 space. Their bot-wall writeup in particular names a failure mode most validators ignored — we added <code>bot_wall</code> in 0.5.0 partly because of it.</li>
+    <li><strong>Setup service.</strong> They sell done-for-you x402 wiring ($149). We don't; we sell the audit engine, not consulting.</li>
+  </ul>
+
+  <h2>Where x402 Validator wins</h2>
+  <ul>
+    <li><strong>Depth per endpoint.</strong> Presence checks tell you a field exists; conformance checks tell you it's <em>right</em> — atomic units, CAIP-2 inside v2 <code>accepts[]</code>, resource/URL match, catalog listing.</li>
+    <li><strong>Marketplaces.</strong> If your catalog page is intentionally free (HTTP 200) and only products are paid, a root-URL checker fails you. Our marketplace mode walks every product's own 402 and validates each one.</li>
+    <li><strong>Embeddable everywhere.</strong> PyPI library, MCP server, GitHub Action, batch CLI — the engine runs in your CI and your agent framework, not just a web form.</li>
+    <li><strong>Verifiable correctness.</strong> The engine is open source with 203 tests. When we shipped a CAIP-2 parser bug that false-failed v2 endpoints, a merchant reported it and we fixed, published, and emailed corrections the same day (<a href="/open">details on /open</a>).</li>
+  </ul>
+
+  <div class="note">
+    <strong>One fact worth knowing about their starter kit.</strong> Stelar's
+    <a href="https://github.com/StelarDigital/x402-starter-kit" rel="noopener">x402-starter-kit</a>
+    ships <code>verify_payment()</code> as a deliberate stub — it accepts any non-empty
+    <code>X-PAYMENT</code> header. Their README says so plainly (credit for honesty), but any
+    endpoint deployed from that kit without replacing the stub is not actually charging anyone.
+    Whichever tool you use: run it against a real endpoint before you trust the paywall.
+  </div>
+
+  <p style="margin-top:32px;">
+    <a class="btn-primary-pill" href="/#audit" style="color:#fff;">Run a free audit — 3/day</a>
+  </p>
+</div>
+
+__PAGE_FOOTER__
+</body>
+</html>
+"""
+
+_OPEN_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open — real numbers behind x402 Validator</title>
+<meta name="description" content="Tests, corpus results, the CAIP-2 bug we shipped and fixed same-day, keys issued, revenue. Every number verifiable, none projected.">
+<link rel="canonical" href="https://lastminutestickets.com/open">
+<meta property="og:title" content="Open — x402 Validator real numbers">
+<meta property="og:description" content="Honest metrics: 203 tests, 27-endpoint corpus, one same-day bug fix, 5 free pro keys, $0 revenue so far.">
+<meta property="og:type" content="website">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/png" href="/static/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>__PAGE_CSS__</style>
+</head>
+<body>
+__PAGE_NAV__
+
+<div class="wrap">
+  <div class="kicker">Open metrics · updated 2026-07-27</div>
+  <h1 class="serif">Real numbers, no projections</h1>
+  <p>Everything on this page is verifiable against the linked source. If a number
+     isn't measurable yet, it says so instead of estimating.</p>
+
+  <h2>Engine</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="num">0.5.0</div><div class="lbl">x402-conformance-suite on <a href="https://pypi.org/project/x402-conformance-suite/" rel="noopener">PyPI</a> (Apache-2.0)</div></div>
+    <div class="stat"><div class="num">203</div><div class="lbl">tests in the engine suite, all passing at release</div></div>
+    <div class="stat"><div class="num">7</div><div class="lbl">checks in a standard audit (4 before 0.5.0)</div></div>
+    <div class="stat"><div class="num">27</div><div class="lbl">production endpoints in the v0.3 validation corpus, audited in 5.2 s</div></div>
+  </div>
+
+  <h2>The corpus result that matters</h2>
+  <p>In the 2026-07-27 corpus run, <strong>0 of 27 endpoints passed</strong> all four v0.3
+     checks. That is not a typo — most x402 endpoints in the wild are not conformant.
+     Two of the 27 failed only CAIP-2 at the time; both pass today after the 0.4.1
+     parser fix below. Full matrix:
+     <a href="https://github.com/MSSATANASS/x402-conformance-engine/blob/feature/x402-core-engine/docs/VALIDATION_REPORT_v0.3.md" rel="noopener">VALIDATION_REPORT_v0.3.md</a>.</p>
+
+  <h2>The bug we shipped (and how it went)</h2>
+  <div class="note">
+    Our pre-0.4.1 CAIP-2 parser read the network only at the top level of the payment
+    payload. x402 v2 carries it at <code>accepts[].network</code> — so every strict-v2
+    endpoint false-failed. Worse, we had already emailed merchants audit results
+    containing that false FAIL.<br><br>
+    A merchant replied with a precise diagnosis (free catalog root, paid products,
+    network in <code>accepts[]</code>). Same day: reproduced live, fixed the parser,
+    added manifest/product network fallbacks, published 0.4.1, redeployed, re-audited,
+    and sent correction emails to the two merchants whose results changed.
+    The full diff and tests are in the public repo history.
+  </div>
+
+  <h2>Business</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="num">5</div><div class="lbl">pro keys issued — all free 3-month early-adopter grants</div></div>
+    <div class="stat"><div class="num">$0</div><div class="lbl">paying-customer revenue to date</div></div>
+    <div class="stat"><div class="num">3/day</div><div class="lbl">free audits per IP; Pro is $9/mo, Enterprise $49/mo</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">person running this (Gael L Chulim), hosted on Render, billed via Stripe</div></div>
+  </div>
+
+  <h2>What we don't track</h2>
+  <p>The API keeps no audit counter, no per-user history, and stores no audit results —
+     only rate-limit timestamps per IP (in-memory, gone on restart) and issued API keys.
+     When we can measure audits-served honestly, that number will appear here. Until
+     then, it won't.</p>
+
+  <h2>Sources</h2>
+  <ul>
+    <li>Engine repo + full test suite: <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">MSSATANASS/x402-conformance-engine</a></li>
+    <li>This site's repo: <a href="https://github.com/MSSATANASS/x402-validator-tools" rel="noopener">MSSATANASS/x402-validator-tools</a></li>
+    <li>PyPI release history: <a href="https://pypi.org/project/x402-conformance-suite/#history" rel="noopener">x402-conformance-suite</a></li>
+    <li>Changelog with the 0.4.1 bug details: <a href="https://github.com/MSSATANASS/x402-conformance-engine/blob/feature/x402-core-engine/CHANGELOG.md" rel="noopener">CHANGELOG.md</a></li>
+  </ul>
+</div>
+
+__PAGE_FOOTER__
+</body>
+</html>
+"""
+
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def landing() -> HTMLResponse:
     return HTMLResponse(_LANDING_HTML)
+
+
+@app.get("/vs-x402-doctor", response_class=HTMLResponse, include_in_schema=False)
+async def vs_doctor() -> HTMLResponse:
+    return HTMLResponse(
+        _VS_DOCTOR_HTML.replace("__PAGE_CSS__", _PAGE_CSS)
+        .replace("__PAGE_NAV__", _PAGE_NAV)
+        .replace("__PAGE_FOOTER__", _PAGE_FOOTER)
+    )
+
+
+@app.get("/open", response_class=HTMLResponse, include_in_schema=False)
+async def open_metrics() -> HTMLResponse:
+    return HTMLResponse(
+        _OPEN_HTML.replace("__PAGE_CSS__", _PAGE_CSS)
+        .replace("__PAGE_NAV__", _PAGE_NAV)
+        .replace("__PAGE_FOOTER__", _PAGE_FOOTER)
+    )
 
 
 # ---------------------------------------------------------------------------

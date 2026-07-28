@@ -160,6 +160,36 @@ class TestLanding:
         # Pricing headline no longer repeats the "at the speed of thought" tic
         assert "at the speed of thought" not in r.text
 
+    def test_vs_doctor_page(self, client: TestClient) -> None:
+        r = client.get("/vs-x402-doctor")
+        assert r.status_code == 200
+        assert "text/html" in r.headers["content-type"]
+        assert "x402 Validator vs x402 Doctor" in r.text
+        assert "stelardigital.com/x402-doctor" in r.text
+        assert "bot_wall" in r.text
+        assert "verify_payment()" in r.text  # starter-kit stub fact
+        assert "3 audits/day" in r.text
+        assert "__PAGE_CSS__" not in r.text  # template placeholders resolved
+        assert "__PAGE_NAV__" not in r.text
+        assert 'rel="canonical"' in r.text
+
+    def test_open_page(self, client: TestClient) -> None:
+        r = client.get("/open")
+        assert r.status_code == 200
+        assert "text/html" in r.headers["content-type"]
+        assert "203" in r.text  # test count
+        assert "0.5.0" in r.text
+        assert "27" in r.text  # corpus endpoints
+        assert "$0" in r.text  # honest revenue
+        assert "VALIDATION_REPORT_v0.3.md" in r.text
+        assert "__PAGE_CSS__" not in r.text
+        assert "__PAGE_FOOTER__" not in r.text
+
+    def test_landing_links_new_pages(self, client: TestClient) -> None:
+        r = client.get("/")
+        assert 'href="/vs-x402-doctor"' in r.text
+        assert 'href="/open"' in r.text
+
 
 class TestPlans:
     def test_lists_all_three(self, client: TestClient) -> None:
