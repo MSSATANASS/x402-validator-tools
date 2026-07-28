@@ -179,27 +179,28 @@ _LANDING_HTML = """<!DOCTYPE html>
    - Accent:  #3054ff blue arrow on white pill; #b4c0ff gradient end
    ============================================================ */
 :root {
-  --bg: #000000;
-  --fg: #ffffff;
-  --fg-80: rgba(255,255,255,0.80);
-  --fg-70: rgba(255,255,255,0.70);
-  --fg-60: rgba(255,255,255,0.60);
-  --fg-50: rgba(255,255,255,0.50);
-  --accent: #3054ff;
-  --accent-hover: #2040e0;
-  --gradient-end: #b4c0ff;
-  --primary-text-dark: #0a0400;
-  --glass-border: rgba(255,255,255,0.10);
-  --hero-grad: linear-gradient(to left, #6366f1, #a855f7, #fcd34d);
+  --bg: #F5F5F5;
+  --fg: #0a0a0a;
+  --fg-80: rgba(10,10,10,0.80);
+  --fg-70: rgba(10,10,10,0.70);
+  --fg-60: rgba(10,10,10,0.60);
+  --fg-50: rgba(10,10,10,0.50);
+  --accent: #0a0a0a;
+  --accent-hover: #2b2644;
+  --gradient-end: #2B2644;
+  --primary-text-dark: #ffffff;
+  --glass-border: rgba(10,10,10,0.10);
+  --ink: #2B2644;
+  --hero-grad: linear-gradient(to left, #2B2644, #3054ff, #6366f1);
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: #000; }
+html, body { margin: 0; padding: 0; background: #F5F5F5; }
 
 body {
   font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
   color: var(--fg);
-  background: #000;
+  background: #F5F5F5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
@@ -208,6 +209,129 @@ body {
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 a { color: inherit; }
+
+
+/* ============================================================
+   Marquee (Halo-style infinite scroll)
+   ============================================================ */
+.marquee-wrap {
+  width: 100%;
+  max-width: 30rem;
+  overflow: hidden;
+  margin-top: 40px;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 22s linear infinite;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-item {
+  margin: 0 28px;
+  flex-shrink: 0;
+  color: rgba(10,10,10,0.60);
+  white-space: nowrap;
+}
+.stack-wrap {
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+.stack-track {
+  display: flex;
+  width: max-content;
+  animation: stack-marquee 30s linear infinite;
+}
+@keyframes stack-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.stack-item {
+  margin: 0 40px;
+  flex-shrink: 0;
+  color: rgba(10,10,10,0.50);
+  white-space: nowrap;
+}
+.stack-section {
+  padding: 56px 24px;
+  border-top: 1px solid rgba(10,10,10,0.08);
+  border-bottom: 1px solid rgba(10,10,10,0.08);
+}
+.stack-grid {
+  max-width: 88rem; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr; gap: 28px; align-items: center;
+}
+@media (min-width: 768px) {
+  .stack-grid { grid-template-columns: 1fr 3fr; gap: 32px; }
+}
+.stack-label {
+  color: rgba(10,10,10,0.70);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   Feature cards (Halo card grid)
+   ============================================================ */
+.cards-section { padding: 96px 24px; }
+.cards-inner { max-width: 88rem; margin: 0 auto; }
+.cards-top {
+  display: grid; grid-template-columns: 1fr; gap: 40px;
+  margin-bottom: 56px; align-items: start;
+}
+@media (min-width: 768px) { .cards-top { grid-template-columns: 1fr 1fr; } }
+.cards-h2 {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600; font-size: 2.5rem; line-height: 1.1;
+  letter-spacing: -0.03em; margin: 0 0 28px; color: var(--fg);
+}
+@media (min-width: 768px) { .cards-h2 { font-size: 3rem; } }
+.cards-lede {
+  color: rgba(10,10,10,0.70);
+  font-size: 1.5rem; line-height: 1.5; letter-spacing: -0.02em; margin: 0;
+}
+@media (min-width: 768px) { .cards-lede { font-size: 1.75rem; } }
+.card-grid {
+  display: grid; grid-template-columns: 1fr; gap: 16px;
+}
+@media (min-width: 640px) { .card-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .card-grid { grid-template-columns: repeat(4, 1fr); } }
+.hcard {
+  border-radius: 16px; padding: 28px; min-height: 20rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.hcard.wide { grid-column: span 1; }
+@media (min-width: 1024px) { .hcard.wide { grid-column: span 2; } }
+.hcard.light {
+  background: #E4E4E4;
+  background-image: radial-gradient(circle at 78% 18%, rgba(48,84,255,0.16), transparent 55%),
+                    radial-gradient(circle at 12% 88%, rgba(43,38,68,0.14), transparent 50%);
+}
+.hcard.ink { background: var(--ink); }
+.hcard-title {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600; font-size: 1.5rem; line-height: 1.25;
+  letter-spacing: -0.02em; margin: 0; color: var(--fg);
+}
+.hcard.ink .hcard-title { color: #fff; }
+.hcard-body {
+  font-size: 1rem; line-height: 1.6; margin: 0; max-width: 22rem;
+  color: rgba(10,10,10,0.70);
+}
+.hcard.ink .hcard-body { color: rgba(255,255,255,0.62); }
+.hcard-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: rgba(10,10,10,0.45); margin: 0 0 14px;
+}
+.hcard.ink .hcard-mono { color: rgba(255,255,255,0.45); }
 
 /* ============================================================
    NAVBAR (fixed, transparent)
@@ -253,7 +377,7 @@ a { color: inherit; }
   transition: box-shadow 0.2s, transform 0.15s;
   display: inline-block;
 }
-.btn-primary-pill:hover { box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+.btn-primary-pill:hover { box-shadow: 0 0 20px rgba(10,10,10,0.3); }
 
 @media (min-width: 640px) { .book-demo { display: inline-flex; } }
 @media (min-width: 768px) { .nav-links { display: flex; } }
@@ -263,12 +387,18 @@ a { color: inherit; }
    ============================================================ */
 .hero {
   position: relative;
-  width: 100%;
-  min-height: 100vh;
-  background: #000000;
+  width: calc(100% - 48px);
+  max-width: 88rem;
+  margin: 0 auto;
+  min-height: calc(100vh - 96px);
+  background: #E9E9E9;
   color: var(--fg);
   overflow: hidden;
+  border-radius: 24px;
   display: flex; flex-direction: column;
+}
+@media (max-width: 640px) {
+  .hero { width: calc(100% - 24px); border-radius: 18px; }
 }
 
 .hero-video-wrap {
@@ -279,14 +409,14 @@ a { color: inherit; }
 .hero-video {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover; opacity: 0.6;
+  object-fit: cover; opacity: 0.9;
 }
 
 .hero-overlay {
   position: absolute; inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: linear-gradient(180deg, rgba(245,245,245,0.72) 0%, rgba(245,245,245,0.45) 45%, rgba(245,245,245,0.80) 100%);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
   z-index: 1;
 }
 
@@ -294,7 +424,7 @@ a { color: inherit; }
   position: absolute;
   border-radius: 50%;
   filter: blur(120px);
-  mix-blend-mode: screen;
+  mix-blend-mode: multiply;
   pointer-events: none;
   z-index: 2;
 }
@@ -312,14 +442,15 @@ a { color: inherit; }
 .hero-content {
   position: relative;
   z-index: 10;
-  max-width: 64rem; /* max-w-5xl */
+  max-width: 88rem;
   margin: 0 auto;
   width: 100%;
-  padding: 144px 24px 64px;
-  text-align: center;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 48px;
+  padding: 160px 48px 64px;
+  text-align: left;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 20px;
 }
+@media (max-width: 640px) { .hero-content { padding: 120px 24px 48px; } }
 
 /* ============================================================
    HeroCopy — pre-headline (serif), main (gradient), sub
@@ -341,7 +472,7 @@ a { color: inherit; }
   line-height: 0.9;
   letter-spacing: -0.05em;  /* tracking-tighter */
   margin: 0;
-  background: linear-gradient(to bottom, #ffffff, #ffffff, #b4c0ff);
+  background: linear-gradient(to bottom, #0a0a0a, #0a0a0a, #2B2644);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -355,7 +486,7 @@ a { color: inherit; }
   color: var(--fg);
   opacity: 0.7;
   margin: 0;
-  max-width: 36rem;  /* max-w-xl */
+  max-width: 34rem;
   letter-spacing: -0.005em;
 }
 
@@ -374,7 +505,8 @@ a { color: inherit; }
    ============================================================ */
 .hero-ctas {
   display: flex; flex-direction: column;
-  align-items: center; gap: 24px;
+  align-items: flex-start; gap: 16px;
+  margin-top: 16px;
 }
 @media (min-width: 640px) { .hero-ctas { flex-direction: row; } }
 
@@ -388,7 +520,7 @@ a { color: inherit; }
 }
 .cta-primary:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(255,255,255,0.30);
+  box-shadow: 0 0 20px rgba(10,10,10,0.30);
 }
 .cta-primary .label {
   font-family: 'Instrument Sans', sans-serif;
@@ -412,7 +544,7 @@ a { color: inherit; }
 .cta-secondary {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 16px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(10,10,10,0.06);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
@@ -424,7 +556,7 @@ a { color: inherit; }
   letter-spacing: -0.005em;
 }
 .cta-secondary:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(10,10,10,0.05);
   color: var(--fg);
 }
 .cta-secondary svg {
@@ -445,7 +577,7 @@ a { color: inherit; }
 .pricing-pill {
   display: inline-block;
   padding: 6px 14px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(10,10,10,0.04);
   border: 1px solid var(--glass-border);
   color: var(--fg-80);
   border-radius: 999px;
@@ -476,7 +608,7 @@ a { color: inherit; }
   max-width: 1000px; margin: 0 auto;
 }
 .plan {
-  background: rgba(255,255,255,0.04);
+  background: rgba(10,10,10,0.04);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
   padding: 32px 28px;
@@ -513,10 +645,10 @@ a { color: inherit; }
   padding: 10px 0;
   display: flex; align-items: center; gap: 10px;
   font-size: 0.92rem;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(10,10,10,0.08);
 }
-.plan-features li:last-child { border-bottom: 1px solid rgba(255,255,255,0.08); }
-.plan-features li svg { flex-shrink: 0; color: #10b981; width: 16px; height: 16px; }
+.plan-features li:last-child { border-bottom: 1px solid rgba(10,10,10,0.08); }
+.plan-features li svg { flex-shrink: 0; color: #047857; width: 16px; height: 16px; }
 
 .plan-cta {
   width: 100%; padding: 12px 24px; margin-top: 24px;
@@ -531,13 +663,13 @@ a { color: inherit; }
 }
 .plan-cta:hover { transform: translateY(-1px); }
 .plan-cta.solid { background: var(--fg); color: var(--primary-text-dark); }
-.plan-cta.outline { background: transparent; color: var(--fg); border: 1px solid rgba(255,255,255,0.15); }
+.plan-cta.outline { background: transparent; color: var(--fg); border: 1px solid rgba(10,10,10,0.15); }
 
 /* ============================================================
    Footer
    ============================================================ */
 footer {
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(10,10,10,0.08);
   padding: 64px 24px 80px;
   color: var(--fg-70);
 }
@@ -552,7 +684,7 @@ footer {
   border-radius: 8px;
   background: var(--hero-grad);
   display: inline-flex; align-items: center; justify-content: center;
-  color: #000; font-weight: 800;
+  color: #fff; font-weight: 800;
   font-family: 'Instrument Sans', sans-serif;
   font-size: 0.85rem;
 }
@@ -573,7 +705,7 @@ footer {
 }
 .foot-col a:hover { color: var(--fg); }
 .foot-bottom {
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(10,10,10,0.08);
   margin: 40px auto 0; padding-top: 20px;
   max-width: 1100px;
   font-size: 0.8rem; color: var(--fg-50);
@@ -589,7 +721,7 @@ footer {
   position: relative;
   max-width: 1000px;
   margin: 0 auto;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(10,10,10,0.06);
 }
 .audit-demo-headline {
   font-family: 'Instrument Sans', sans-serif;
@@ -613,8 +745,8 @@ footer {
 .audit-demo-sub strong { color: var(--fg); font-weight: 600; }
 
 .audit-form {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(10,10,10,0.04);
+  border: 1px solid rgba(10,10,10,0.10);
   border-radius: 16px;
   padding: 20px 20px 14px;
   max-width: 760px;
@@ -631,8 +763,8 @@ footer {
 }
 .audit-form input[type="url"] {
   flex: 1;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: #ffffff;
+  border: 1px solid rgba(10,10,10,0.14);
   border-radius: 10px;
   padding: 12px 14px;
   color: var(--fg);
@@ -644,11 +776,11 @@ footer {
 }
 .audit-form input[type="url"]:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(48,84,255,0.25);
+  box-shadow: 0 0 0 3px rgba(43,38,68,0.18);
 }
 .audit-form select {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: #ffffff;
+  border: 1px solid rgba(10,10,10,0.14);
   border-radius: 10px;
   padding: 12px 14px;
   color: var(--fg);
@@ -687,8 +819,8 @@ footer {
   margin: 20px auto 0;
 }
 .audit-summary {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: #ffffff;
+  border: 1px solid rgba(10,10,10,0.10);
   border-radius: 12px;
   padding: 14px 18px;
   font-family: 'Instrument Sans', sans-serif;
@@ -704,13 +836,13 @@ footer {
   font-size: 0.7rem; font-weight: 700;
   letter-spacing: 0.06em; text-transform: uppercase;
 }
-.audit-summary .badge.PASS { background: rgba(16,185,129,0.18); color: #34d399; }
-.audit-summary .badge.FAIL { background: rgba(239,68,68,0.18); color: #fca5a5; }
+.audit-summary .badge.PASS { background: rgba(5,150,105,0.14); color: #047857; }
+.audit-summary .badge.FAIL { background: rgba(220,38,38,0.12); color: #b91c1c; }
 .audit-summary .latency { color: var(--fg-50); font-size: 0.85rem; margin-left: auto; }
 
 .check-row {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: #ffffff;
+  border: 1px solid rgba(10,10,10,0.06);
   border-radius: 10px;
   padding: 12px 14px;
   display: grid;
@@ -728,8 +860,8 @@ footer {
   letter-spacing: 0.06em;
   padding: 4px 0; text-align: center; text-transform: uppercase;
 }
-.check-row .check-status.PASS { color: #34d399; }
-.check-row .check-status.FAIL { color: #fca5a5; }
+.check-row .check-status.PASS { color: #047857; }
+.check-row .check-status.FAIL { color: #b91c1c; }
 .check-row .check-name {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--fg); font-weight: 600;
@@ -750,8 +882,8 @@ footer {
 .audit-rate a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .audit-rate a:hover { text-decoration: underline; }
 .audit-loading {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(10,10,10,0.03);
+  border: 1px solid rgba(10,10,10,0.08);
   border-radius: 10px;
   padding: 14px 16px;
   font-family: 'Instrument Sans', sans-serif;
@@ -761,7 +893,7 @@ footer {
 }
 .audit-loading .spinner {
   width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,0.18);
+  border: 2px solid rgba(10,10,10,0.18);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -775,7 +907,7 @@ footer {
   padding: 96px 24px 80px;
   max-width: 800px;
   margin: 0 auto;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(10,10,10,0.06);
 }
 .faq-headline {
   font-family: 'Instrument Sans', sans-serif;
@@ -789,13 +921,13 @@ footer {
 }
 .faq-list { display: flex; flex-direction: column; gap: 10px; }
 .faq-item {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(10,10,10,0.03);
+  border: 1px solid rgba(10,10,10,0.08);
   border-radius: 12px;
   padding: 0;
   transition: border-color 0.15s;
 }
-.faq-item:hover { border-color: rgba(255,255,255,0.14); }
+.faq-item:hover { border-color: rgba(10,10,10,0.14); }
 .faq-item summary {
   cursor: pointer;
   padding: 18px 20px;
@@ -825,7 +957,7 @@ footer {
   line-height: 1.65;
 }
 .faq-item p code {
-  background: rgba(255,255,255,0.06);
+  background: rgba(10,10,10,0.06);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -866,7 +998,7 @@ footer {
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
       <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;">
-      <span style="color:#fff;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
+      <span style="color:#0a0a0a;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
     </a>
   </div>
 
@@ -912,6 +1044,96 @@ footer {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
     </div>
+
+    <div class="marquee-wrap" aria-hidden="true">
+      <div class="marquee-track">
+        <span class="marquee-item" style="font-family:Georgia,serif;font-weight:700;letter-spacing:-0.02em;font-size:15px;">manifest_discovery</span>
+        <span class="marquee-item" style="font-family:Arial,sans-serif;font-weight:900;letter-spacing:0.08em;font-size:13px;text-transform:uppercase;">caip2</span>
+        <span class="marquee-item" style="font-family:'Trebuchet MS',sans-serif;font-weight:600;letter-spacing:0.01em;font-size:15px;font-style:italic;">json_resilience</span>
+        <span class="marquee-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.12em;font-size:13px;text-transform:uppercase;">bazaar</span>
+        <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;">bot_wall</span>
+        <span class="marquee-item" style="font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:0.04em;font-size:14px;">accepts[]</span>
+        <span class="marquee-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:-0.03em;font-size:13px;">discovery_listing</span>
+        <span class="marquee-item" style="font-family:Georgia,serif;font-weight:700;letter-spacing:-0.02em;font-size:15px;">manifest_discovery</span>
+        <span class="marquee-item" style="font-family:Arial,sans-serif;font-weight:900;letter-spacing:0.08em;font-size:13px;text-transform:uppercase;">caip2</span>
+        <span class="marquee-item" style="font-family:'Trebuchet MS',sans-serif;font-weight:600;letter-spacing:0.01em;font-size:15px;font-style:italic;">json_resilience</span>
+        <span class="marquee-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.12em;font-size:13px;text-transform:uppercase;">bazaar</span>
+        <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;">bot_wall</span>
+        <span class="marquee-item" style="font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:0.04em;font-size:14px;">accepts[]</span>
+        <span class="marquee-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:-0.03em;font-size:13px;">discovery_listing</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== MEET THE ENGINE (Halo-style card grid) =================== -->
+<section class="cards-section">
+  <div class="cards-inner">
+    <div class="cards-top">
+      <div>
+        <h2 class="cards-h2">Meet the engine.</h2>
+        <a class="cta-primary" href="/open">
+          <span class="label">See real numbers</span>
+          <span class="arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </span>
+        </a>
+      </div>
+      <p class="cards-lede">An open-source conformance engine that tells you whether an x402 endpoint is actually payable by an agent &mdash; not just whether it responds.</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="hcard light wide">
+        <div>
+          <p class="hcard-mono">7 checks &middot; standard mode</p>
+          <h3 class="hcard-title">Depth, not a ping</h3>
+        </div>
+        <p class="hcard-body">Manifest, CAIP-2 inside v2 <code>accepts[]</code>, JSON resilience, Bazaar shape, bot-wall detection, atomic-unit amounts, and catalog listing &mdash; each with an operator-actionable message.</p>
+      </div>
+
+      <div class="hcard ink">
+        <div>
+          <p class="hcard-mono">Marketplace mode</p>
+          <h3 class="hcard-title">Every product,<br/>not just the root</h3>
+        </div>
+        <p class="hcard-body">A free catalog page shouldn't fail your audit. We walk each paid product's own 402 and validate it independently.</p>
+      </div>
+
+      <div class="hcard ink">
+        <div>
+          <p class="hcard-mono">Apache-2.0</p>
+          <h3 class="hcard-title">Runs where<br/>you work</h3>
+        </div>
+        <p class="hcard-body">PyPI library, MCP server, GitHub Action, batch CLI, and this API &mdash; the same engine, 203 tests behind it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== STACK MARQUEE =================== -->
+<section class="stack-section">
+  <div class="stack-grid">
+    <p class="stack-label">Open source engine,<br/>shipped on boring infrastructure.</p>
+    <div class="stack-wrap" aria-hidden="true">
+      <div class="stack-track">
+        <span class="stack-item" style="font-family:'Times New Roman',serif;font-weight:400;letter-spacing:0.02em;font-size:14px;">Apache-2.0</span>
+        <span class="stack-item" style="font-family:'Arial Black',sans-serif;font-weight:900;letter-spacing:0.08em;font-size:16px;">PyPI</span>
+        <span class="stack-item" style="font-family:Impact,sans-serif;font-weight:700;letter-spacing:0.05em;font-size:18px;">MCP</span>
+        <span class="stack-item" style="font-family:Georgia,serif;font-weight:600;letter-spacing:-0.02em;font-size:17px;">GitHub Action</span>
+        <span class="stack-item" style="font-family:Helvetica,sans-serif;font-weight:700;letter-spacing:-0.01em;font-size:15px;">FastAPI</span>
+        <span class="stack-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:14px;text-transform:uppercase;">Render</span>
+        <span class="stack-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.18em;font-size:14px;">Stripe</span>
+        <span class="stack-item" style="font-family:Palatino,serif;font-weight:500;letter-spacing:0.03em;font-size:15px;">203 tests</span>
+        <span class="stack-item" style="font-family:'Times New Roman',serif;font-weight:400;letter-spacing:0.02em;font-size:14px;">Apache-2.0</span>
+        <span class="stack-item" style="font-family:'Arial Black',sans-serif;font-weight:900;letter-spacing:0.08em;font-size:16px;">PyPI</span>
+        <span class="stack-item" style="font-family:Impact,sans-serif;font-weight:700;letter-spacing:0.05em;font-size:18px;">MCP</span>
+        <span class="stack-item" style="font-family:Georgia,serif;font-weight:600;letter-spacing:-0.02em;font-size:17px;">GitHub Action</span>
+        <span class="stack-item" style="font-family:Helvetica,sans-serif;font-weight:700;letter-spacing:-0.01em;font-size:15px;">FastAPI</span>
+        <span class="stack-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:14px;text-transform:uppercase;">Render</span>
+        <span class="stack-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.18em;font-size:14px;">Stripe</span>
+        <span class="stack-item" style="font-family:Palatino,serif;font-weight:500;letter-spacing:0.03em;font-size:15px;">203 tests</span>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -933,7 +1155,7 @@ footer {
       </select>
       <button type="submit" class="audit-submit">Audit free</button>
     </div>
-    <p class="audit-hint" id="auditHint">Real audited endpoints: <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">observer</a> · <a href="#" onclick="fillUrl('https://defi.hugen.tokyo');return false">hugen</a> · <a href="#" onclick="fillUrl('https://stabletravel.dev');return false">travel</a></p>
+    <p class="audit-hint" id="auditHint">No URL handy? <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">Load a live x402 endpoint</a> and audit it.</p>
   </form>
 
   <div id="auditResults" class="audit-results" aria-live="polite" hidden></div>
@@ -952,7 +1174,7 @@ footer {
       <div class="plan-value"><div class="plan-price">$0</div><span class="plan-period-small">/mo</span></div>
       <div class="plan-period-line">100 audits / month · forever</div>
       <ul class="plan-features">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 4 conformance checks</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 7 conformance checks</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>JSON response</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Community support</li>
       </ul>
@@ -1184,14 +1406,15 @@ footer {
 
 _PAGE_CSS = """
 :root {
-  --bg: #000000;
-  --fg: #ffffff;
-  --fg-70: rgba(255,255,255,0.70);
-  --fg-60: rgba(255,255,255,0.60);
-  --fg-50: rgba(255,255,255,0.50);
-  --accent: #3054ff;
-  --accent-hover: #2040e0;
-  --glass-border: rgba(255,255,255,0.10);
+  --bg: #F5F5F5;
+  --fg: #0a0a0a;
+  --fg-70: rgba(10,10,10,0.70);
+  --fg-60: rgba(10,10,10,0.60);
+  --fg-50: rgba(10,10,10,0.50);
+  --accent: #2B2644;
+  --accent-hover: #0a0a0a;
+  --ink: #2B2644;
+  --glass-border: rgba(10,10,10,0.10);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -1205,7 +1428,7 @@ nav.navbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 28px;
-  background: rgba(0,0,0,0.72);
+  background: rgba(245,245,245,0.82);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--glass-border);
 }
@@ -1216,16 +1439,16 @@ nav.navbar {
 .nav-links a:hover, .nav-right a:hover { color: var(--fg); }
 .nav-right { display: flex; gap: 14px; align-items: center; }
 .btn-primary-pill {
-  background: var(--accent); color: #fff !important;
+  background: #0a0a0a; color: #fff !important;
   padding: 8px 18px; border-radius: 999px; font-weight: 600;
 }
 .btn-primary-pill:hover { background: var(--accent-hover); }
-h1 { font-size: 2.4rem; line-height: 1.15; margin-bottom: 14px; font-weight: 400; }
-h2 { font-size: 1.35rem; margin: 40px 0 14px; font-weight: 600; }
+h1 { font-size: 2.6rem; line-height: 1.1; margin-bottom: 14px; font-weight: 600; letter-spacing: -0.04em; }
+h2 { font-size: 1.45rem; margin: 44px 0 14px; font-weight: 600; letter-spacing: -0.02em; }
 p, li { color: var(--fg-70); margin-bottom: 12px; }
 li { margin-left: 20px; margin-bottom: 8px; }
 code {
-  background: rgba(255,255,255,0.07); border-radius: 6px;
+  background: rgba(10,10,10,0.06); border-radius: 6px;
   padding: 1px 6px; font-size: 0.88em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--fg);
@@ -1238,7 +1461,7 @@ table.cmp th, table.cmp td {
 }
 table.cmp th { color: var(--fg); font-weight: 600; }
 table.cmp td { color: var(--fg-70); }
-table.cmp td.y { color: #7ee787; }
+table.cmp td.y { color: #047857; }
 table.cmp td.n { color: var(--fg-50); }
 .kicker {
   color: var(--accent); font-weight: 600; font-size: 0.85rem;
@@ -1246,12 +1469,12 @@ table.cmp td.n { color: var(--fg-50); }
 }
 .note {
   border: 1px solid var(--glass-border); border-radius: 12px;
-  background: rgba(255,255,255,0.04); padding: 16px 18px; margin: 18px 0;
+  background: #ffffff; padding: 16px 18px; margin: 18px 0;
 }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 22px 0; }
 .stat {
   border: 1px solid var(--glass-border); border-radius: 12px;
-  padding: 16px; background: rgba(255,255,255,0.03);
+  padding: 16px; background: #ffffff;
 }
 .stat .num { font-size: 1.6rem; font-weight: 700; color: var(--fg); }
 .stat .lbl { font-size: 0.85rem; color: var(--fg-60); margin-top: 4px; }
@@ -1269,7 +1492,7 @@ _PAGE_NAV = """
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
       <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;">
-      <span style="color:#fff;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
+      <span style="color:#0a0a0a;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
     </a>
   </div>
   <div class="nav-links">

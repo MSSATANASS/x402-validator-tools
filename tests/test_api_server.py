@@ -84,10 +84,17 @@ class TestLanding:
         assert "mask-composite" not in r.text
         for name in ("Asterpay", "Hugen", "Observer", "Greeneris", "SmartFlow"):
             assert name not in r.text
-        # Dark-mode spec markers
-        assert "#000000" in r.text
-        assert "#3054ff" in r.text
-        assert "#b4c0ff" in r.text
+        # Light "Halo" theme markers
+        assert "#F5F5F5" in r.text
+        assert "#2B2644" in r.text
+        assert "rgba(10,10,10,0.70)" in r.text
+        assert "background: #000;" not in r.text
+        # Halo composition: marquees + card grid
+        assert "marquee-track" in r.text
+        assert "stack-track" in r.text
+        assert "@keyframes marquee" in r.text
+        assert "hcard" in r.text
+        assert "Meet the engine." in r.text
         # Hero video slot present
         assert "hero-video-wrap" in r.text
         assert "hls.js" in r.text
@@ -97,7 +104,7 @@ class TestLanding:
         assert "rgba(30,58,138,0.20)" in r.text
         assert "rgba(49,46,129,0.20)" in r.text
         assert "blur(120px)" in r.text
-        assert "mix-blend-mode: screen" in r.text
+        assert "mix-blend-mode: multiply" in r.text
         # Hero CTAs
         assert "Get Your API Key" in r.text
         assert "Try It Free" in r.text
