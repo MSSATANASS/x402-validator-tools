@@ -95,16 +95,26 @@ class TestLanding:
         assert "@keyframes marquee" in r.text
         assert "hcard" in r.text
         assert "Meet the engine." in r.text
-        # Hero video slot present
+        # Hero background is pure CSS/SVG crypto art — no video, no external media
         assert "hero-video-wrap" in r.text
-        assert "hls.js" in r.text
-        assert "stream.mux.com" in r.text
-        assert "images.unsplash.com" in r.text
-        # Decorative gradients
-        assert "rgba(30,58,138,0.20)" in r.text
-        assert "rgba(49,46,129,0.20)" in r.text
+        assert "<video" not in r.text
+        assert "hls.js" not in r.text
+        assert "stream.mux.com" not in r.text
+        assert "images.unsplash.com" not in r.text
+        # Violet + emerald crypto palette
+        assert "rgba(124,58,237,0.30)" in r.text   # violet mesh
+        assert "rgba(16,185,129,0.28)" in r.text   # emerald mesh
+        assert "rgba(124,58,237,0.20)" in r.text   # violet decor blob
+        assert "rgba(16,185,129,0.20)" in r.text   # emerald decor blob
+        # Ledger grid + settlement flow animation
+        assert "hero-grid" in r.text
+        assert "hero-flow" in r.text
+        assert "@keyframes settle" in r.text
+        assert "flow-nodes" in r.text
         assert "blur(120px)" in r.text
         assert "mix-blend-mode: multiply" in r.text
+        # Accessibility: motion can be turned off
+        assert "prefers-reduced-motion" in r.text
         # Hero CTAs
         assert "Get Your API Key" in r.text
         assert "Try It Free" in r.text

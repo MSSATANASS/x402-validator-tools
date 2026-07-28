@@ -129,10 +129,7 @@ _LANDING_HTML = """<!DOCTYPE html>
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://stream.mux.com" crossorigin>
-<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.min.js"></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -391,7 +388,7 @@ a { color: inherit; }
   max-width: 88rem;
   margin: 0 auto;
   min-height: calc(100vh - 96px);
-  background: #E9E9E9;
+  background: linear-gradient(165deg, #EFEDF7 0%, #EAF3EF 55%, #EDECF2 100%);
   color: var(--fg);
   overflow: hidden;
   border-radius: 24px;
@@ -406,15 +403,93 @@ a { color: inherit; }
   z-index: 0;
   overflow: hidden;
 }
-.hero-video {
+/* --- Animated crypto background (violet + emerald, ~30% presence) --- */
+.mesh {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  mix-blend-mode: multiply;
+  will-change: transform;
+}
+.mesh-violet {
+  width: 62%; height: 78%;
+  top: -18%; right: -8%;
+  background: radial-gradient(circle, rgba(124,58,237,0.30) 0%, rgba(124,58,237,0.10) 45%, transparent 70%);
+  animation: drift-a 26s ease-in-out infinite;
+}
+.mesh-emerald {
+  width: 55%; height: 70%;
+  bottom: -22%; left: -10%;
+  background: radial-gradient(circle, rgba(16,185,129,0.28) 0%, rgba(16,185,129,0.09) 45%, transparent 70%);
+  animation: drift-b 32s ease-in-out infinite;
+}
+.mesh-deep {
+  width: 48%; height: 55%;
+  top: 30%; left: 32%;
+  background: radial-gradient(circle, rgba(43,38,68,0.22) 0%, rgba(43,38,68,0.06) 50%, transparent 72%);
+  animation: drift-c 38s ease-in-out infinite;
+}
+@keyframes drift-a {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); }
+  50%      { transform: translate3d(-6%, 5%, 0) scale(1.10); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); }
+  50%      { transform: translate3d(7%, -5%, 0) scale(1.08); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); }
+  50%      { transform: translate3d(-4%, -6%, 0) scale(1.12); }
+}
+
+/* Ledger grid */
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(43,38,68,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43,38,68,0.055) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 35%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 35%, transparent 100%);
+}
+
+/* Settlement flow lines */
+.hero-flow {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover; opacity: 0.9;
+  opacity: 0.30;
+}
+.flow-line {
+  stroke-dasharray: 190 1400;
+  stroke-linecap: round;
+  animation: settle 9s linear infinite;
+}
+.flow-line.f2 { animation-duration: 12s; animation-delay: -3.5s; }
+.flow-line.f3 { animation-duration: 15s; animation-delay: -7s; }
+@keyframes settle {
+  from { stroke-dashoffset: 1590; }
+  to   { stroke-dashoffset: 0; }
+}
+.flow-nodes circle {
+  fill: #2B2644;
+  opacity: 0.35;
+  animation: node-pulse 4s ease-in-out infinite;
+}
+.flow-nodes circle:nth-child(2) { animation-delay: -1.3s; }
+.flow-nodes circle:nth-child(3) { animation-delay: -2.6s; }
+.flow-nodes circle:nth-child(4) { animation-delay: -0.7s; }
+@keyframes node-pulse {
+  0%, 100% { opacity: 0.18; r: 3; }
+  50%      { opacity: 0.55; r: 4.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mesh, .flow-line, .flow-nodes circle { animation: none !important; }
 }
 
 .hero-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(245,245,245,0.72) 0%, rgba(245,245,245,0.45) 45%, rgba(245,245,245,0.80) 100%);
+  background: linear-gradient(180deg, rgba(245,245,245,0.35) 0%, rgba(245,245,245,0.12) 45%, rgba(245,245,245,0.55) 100%);
   backdrop-filter: blur(1px);
   -webkit-backdrop-filter: blur(1px);
   z-index: 1;
@@ -431,12 +506,12 @@ a { color: inherit; }
 .hero-decor.tl {
   top: -20%; left: 20%;
   width: 600px; height: 600px;
-  background: rgba(30,58,138,0.20);  /* blue-900/20 */
+  background: rgba(124,58,237,0.20);  /* violet-600/20 */
 }
 .hero-decor.br {
   bottom: -10%; right: 20%;
   width: 500px; height: 500px;
-  background: rgba(49,46,129,0.20);  /* indigo-900/20 */
+  background: rgba(16,185,129,0.20);  /* emerald-500/20 */
 }
 
 .hero-content {
@@ -1019,10 +1094,34 @@ footer {
 
 <!-- =================== HERO SECTION (motion-style) =================== -->
 <section class="hero">
-  <!-- HLS video bg with poster fallback -->
-  <div class="hero-video-wrap">
-    <video id="heroVideo" class="hero-video" muted loop playsinline preload="auto"
-           poster="https://images.unsplash.com/photo-1647356191320-d7a1f80ca777?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhcmslMjB0ZWNobm9sb2d5JTIwbmV1cmFsJTIwbmV0d29ya3xlbnwxfHx8fDE3Njg5NzIyNTV8MA&ixlib=rb-4.1.0&q=80&w=1080"></video>
+  <!-- Animated crypto background: mesh gradients + ledger grid + settlement flow.
+       Pure CSS/SVG — no video, no CDN dependency, ~30% presence. -->
+  <div class="hero-video-wrap" aria-hidden="true">
+    <div class="mesh mesh-violet"></div>
+    <div class="mesh mesh-emerald"></div>
+    <div class="mesh mesh-deep"></div>
+    <div class="hero-grid"></div>
+    <svg class="hero-flow" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="flowViolet" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7C3AED" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#7C3AED" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="flowEmerald" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#10B981" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#10B981" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path class="flow-line f1" d="M-100 170 H 400 Q 470 170 470 240 V 330 Q 470 400 540 400 H 1300" fill="none" stroke="url(#flowViolet)" stroke-width="1.5"/>
+      <path class="flow-line f2" d="M-100 430 H 300 Q 370 430 370 360 V 250 Q 370 180 440 180 H 1300" fill="none" stroke="url(#flowEmerald)" stroke-width="1.5"/>
+      <path class="flow-line f3" d="M-100 300 H 700 Q 780 300 780 220 V 140 Q 780 70 850 70 H 1300" fill="none" stroke="url(#flowViolet)" stroke-width="1.2"/>
+      <g class="flow-nodes">
+        <circle cx="470" cy="240" r="3.5"/><circle cx="370" cy="360" r="3.5"/>
+        <circle cx="780" cy="220" r="3"/><circle cx="540" cy="400" r="3"/>
+      </g>
+    </svg>
   </div>
   <div class="hero-overlay"></div>
   <div class="hero-decor tl"></div>
@@ -1284,30 +1383,9 @@ footer {
 </footer>
 
 <script>
-// === HLS.js video loader with Safari fallback ===
-// Spec contract: muted, loop, playsInline, object-fit cover, opacity 0.6,
-// poster fallback if HLS fails / unsupported.
+// Hero background is pure CSS/SVG (mesh gradients + ledger grid + flow lines).
+// No video element, no HLS, no external media dependency.
 (function () {
-  const video = document.getElementById('heroVideo');
-  if (!video) return;
-  const src = 'https://stream.mux.com/T6oQJQ02cQ6N01TR6iHwZkKFkbepS34dkkIc9iukgy400g.m3u8';
-
-  function play() {
-    video.play().catch(function (e) { console.log('Auto-play prevented:', e); });
-  }
-
-  if (window.Hls && Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(src);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, play);
-    window.addEventListener('beforeunload', function () { hls.destroy(); });
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = src;
-    video.addEventListener('loadedmetadata', play);
-  }
-  // else: poster image stays as the visual fallback.
-})();
 
 // === Audit-demo form handler ===
 (function () {
