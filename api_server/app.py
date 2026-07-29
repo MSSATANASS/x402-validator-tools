@@ -1242,7 +1242,12 @@ footer {
   <h2 class="audit-demo-headline">Audit an x402 endpoint right now</h2>
   <p class="audit-demo-sub">Paste any merchant URL. We run seven checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, and discovery listing. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
 
-  <form id="auditForm" class="audit-form" autocomplete="off">
+  <!-- action="/method=get" keep the form well-formed; the inline onsubmit guard
+       returns false until the bound JS handler flips window.__x402AuditReady
+       to true, so a degraded submit NEVER silently resets the page. -->
+  <form id="auditForm" class="audit-form" autocomplete="off"
+        action="/" method="get"
+        onsubmit="if(window.__x402AuditReady!==true){var n=document.getElementById('auditInlineErr');if(!n){n=document.createElement('div');n.id='auditInlineErr';n.className='audit-error';n.style.cssText='margin-top:10px;font-size:0.85rem;';n.textContent='Page scripts did not load (network error or stale cache). Please refresh (Ctrl+R / Cmd+R) and try again. If this persists, contact support.';this.appendChild(n);}n.hidden=false;}return window.__x402AuditReady===true;">
     <div class="audit-input-row">
       <input type="url" id="auditUrl" name="url" required
              value="https://observer.137-184-67-179.sslip.io"
@@ -1255,6 +1260,9 @@ footer {
       <button type="submit" class="audit-submit">Audit free</button>
     </div>
     <p class="audit-hint" id="auditHint">No URL handy? <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">Load a live x402 endpoint</a> and audit it.</p>
+    <noscript>
+      <p style="margin-top:10px;color:var(--fg-50);font-size:0.85rem;">The audit demo requires JavaScript. <a href="/health">Check status</a> or enable scripts and refresh.</p>
+    </noscript>
   </form>
 
   <div id="auditResults" class="audit-results" aria-live="polite" hidden></div>
@@ -1385,10 +1393,18 @@ footer {
 <script>
 // Hero background is pure CSS/SVG (mesh gradients + ledger grid + flow lines).
 // No video element, no HLS, no external media dependency.
+//
+// Audit-demo form handler. Kept in a single IIFE: the previous version had a
+// dangling outer `(function () {` that broke the whole block as a SyntaxError,
+// which meant the submit handler never bound and every form submit fell
+// through to the browser's native GET (resetting the page silently). See
+// ROBUSTNESS.md / commit history for the bug report from Ali Nain / Viridis.
 (function () {
+  // Safety flag read by the inline onsubmit guard on <form id="auditForm">.
+  // Until bind() finishes, submitting the form is refused at the kernel level
+  // and shows an inline error instead of resetting the page.
+  window.__x402AuditReady = false;
 
-// === Audit-demo form handler ===
-(function () {
   function $(id) { return document.getElementById(id); }
 
   function esc(s) {
@@ -1434,47 +1450,103 @@ footer {
       '</p>';
   }
 
-  var form = $('auditForm');
-  var results = $('auditResults');
-  if (form) {
-    form.addEventListener('submit', function (ev) {
-      ev.preventDefault();
-      var urlEl = $('auditUrl');
-      var modeEl = $('auditMode');
-      var submitBtn = form.querySelector('.audit-submit');
-      var url = urlEl.value.trim();
-      var mode = modeEl.value;
-      if (!url) return;
-      submitBtn.disabled = true;
-      results.hidden = false;
-      results.innerHTML =
-        '<div class="audit-loading"><span class="spinner"></span>Auditing ' + esc(url) + '…</div>';
-      fetch('/audit-public', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({url: url, mode: mode})
+  function runAudit(url, mode, results, submitBtn) {
+    fetch('/audit-public', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url: url, mode: mode})
+    })
+      .then(function (r) {
+        return r.json().then(function (body) { return {status: r.status, body: body}; });
       })
-        .then(function (r) {
-          return r.json().then(function (body) { return {status: r.status, body: body}; });
-        })
-        .then(function (resp) {
-          renderResults(results, resp.body, resp.status);
-        })
-        .catch(function (e) {
-          results.innerHTML = '<div class="audit-error">Network error: ' + esc(e.message) + '</div>';
-        })
-        .then(function () { submitBtn.disabled = false; });
-    });
+      .then(function (resp) {
+        renderResults(results, resp.body, resp.status);
+      })
+      .catch(function (e) {
+        if (results) {
+          results.innerHTML = '<div class="audit-error">Network error: ' + esc(e && e.message || e) + '</div>';
+        }
+      })
+      .then(function () { if (submitBtn) submitBtn.disabled = false; });
   }
 
-  // expose so the inline hint links can fill the input
-  window.fillUrl = function (u) {
-    var urlEl = $('auditUrl');
-    if (urlEl) {
-      urlEl.value = u;
-      urlEl.focus();
+  function bind() {
+    var form = $('auditForm');
+    var results = $('auditResults');
+
+    if (form) {
+      // Defence in depth: even if the inline onsubmit guard ever returned the
+      // wrong thing, this handler refuses to let the browser submit natively.
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var urlEl = $('auditUrl');
+        var modeEl = $('auditMode');
+        var submitBtn = form.querySelector('.audit-submit');
+        if (!urlEl) return;
+        var url = (urlEl.value || '').trim();
+        var mode = modeEl ? modeEl.value : 'standard';
+        if (!url) return;
+        if (submitBtn) submitBtn.disabled = true;
+        if (results) {
+          results.hidden = false;
+          results.innerHTML =
+            '<div class="audit-loading"><span class="spinner"></span>Auditing ' + esc(url) + '…</div>';
+        }
+        runAudit(url, mode, results, submitBtn);
+      });
     }
-  };
+
+    // expose so the inline hint links can fill the input
+    window.fillUrl = function (u) {
+      var urlEl = $('auditUrl');
+      if (urlEl) {
+        urlEl.value = u;
+        urlEl.focus();
+      }
+    };
+
+    // Progressive enhancement: if we ever land at "/" with ?url=&mode= in the
+    // query string (the symptom Ali reported — a degraded native GET submit),
+    // refill the form fields from the query and dispatch a synthetic submit
+    // so the user still sees a real audit result instead of a blank reset.
+    // The synthetic submit fires the listener above, which calls
+    // preventDefault() so no navigation happens.
+    try {
+      var sp = new URLSearchParams(window.location.search);
+      var qUrl = sp.get('url');
+      var qMode = sp.get('mode');
+      if (form && qUrl) {
+        var qUrlEl = $('auditUrl');
+        var qModeEl = $('auditMode');
+        if (qUrlEl) qUrlEl.value = qUrl;
+        if (qModeEl && (qMode === 'standard' || qMode === 'marketplace')) {
+          qModeEl.value = qMode;
+        }
+        form.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}));
+        // Clean the URL so a manual refresh doesn't auto-run again.
+        try {
+          history.replaceState(
+            null, '',
+            window.location.pathname + (window.location.hash || '')
+          );
+        } catch (e2) { /* ignore — older browsers */ }
+      }
+    } catch (e) { /* ignore — graceful failure */ }
+
+    // Flip the safety flag LAST, after bind() has succeeded. If anything above
+    // threw, the flag stays false and the inline onsubmit guard will refuse
+    // navigation on submit, surfacing an inline error to the user.
+    window.__x402AuditReady = true;
+  }
+
+  // The script sits at the bottom of <body>, so DOM is normally already
+  // parsed; DOMContentLoaded is a belt-and-suspenders guard against future
+  // template reordering or async bundle splits.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
+  } else {
+    bind();
+  }
 })();
 </script>
 
