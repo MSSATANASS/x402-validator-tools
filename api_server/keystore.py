@@ -16,8 +16,11 @@ On-disk shape (JSON)::
 Legacy flat shape ``{"<token>": "<plan_id>", ...}`` is auto-migrated on
 next load. Atomic writes (tmp + rename) keep the file crash-safe.
 
-For production multi-replica deployments swap this for PostgreSQL / Redis.
-The interface stays the same.
+Backend selection happens in ``get_store()``: when ``DATABASE_URL`` is set
+the PostgreSQL/PolarDB-backed ``api_server.dbkeystore.DBKeyStore`` is used
+(same interface, plus real monthly-quota enforcement and an audit log);
+otherwise this JSON store is used. To migrate existing data run
+``scripts/migrate_keystore_to_db.py``.
 """
 
 from __future__ import annotations
@@ -176,18 +179,52 @@ class KeyStore:
         """Operator view of every persisted claim (debug / admin)."""
         return dict(self._data["claims"])
 
+    # ----- usage accounting (no-ops on the JSON backend) -----
+    # The JSON store tracks no per-key usage, so quotas are not enforced
+    # (historical behavior). These keep app code store-agnostic; the
+    # PostgreSQL-backed DBKeyStore implements real enforcement.
 
-# Default in-memory instance — the FastAPI app talks to this.
-_store = KeyStore()
+    backend = "json"
+
+    def usage_this_month(self, key: str) -> int:
+        return 0
+
+    def quota_allows(self, key: str, plan_id: Optional[str]) -> bool:
+        return True
+
+    def record_audit(self, **kwargs: Any) -> None:
+        return None
 
 
-def get_store() -> KeyStore:
-    """Return the module-level default KeyStore."""
+# Default instance — created lazily on first use so test/env changes to
+# DATABASE_URL / API_KEYS_FILE are picked up correctly.
+_store = None
+
+
+def _make_default_store() -> "KeyStore":
+    db_url = os.environ.get("DATABASE_URL", "").strip()
+    if db_url:
+        from api_server.dbkeystore import DBKeyStore  # lazy import
+        return DBKeyStore(db_url)
+    return KeyStore()
+
+
+def get_store() -> "KeyStore":
+    """Return the module-level default store (JSON or PostgreSQL-backed)."""
+    global _store
+    if _store is None:
+        _store = _make_default_store()
     return _store
 
 
 def reset_store(path: Optional[Path] = None) -> KeyStore:
-    """Replace the default store with a fresh one (tests, etc.)."""
+    """Replace the default store with a fresh JSON one (tests, etc.)."""
     global _store
     _store = KeyStore(path)
     return _store
+
+
+def reset_default_store() -> None:
+    """Drop the cached store; the next get_store() re-reads the environment."""
+    global _store
+    _store = None

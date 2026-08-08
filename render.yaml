@@ -32,3 +32,8 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Optional: set to switch the keystore from api_keys.json to
+      # PostgreSQL/PolarDB (monthly quotas + audit log). Leave unset to
+      # keep the JSON file. Set manually in the dashboard when ready.
+      - key: DATABASE_URL
+        sync: false

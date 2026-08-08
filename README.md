@@ -52,9 +52,46 @@ for ports, env vars, and volume mounts.
 
 | Component    | Env vars                                       |
 |--------------|------------------------------------------------|
-| `api_server` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PUBLIC_URL`, `HOST`, `PORT` |
+| `api_server` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PUBLIC_URL`, `HOST`, `PORT`, `API_KEYS_FILE`, `DATABASE_URL` (optional), `ADMIN_SECRET`, `AUDIT_PUBLIC_DAILY_LIMIT` |
 | `dashboard`  | `FLASK_DEBUG`, `HOST`, `PORT`                  |
 | `proxy`      | proxy reads `proxy/config.yaml` at startup     |
+
+### Database backend (PostgreSQL / PolarDB)
+
+By default the API persists keys to a JSON file (`api_keys.json`, override
+with `API_KEYS_FILE`). Setting `DATABASE_URL` switches to the
+PostgreSQL-backed store (`api_server/dbkeystore.py`) with the same interface
+plus three upgrades:
+
+```bash
+export DATABASE_URL=postgresql://user:pass@<host>:5432/x402
+```
+
+1. **Real monthly quotas** — `/validate` returns 429 once a key exhausts its
+   plan (100 / 500 / 5,000 audits per month). The JSON backend historically
+   does not enforce quotas.
+2. **Audit log** — one row per served audit (timestamp, URL, mode, overall,
+   latency, plan tier; public-demo rows carry no identity). Powers the live
+   counters on `/open`.
+3. **Multi-replica safe** — the database is the lock, so several app
+   instances can share one keystore.
+
+Schema is created idempotently at boot. To migrate existing JSON data:
+
+```bash
+DATABASE_URL=postgresql://... python scripts/migrate_keystore_to_db.py /var/data/api_keys.json
+```
+
+The migration is idempotent (`ON CONFLICT DO NOTHING`) and never prints
+credentials. Works with any PostgreSQL 12+, including Alibaba Cloud PolarDB
+(always-free 2C8G tier) and the `db` service in `docker-compose.yml`.
+
+Integration tests for the DB backend run when `TEST_DATABASE_URL` is set:
+
+```bash
+TEST_DATABASE_URL=postgresql://x402:x402@localhost:5432/x402 \
+    pytest tests/test_dbkeystore.py -q
+```
 
 ## Architecture
 

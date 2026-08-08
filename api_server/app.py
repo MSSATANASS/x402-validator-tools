@@ -6,15 +6,18 @@ Endpoints
     GET  /                 landing HTML page
     GET  /health           liveness check
     GET  /plans            list available subscription plans
-    POST /validate         audit a single URL (requires API key)
+    POST /validate         audit a single URL (requires API key; ``advise:
+                           true`` attaches Qwen AI remediation advice when
+                           ``DASHSCOPE_API_KEY`` is configured)
     POST /create-checkout-session  create a Stripe checkout session for a plan
     POST /stripe-webhook   Stripe webhook receiver (signature verified)
     POST /admin/keys       mint a new API key for a plan (admin secret required)
     DELETE /admin/keys/{key}  revoke a key (admin secret required)
 
 API keys are persisted to a JSON file (``api_keys.json`` by default, override
-with ``API_KEYS_FILE`` env var). Multireplica deployments should swap
-``api_server.keystore`` for a database-backed implementation.
+with ``API_KEYS_FILE`` env var). Setting ``DATABASE_URL`` switches to the
+PostgreSQL / PolarDB-backed store (``api_server.dbkeystore``), which also
+enables per-plan monthly quota enforcement and the audit log behind /open.
 """
 
 from __future__ import annotations
@@ -41,6 +44,7 @@ from api_server.models import (
 )
 from api_server import stripe_integration
 from api_server import ratelimit
+from api_server import ai_advisor
 from api_server.keystore import get_store
 
 
@@ -73,11 +77,14 @@ async def _run_audit(url: str, mode: str, timeout: float = 10.0):
 
 
 def _require_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
-    """FastAPI dependency: 401 unless the supplied key is registered."""
-    plan = get_store().get(x_api_key)
-    if not plan:
+    """FastAPI dependency: 401 unless the supplied key is registered.
+
+    Returns the API key itself so handlers can attribute usage and enforce
+    the plan's monthly quota per key.
+    """
+    if not get_store().get(x_api_key):
         raise HTTPException(401, "Invalid API key")
-    return plan
+    return x_api_key
 
 
 def _flatten_checks(report) -> list[CheckResultItem]:
@@ -1816,11 +1823,7 @@ __PAGE_NAV__
     <div class="stat"><div class="num">1</div><div class="lbl">person running this (Gael L Chulim), hosted on Render, billed via Stripe</div></div>
   </div>
 
-  <h2>What we don't track</h2>
-  <p>The API keeps no audit counter, no per-user history, and stores no audit results —
-     only rate-limit timestamps per IP (in-memory, gone on restart) and issued API keys.
-     When we can measure audits-served honestly, that number will appear here. Until
-     then, it won't.</p>
+  __WHAT_WE_TRACK__
 
   <h2>Sources</h2>
   <ul>
@@ -1835,6 +1838,33 @@ __PAGE_FOOTER__
 </body>
 </html>
 """
+
+
+# "What we track" section for /open — picked per backend at render time.
+# The JSON-backend copy is the historical text, unchanged.
+_WHAT_WE_TRACK_JSON = """<h2>What we don't track</h2>
+  <p>The API keeps no audit counter, no per-user history, and stores no audit results —
+     only rate-limit timestamps per IP (in-memory, gone on restart) and issued API keys.
+     When we can measure audits-served honestly, that number will appear here. Until
+     then, it won't.</p>"""
+
+_WHAT_WE_TRACK_DB = """<h2>What we track (and what we don't)</h2>
+  <p>Since the database migration, every served audit writes one row: timestamp,
+     URL, mode, overall result, latency, and the caller's plan tier. Public-demo
+     rows carry no identity at all. We do not store the full check-by-check report,
+     and we don't sell or share any of it. That is what makes the numbers below
+     measured instead of projected.</p>
+  <div class="stat-grid">
+    <div class="stat"><div class="num">{total}</div><div class="lbl">audits served, all-time (live from the audit log)</div></div>
+    <div class="stat"><div class="num">{this_month}</div><div class="lbl">audits served this month</div></div>
+  </div>"""
+
+_WHAT_WE_TRACK_DB_NO_STATS = """<h2>What we track (and what we don't)</h2>
+  <p>Since the database migration, every served audit writes one row: timestamp,
+     URL, mode, overall result, latency, and the caller's plan tier. Public-demo
+     rows carry no identity at all. We do not store the full check-by-check report,
+     and we don't sell or share any of it. The live audits-served counters are
+     temporarily unavailable — we show real numbers or nothing.</p>"""
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -1853,10 +1883,22 @@ async def vs_doctor() -> HTMLResponse:
 
 @app.get("/open", response_class=HTMLResponse, include_in_schema=False)
 async def open_metrics() -> HTMLResponse:
+    store = get_store()
+    if getattr(store, "backend", "json") == "json":
+        track_section = _WHAT_WE_TRACK_JSON
+    else:
+        try:
+            stats = store.audit_stats()
+            track_section = _WHAT_WE_TRACK_DB.format(
+                total=stats["total"], this_month=stats["this_month"]
+            )
+        except Exception:
+            track_section = _WHAT_WE_TRACK_DB_NO_STATS
     return HTMLResponse(
         _OPEN_HTML.replace("__PAGE_CSS__", _PAGE_CSS)
         .replace("__PAGE_NAV__", _PAGE_NAV)
         .replace("__PAGE_FOOTER__", _PAGE_FOOTER)
+        .replace("__WHAT_WE_TRACK__", track_section)
     )
 
 
@@ -1878,21 +1920,54 @@ async def plans() -> list[Plan]:
 @app.post("/validate", response_model=ValidateResponse)
 async def validate(
     req: ValidateRequest,
-    plan_id: str = Depends(_require_api_key),
+    api_key: str = Depends(_require_api_key),
 ) -> ValidateResponse:
+    store = get_store()
+    plan_id = store.get(api_key)
+
+    # Enforce the plan's monthly quota. The JSON keystore reports usage 0
+    # (historical behavior); the PostgreSQL backend enforces for real.
+    if not store.quota_allows(api_key, plan_id):
+        plan = PLANS.get(plan_id or "")
+        limit = plan.requests_per_month if plan else "your plan's"
+        raise HTTPException(
+            429,
+            f"Monthly quota reached ({limit} audits/month on "
+            f"{plan_id}). Upgrade: /create-checkout-session?plan_id=pro",
+        )
+
     started = time.monotonic()
     try:
         report = await _run_audit(req.url, req.mode)
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
+    store.record_audit(
+        url=report.target_url,
+        mode=req.mode,
+        overall=report.overall_status,
+        latency_ms=elapsed_ms,
+        caller_key=api_key,
+        caller_plan=plan_id,
+        source="api",
+    )
+    checks = _flatten_checks(report)
+    ai_advice = None
+    if req.advise:
+        ai_advice = await ai_advisor.advise(
+            url=report.target_url,
+            overall=report.overall_status,
+            summary=report.summary,
+            checks=checks,
+        )
     return ValidateResponse(
         url=report.target_url,
         overall=report.overall_status,
         summary=report.summary,
-        checks=_flatten_checks(report),
+        checks=checks,
         latency_ms=elapsed_ms,
         timestamp=report.timestamp.isoformat(),
+        ai_advice=ai_advice,
     )
 
 
@@ -1928,6 +2003,15 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
+    get_store().record_audit(
+        url=report.target_url,
+        mode=req.mode,
+        overall=report.overall_status,
+        latency_ms=elapsed_ms,
+        caller_key=None,
+        caller_plan=None,
+        source="public",
+    )
     checks = [
         {
             "name": c.check_name,

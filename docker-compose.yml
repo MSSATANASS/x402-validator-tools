@@ -2,6 +2,24 @@
 # but the image supports a COMPONENT env override so you can also run them
 # individually in other environments.
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: x402-db
+    environment:
+      POSTGRES_DB: x402
+      POSTGRES_USER: x402
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-x402-local-dev}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U x402 -d x402"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Port exposed for local tooling/tests only; keep it firewalled in ECS.
+    ports:
+      - "5432:5432"
+
   api:
     build: .
     image: x402-validator-tools:ci
@@ -12,8 +30,14 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8000}
+      # When set, the keystore switches from api_keys.json to PostgreSQL
+      # (quota enforcement + audit log). See api_server/dbkeystore.py.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://x402:${POSTGRES_PASSWORD:-x402-local-dev}@db:5432/x402}
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
   dashboard:
     build: .
@@ -40,3 +64,6 @@ services:
       - "8080:8080"
     depends_on:
       - api
+
+volumes:
+  db-data:

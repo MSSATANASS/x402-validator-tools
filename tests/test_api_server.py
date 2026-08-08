@@ -17,6 +17,8 @@ def client(tmp_path, monkeypatch):
     import sys
     monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "api_keys.json"))
     monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
+    # These tests exercise the JSON keystore path explicitly.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     # Force-load the modules first so they're registered in sys.modules
     import api_server.keystore  # noqa: F401
     import api_server.app  # noqa: F401
