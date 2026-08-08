@@ -67,6 +67,10 @@ class ValidateRequest(BaseModel):
         default=False,
         description="Attach Qwen AI remediation advice (requires DASHSCOPE_API_KEY server-side)",
     )
+    explain: bool = Field(
+        default=False,
+        description="Attach a plain-language AI summary of the result for non-experts (requires DASHSCOPE_API_KEY server-side)",
+    )
 
 
 class CheckResultItem(BaseModel):
@@ -88,6 +92,7 @@ class ValidateResponse(BaseModel):
     latency_ms: Optional[float] = None
     timestamp: str
     ai_advice: Optional[str] = None
+    ai_summary: Optional[str] = None
 
 
 class CheckoutResponse(BaseModel):

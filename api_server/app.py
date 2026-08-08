@@ -1952,14 +1952,22 @@ async def validate(
         source="api",
     )
     checks = _flatten_checks(report)
-    ai_advice = None
-    if req.advise:
-        ai_advice = await ai_advisor.advise(
-            url=report.target_url,
-            overall=report.overall_status,
-            summary=report.summary,
-            checks=checks,
+    ai_advice = ai_summary = None
+    ai_args = dict(
+        url=report.target_url,
+        overall=report.overall_status,
+        summary=report.summary,
+        checks=checks,
+    )
+    if req.advise and req.explain:
+        ai_advice, ai_summary = await asyncio.gather(
+            ai_advisor.advise(**ai_args),
+            ai_advisor.summarize(**ai_args),
         )
+    elif req.advise:
+        ai_advice = await ai_advisor.advise(**ai_args)
+    elif req.explain:
+        ai_summary = await ai_advisor.summarize(**ai_args)
     return ValidateResponse(
         url=report.target_url,
         overall=report.overall_status,
@@ -1968,6 +1976,7 @@ async def validate(
         latency_ms=elapsed_ms,
         timestamp=report.timestamp.isoformat(),
         ai_advice=ai_advice,
+        ai_summary=ai_summary,
     )
 
 
