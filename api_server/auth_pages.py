@@ -16,7 +16,9 @@ import os
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from api_server import auth, ratelimit
+from api_server import auth, ratelimit, stripe_integration
+from api_server.keystore import get_store
+from api_server.models import PLANS
 from api_server.pages import PAGE_CSS, PAGE_FOOTER, PAGE_NAV
 
 router = APIRouter()
@@ -97,6 +99,72 @@ _LOGIN_FORM = """
   </form>
   <div class="form-note">No account yet? <a href="/signup">Sign up</a></div>
 </div>"""
+
+
+_DASHBOARD_BODY = """
+<h1>My dashboard</h1>
+<p>Signed in as <strong>__EMAIL__</strong> · plan: <strong>__PLAN__</strong></p>
+
+<h2>API keys</h2>
+__KEYS_TABLE__
+<form method="post" action="/dashboard/keys">
+  <button class="form-btn" style="width:auto;padding:10px 22px;" type="submit">Create new API key</button>
+</form>
+<p style="font-size:0.85rem;color:var(--fg-60);">Keys use your plan's monthly
+quota and are shown in full only once, at creation.</p>
+
+<h2>Plans</h2>
+__UPGRADE__
+
+<form method="post" action="/logout" style="margin-top:40px;">
+  <button class="mini-btn" type="submit">Log out</button>
+</form>
+"""
+
+_KEYS_TABLE = """<table class="keys">
+<tr><th>Key</th><th>Plan</th><th>Usage this month</th><th>Created</th><th></th></tr>
+__ROWS__
+</table>"""
+
+_NEW_KEY_BODY = """
+<div class="auth-card" style="max-width:560px;">
+  <h1>API key created</h1>
+  <p>Save this key — it will not be shown again:</p>
+  <div class="key-box" id="keyBox">__API_KEY__</div>
+  <button class="form-btn" id="copyBtn" type="button">Copy key</button>
+  <div class="form-note"><a href="/dashboard">Back to dashboard</a></div>
+</div>
+<script>
+(function(){
+  var btn = document.getElementById('copyBtn');
+  if(!btn || !navigator.clipboard) return;
+  btn.addEventListener('click', function(){
+    navigator.clipboard.writeText(document.getElementById('keyBox').innerText).then(function(){
+      btn.innerText = 'Copied!';
+      setTimeout(function(){ btn.innerText = 'Copy key'; }, 2000);
+    }).catch(function(){ btn.innerText = 'Select + copy manually'; });
+  });
+})();
+</script>
+"""
+
+
+def _upgrade_html(current_plan: str) -> str:
+    links = []
+    for pid in ("pro", "enterprise"):
+        if pid == current_plan:
+            continue
+        p = PLANS[pid]
+        price = f"${p.price_cents // 100}/mo"
+        links.append(
+            f'<a class="btn-primary-pill" style="display:inline-block;'
+            f'margin-right:10px;text-decoration:none;" '
+            f'href="/dashboard/upgrade?plan_id={pid}">'
+            f'Upgrade to {p.name} — {price}</a>'
+        )
+    if not links:
+        return "<p>You are on the top plan — thank you!</p>"
+    return "<p>" + "".join(links) + "</p>"
 
 
 def _page(title: str, body: str, status_code: int = 200) -> HTMLResponse:
@@ -248,3 +316,69 @@ async def logout(request: Request):
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie(auth.SESSION_COOKIE, path="/")
     return response
+
+
+# ---------------------------------------------------------------------------
+# Dashboard + key management
+# ---------------------------------------------------------------------------
+
+
+@router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard(request: Request) -> HTMLResponse:
+    user = current_user(request)
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    store = _require_store()
+    keys = store.list_keys(user["id"])
+    ks = get_store()
+    rows = []
+    for k in keys:
+        plan = PLANS.get(k["plan_id"])
+        quota = plan.requests_per_month if plan else "?"
+        used = ks.usage_this_month(k["token"])
+        rows.append(
+            "<tr>"
+            f"<td><code>{_html.escape(k['kid'])}…</code></td>"
+            f"<td>{_html.escape(k['plan_id'])}</td>"
+            f"<td>{used} / {quota}</td>"
+            f"<td>{str(k['created_at'])[:10]}</td>"
+            "<td><form method=\"post\" action=\"/dashboard/keys/revoke\">"
+            f"<input type=\"hidden\" name=\"kid\" value=\"{_html.escape(k['kid'])}\">"
+            "<button class=\"mini-btn\" type=\"submit\">Revoke</button>"
+            "</form></td>"
+            "</tr>"
+        )
+    keys_table = (_KEYS_TABLE.replace("__ROWS__", "".join(rows))
+                  if rows else
+                  "<p>No keys yet — create your first one below.</p>")
+    plan_label = PLANS[user["plan_id"]].name if user["plan_id"] in PLANS \
+        else user["plan_id"]
+    body = (_DASHBOARD_BODY
+            .replace("__EMAIL__", _html.escape(user["email"]))
+            .replace("__PLAN__", _html.escape(plan_label))
+            .replace("__KEYS_TABLE__", keys_table)
+            .replace("__UPGRADE__", _upgrade_html(user["plan_id"])))
+    return _page("My dashboard", body)
+
+
+@router.post("/dashboard/keys", response_class=HTMLResponse,
+             include_in_schema=False)
+async def dashboard_create_key(request: Request):
+    user = current_user(request)
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    store = _require_store()
+    token = store.issue_key(user["id"], user["plan_id"])
+    body = _NEW_KEY_BODY.replace("__API_KEY__", _html.escape(token))
+    return _page("API key created", body)
+
+
+@router.post("/dashboard/keys/revoke", include_in_schema=False)
+async def dashboard_revoke_key(request: Request, kid: str = Form(...)):
+    user = current_user(request)
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    store = _require_store()
+    if not store.revoke_key_by_kid(user["id"], kid):
+        raise HTTPException(404, "Key not found")
+    return RedirectResponse("/dashboard", status_code=303)

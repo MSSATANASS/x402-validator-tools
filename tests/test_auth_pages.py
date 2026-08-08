@@ -199,3 +199,88 @@ class TestSignupLoginLogout:
         _, r = _signup(db_client)
         assert r.status_code == 429
         ratelimit.reset_limiter()
+
+
+KEY_BOX_RE = re.compile(r'id="keyBox">([^<]+)</div>')
+
+
+class TestDashboardJsonMode:
+    def test_dashboard_redirects_to_login_without_session(self, json_client):
+        r = json_client.get("/dashboard", follow_redirects=False)
+        assert r.status_code == 303
+        assert r.headers["location"] == "/login"
+
+
+@needs_db
+class TestDashboard:
+    def test_dashboard_requires_session(self, db_client):
+        db_client.cookies.clear()
+        r = db_client.get("/dashboard", follow_redirects=False)
+        assert r.status_code == 303
+        assert r.headers["location"] == "/login"
+
+    def test_dashboard_shows_email(self, db_client):
+        db_client.cookies.clear()
+        email, _ = _signup(db_client)
+        dash = db_client.get("/dashboard")
+        assert dash.status_code == 200
+        assert email in dash.text
+
+    def test_logout_revokes_session(self, db_client):
+        db_client.cookies.clear()
+        _signup(db_client)
+        db_client.post("/logout", follow_redirects=False)
+        dash = db_client.get("/dashboard", follow_redirects=False)
+        assert dash.status_code == 303
+        assert dash.headers["location"] == "/login"
+
+    def test_create_key_shown_once_and_listed_masked(self, db_client):
+        db_client.cookies.clear()
+        _signup(db_client)
+        r = db_client.post("/dashboard/keys")
+        assert r.status_code == 200
+        m = KEY_BOX_RE.search(r.text)
+        assert m, "key box missing from the new-key page"
+        token = m.group(1).strip()
+        assert len(token) >= 40
+        dash = db_client.get("/dashboard")
+        assert token not in dash.text, "raw token leaked into the dashboard"
+        from api_server import auth as auth_mod
+        assert auth_mod.kid_for_token(token) in dash.text
+
+    def test_new_key_works_for_validate_gate(self, db_client):
+        db_client.cookies.clear()
+        _signup(db_client)
+        r = db_client.post("/dashboard/keys")
+        token = KEY_BOX_RE.search(r.text).group(1).strip()
+        from api_server.keystore import get_store
+        assert get_store().get(token) == "free"  # signup plan
+
+    def test_revoke_own_key_only(self, db_client):
+        from api_server import auth as auth_mod
+        from api_server.keystore import get_store
+        db_client.cookies.clear()
+        email1, _ = _signup(db_client)
+        r = db_client.post("/dashboard/keys")
+        token = KEY_BOX_RE.search(r.text).group(1).strip()
+        kid = auth_mod.kid_for_token(token)
+
+        # a different user cannot revoke it
+        db_client.cookies.clear()
+        _signup(db_client)
+        r = db_client.post("/dashboard/keys/revoke", data={"kid": kid})
+        assert r.status_code == 404
+        assert get_store().get(token) == "free"  # still alive
+
+        # the owner can
+        db_client.cookies.clear()
+        db_client.post(
+            "/login", data={"email": email1, "password": "password123"}
+        )
+        r = db_client.post(
+            "/dashboard/keys/revoke", data={"kid": kid},
+            follow_redirects=False,
+        )
+        assert r.status_code == 303
+        assert get_store().get(token) is None
+        assert kid not in db_client.get("/dashboard").text
