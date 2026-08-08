@@ -129,6 +129,12 @@ class DBKeyStore:
     def close(self) -> None:
         self._pool.close()
 
+    @property
+    def pool(self):
+        """Expose the connection pool so api_server.auth.UserStore can share
+        it (one pool per process — Neon free tier limits connections)."""
+        return self._pool
+
     # ----- key lookup (used by validation gate) -----
 
     def __contains__(self, key: str) -> bool:

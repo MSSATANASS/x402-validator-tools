@@ -772,3 +772,15 @@ class TestRateLimiter:
         # Advance beyond the window
         base[0] += 11
         assert rl.allow("k", 2) is True
+
+
+class TestPagesChrome:
+    def test_page_nav_has_login_link(self) -> None:
+        from api_server.pages import PAGE_NAV
+        assert 'href="/login"' in PAGE_NAV
+
+    def test_auth_nav_links(self) -> None:
+        from api_server.pages import auth_nav_links
+        logged_out = auth_nav_links(False)
+        assert "/login" in logged_out and "/signup" in logged_out
+        assert auth_nav_links(True) == '<a href="/dashboard">My dashboard</a>'

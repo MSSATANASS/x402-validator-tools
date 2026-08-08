@@ -27,6 +27,10 @@ dependencies = [
     # Optional at runtime: without DATABASE_URL the JSON keystore is used,
     # but the driver is installed so the switch is config-only.
     "psycopg[binary,pool]>=3.2",
+    # Accounts: argon2id password hashing (api_server.auth).
+    "argon2-cffi>=23.1",
+    # Required by fastapi.Form (signup/login form posts).
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

@@ -14,3 +14,6 @@ node_modules/
 
 # Local-only: contains account IDs and operational details (see vault)
 CLAUDE.md
+
+# secret-shuttle env-ref files (refs only, never secrets — kept local anyway)
+*.refs
