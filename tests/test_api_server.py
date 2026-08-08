@@ -160,7 +160,7 @@ class TestLanding:
         assert 'id="pricing"' in r.text
         assert 'id="audit"' in r.text
         # og:image now points to a real generated asset served from /static
-        assert 'property="og:image" content="https://lastminutestickets.com/static/og-image.png"' in r.text
+        assert 'property="og:image" content="https://x402-validator-tools.onrender.com/static/og-image.png"' in r.text
         assert 'name="twitter:image"' in r.text
         # Real PNG favicon + apple-touch-icon (replaces the old inline SVG data URI)
         assert 'rel="icon" type="image/png" href="/static/favicon-32.png"' in r.text

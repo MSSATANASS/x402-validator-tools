@@ -118,19 +118,19 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>x402 Validator — strict-v2 conformance audits · Manifest, CAIP-2, JSON, Bazaar</title>
 <meta name="description" content="Audit any x402 merchant endpoint for strict-v2 conformance in ~580 ms. Live demo, no signup · Free, Pro ($9/mo), Enterprise ($49/mo). Hosted by Gael L Chulim.">
-<link rel="canonical" href="https://lastminutestickets.com/">
+<link rel="canonical" href="https://x402-validator-tools.onrender.com/">
 <meta property="og:title" content="x402 Validator — strict-v2 conformance audits">
 <meta property="og:description" content="Manifest, CAIP-2, JSON resilience, Bazaar compliance. Operator-actionable results in ~580 ms. Free demo + Pro API.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://lastminutestickets.com/">
+<meta property="og:url" content="https://x402-validator-tools.onrender.com/">
 <meta property="og:site_name" content="x402 validator">
-<meta property="og:image" content="https://lastminutestickets.com/static/og-image.png">
+<meta property="og:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="x402 Validator — strict-v2 conformance audits">
 <meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
-<meta name="twitter:image" content="https://lastminutestickets.com/static/og-image.png">
+<meta name="twitter:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
 <meta name="robots" content="index, follow">
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -144,7 +144,7 @@ _LANDING_HTML = """<!DOCTYPE html>
     {
       "@type": "SoftwareApplication",
       "name": "x402 Validator",
-      "url": "https://lastminutestickets.com/",
+      "url": "https://x402-validator-tools.onrender.com/",
       "applicationCategory": "DeveloperApplication",
       "applicationSubCategory": "API Service / Testing Tool",
       "operatingSystem": "Any (hosted REST API)",
@@ -154,7 +154,7 @@ _LANDING_HTML = """<!DOCTYPE html>
         {"@type": "Offer", "name": "Pro", "price": "9", "priceCurrency": "USD", "description": "500 audits / month · API key · marketplace mode · email support"},
         {"@type": "Offer", "name": "Enterprise", "price": "49", "priceCurrency": "USD", "description": "5,000 audits / month · bulk · priority support · volume rebate"}
       ],
-      "creator": {"@type": "Person", "name": "Gael L Chulim", "email": "gael@lastminutestickets.com"},
+      "creator": {"@type": "Person", "name": "Gael L Chulim", "sameAs": "https://github.com/MSSATANASS"},
       "license": "https://www.apache.org/licenses/LICENSE-2.0"
     },
     {
@@ -1094,7 +1094,7 @@ footer {
   </div>
 
   <div class="nav-right">
-    <a class="book-demo" href="mailto:support@lastminutestickets.com">Contact</a>
+    <a class="book-demo" href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
   </div>
 </nav>
@@ -1355,7 +1355,7 @@ footer {
     </details>
     <details class="faq-item">
       <summary>Who runs this?</summary>
-      <p>x402 validator is built and operated by Gael L Chulim (<a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Render and billed through Stripe.</p>
+      <p>x402 validator is built and operated by Gael L Chulim (<a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Render and billed through Stripe.</p>
     </details>
   </div>
 </section>
@@ -1375,7 +1375,7 @@ footer {
       <a href="/open">Open metrics</a>
       <a href="/plans">Plans API</a>
       <a href="/health">Status</a>
-      <a href="mailto:support@lastminutestickets.com">Support</a>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">Support</a>
     </div>
     <div class="foot-col">
       <h4>Code</h4>
@@ -1386,9 +1386,9 @@ footer {
     </div>
     <div class="foot-col">
       <h4>Contact</h4>
-      <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">GitHub Issues</a>
       <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">GitHub issues</a>
-      <a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>
+      <a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>
     </div>
   </div>
   <div class="foot-bottom">
@@ -1660,7 +1660,7 @@ _PAGE_NAV = """
     <a href="/health">Status</a>
   </div>
   <div class="nav-right">
-    <a href="mailto:support@lastminutestickets.com">Contact</a>
+    <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
   </div>
 </nav>
@@ -1671,7 +1671,7 @@ _PAGE_FOOTER = """
   <div>© 2026 x402 validator · Apache-2.0 ·
     <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">engine</a> ·
     <a href="https://pypi.org/project/x402-conformance-suite/" rel="noopener">pip install</a> ·
-    <a href="mailto:gael@lastminutestickets.com">gael@lastminutestickets.com</a>
+    <a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>
   </div>
 </footer>
 """
@@ -1683,7 +1683,7 @@ _VS_DOCTOR_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>x402 Validator vs x402 Doctor — checker depth, compared honestly</title>
 <meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 7 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
-<link rel="canonical" href="https://lastminutestickets.com/vs-x402-doctor">
+<link rel="canonical" href="https://x402-validator-tools.onrender.com/vs-x402-doctor">
 <meta property="og:title" content="x402 Validator vs x402 Doctor">
 <meta property="og:description" content="Quick checker vs strict-v2 conformance engine. What each one actually runs, verified against both products' own docs.">
 <meta property="og:type" content="article">
@@ -1767,7 +1767,7 @@ _OPEN_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Open — real numbers behind x402 Validator</title>
 <meta name="description" content="Tests, corpus results, the CAIP-2 bug we shipped and fixed same-day, keys issued, revenue. Every number verifiable, none projected.">
-<link rel="canonical" href="https://lastminutestickets.com/open">
+<link rel="canonical" href="https://x402-validator-tools.onrender.com/open">
 <meta property="og:title" content="Open — x402 Validator real numbers">
 <meta property="og:description" content="Honest metrics: 203 tests, 27-endpoint corpus, one same-day bug fix, 5 free pro keys, $0 revenue so far.">
 <meta property="og:type" content="website">
@@ -2037,7 +2037,7 @@ async def create_checkout_session(plan_id: str) -> CheckoutResponse:
     if plan_id not in PLANS:
         raise HTTPException(400, f"Unknown plan: {plan_id!r}")
 
-    base = os.environ.get("PUBLIC_URL", "https://lastminutestickets.com")
+    base = os.environ.get("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
     try:
         url = stripe_integration.create_checkout_session(
             plan_id,
@@ -2066,7 +2066,7 @@ async def create_checkout_session_link(plan_id: str) -> RedirectResponse:
     if plan_id not in PLANS:
         raise HTTPException(400, f"Unknown plan: {plan_id!r}")
 
-    base = os.environ.get("PUBLIC_URL", "https://lastminutestickets.com")
+    base = os.environ.get("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
     url = stripe_integration.create_checkout_session(
         plan_id,
         success_url=f"{base}/success?session_id={{CHECKOUT_SESSION_ID}}",
@@ -2217,7 +2217,7 @@ a{color:var(--accent);text-decoration:none;}
   <h1>Payment received</h1>
   <p>Your key is still being issued — our webhook usually finishes within a
      few seconds. Refresh this page in a moment, or contact
-     <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>
+     <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">GitHub Issues</a>
      with your Stripe receipt if it doesn't show up.</p>
   <p>You can also return to the <a href="/">home page</a>.</p>
 </div>
@@ -2257,7 +2257,7 @@ a{color:var(--accent);text-decoration:none;}
   <button class="copy-btn" id="copyBtn" type="button">Copy key</button>
   <p class="warn">⚠ Treat it like a password. Refreshing this page removes it from our
      view; if you lose it, mint a replacement from your dashboard
-     or contact <a href="mailto:support@lastminutestickets.com">support@lastminutestickets.com</a>.</p>
+     or contact <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">GitHub Issues</a>.</p>
 </div>
 <script>
 (function(){

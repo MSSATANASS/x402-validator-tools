@@ -25,7 +25,7 @@ services:
 
     envVars:
       - key: PUBLIC_URL
-        value: https://lastminutestickets.com
+        value: https://x402-validator-tools.onrender.com
       - key: API_KEYS_FILE
         value: /var/data/api_keys.json
       - key: STRIPE_SECRET_KEY
