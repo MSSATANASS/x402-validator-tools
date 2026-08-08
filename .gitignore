@@ -11,3 +11,6 @@ venv/
 .pytest_cache/
 dashboard/data/
 node_modules/
+
+# Local-only: contains account IDs and operational details (see vault)
+CLAUDE.md
