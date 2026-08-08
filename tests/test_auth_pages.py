@@ -463,3 +463,64 @@ class TestUpgradeAndWebhook:
         body = r.json()
         assert body["minted"] is True          # purchase never lost
         assert "user_id" not in body
+
+
+@needs_db
+class TestLandingNavAndSuccess:
+    def test_landing_shows_auth_links_logged_out(self, db_client):
+        db_client.cookies.clear()
+        r = db_client.get("/")
+        assert 'href="/login"' in r.text
+        assert 'href="/signup"' in r.text
+        assert "My dashboard" not in r.text
+
+    def test_landing_shows_dashboard_link_logged_in(self, db_client):
+        db_client.cookies.clear()
+        _signup(db_client)
+        r = db_client.get("/")
+        assert 'href="/dashboard"' in r.text
+
+    def test_success_page_note_for_owner(self, db_client):
+        from api_server import auth as auth_mod
+        db_client.cookies.clear()
+        email, _ = _signup(db_client)
+        uid = auth_mod.get_user_store().authenticate(email, "password123")
+        session_id = f"cs_note_{secrets.token_hex(4)}"
+        event = {"type": "checkout.session.completed",
+                 "data": {"object": {"id": session_id}}}
+        session = {"id": session_id, "customer": "cus_note",
+                   "amount_total": None, "subscription": None,
+                   "mode": "subscription", "metadata": {"plan_id": "pro"},
+                   "client_reference_id": f"user:{uid}",
+                   "customer_email": email}
+        with patch("api_server.stripe_integration.verify_webhook",
+                   return_value=event), \
+             patch("api_server.stripe_integration.retrieve_session",
+                   return_value=session):
+            db_client.post("/stripe-webhook", content=b"{}",
+                           headers={"stripe-signature": "ok"})
+        r = db_client.get(f"/success?session_id={session_id}")
+        assert r.status_code == 200
+        # the note's anchor (the warn paragraph also mentions "your
+        # dashboard" in plain text, so assert the exact link)
+        assert '<a href="/dashboard">your dashboard</a>' in r.text
+
+    def test_success_page_no_note_for_strangers(self, db_client):
+        db_client.cookies.clear()
+        # logged out visitor: no note even with a valid claim
+        session_id = f"cs_note2_{secrets.token_hex(4)}"
+        event = {"type": "checkout.session.completed",
+                 "data": {"object": {"id": session_id}}}
+        session = {"id": session_id, "customer": "cus_note2",
+                   "amount_total": None, "subscription": None,
+                   "mode": "subscription", "metadata": {"plan_id": "pro"},
+                   "client_reference_id": None, "customer_email": None}
+        with patch("api_server.stripe_integration.verify_webhook",
+                   return_value=event), \
+             patch("api_server.stripe_integration.retrieve_session",
+                   return_value=session):
+            db_client.post("/stripe-webhook", content=b"{}",
+                           headers={"stripe-signature": "ok"})
+        r = db_client.get(f"/success?session_id={session_id}")
+        assert r.status_code == 200
+        assert '<a href="/dashboard">your dashboard</a>' not in r.text

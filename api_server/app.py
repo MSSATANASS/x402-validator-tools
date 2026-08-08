@@ -1102,6 +1102,7 @@ footer {
   </div>
 
   <div class="nav-right">
+    __AUTH_NAV__
     <a class="book-demo" href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
   </div>
@@ -1764,8 +1765,15 @@ _WHAT_WE_TRACK_DB_NO_STATS = """<h2>What we track (and what we don't)</h2>
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def landing() -> HTMLResponse:
-    return HTMLResponse(_LANDING_HTML)
+async def landing(request: Request) -> HTMLResponse:
+    logged_in = False
+    try:
+        logged_in = auth_pages.current_user(request) is not None
+    except Exception:
+        logged_in = False  # the landing must never break on auth issues
+    return HTMLResponse(
+        _LANDING_HTML.replace("__AUTH_NAV__", _auth_nav_links(logged_in))
+    )
 
 
 @app.get("/vs-x402-doctor", response_class=HTMLResponse, include_in_schema=False)
@@ -2195,6 +2203,7 @@ a{color:var(--accent);text-decoration:none;}
   <p class="lede">Save this API key — we will not show it again.</p>
   <div class="key-box" id="keyBox">__API_KEY__</div>
   <button class="copy-btn" id="copyBtn" type="button">Copy key</button>
+  __OWNER_NOTE__
   <p class="warn">⚠ Treat it like a password. Refreshing this page removes it from our
      view; if you lose it, mint a replacement from your dashboard
      or contact <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">GitHub Issues</a>.</p>
@@ -2218,23 +2227,38 @@ a{color:var(--accent);text-decoration:none;}
 _PLAN_LABELS = {"free": "Free", "pro": "Pro", "enterprise": "Enterprise"}
 
 
-def _success_html(api_key: str, plan_id: str, session_id: str) -> HTMLResponse:
+def _success_html(api_key: str, plan_id: str, session_id: str,
+                  owner_note: str = "") -> HTMLResponse:
     import html as _html
     return HTMLResponse(
         _SUCCESS_WITH_KEY_HTML
         .replace("__API_KEY__", _html.escape(api_key))
         .replace("__PLAN_LABEL__", _html.escape(_PLAN_LABELS.get(plan_id, plan_id.title())))
         .replace("__SESSION_ID__", _html.escape(session_id))
+        .replace("__OWNER_NOTE__", owner_note)
     )
 
 
 @app.get("/success", response_class=HTMLResponse, include_in_schema=False)
-async def success_page(session_id: Optional[str] = None) -> HTMLResponse:
+async def success_page(request: Request,
+                       session_id: Optional[str] = None) -> HTMLResponse:
     """Display a one-time key view when ``session_id`` is valid, fall back otherwise."""
     if session_id:
         claim = get_store().claim_by_session(session_id)
         if claim and get_store().get(claim["api_key"]) is not None:
-            html = _success_html(claim["api_key"], claim["plan_id"], session_id)
+            note = ""
+            try:
+                user = auth_pages.current_user(request)
+                user_store = auth.get_user_store()
+                if user and user_store and \
+                        user_store.key_owner(claim["api_key"]) == user["id"]:
+                    note = ('<p style="color:var(--fg-70);font-size:13px;'
+                            'margin-top:16px;">This key is also listed in '
+                            '<a href="/dashboard">your dashboard</a>.</p>')
+            except Exception:
+                note = ""  # never break the key view
+            html = _success_html(claim["api_key"], claim["plan_id"],
+                                 session_id, note)
             get_store().mark_claimed(session_id)
             return html
     return HTMLResponse(_SUCCESS_FALLBACK_HTML)
