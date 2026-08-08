@@ -45,11 +45,16 @@ def create_checkout_session(
     *,
     success_url: str,
     cancel_url: str,
+    client_reference_id: Optional[str] = None,
+    customer_email: Optional[str] = None,
+    customer: Optional[str] = None,
 ) -> Optional[str]:
     """Create a Stripe Checkout session for ``plan_id`` and return its URL.
 
     Embeds ``metadata.plan_id`` so the webhook handler can route the paid
     checkout back to the correct tier without trusting the price.
+    Optionally links the checkout to a user account via
+    ``client_reference_id`` (``user:<id>``).
 
     Returns ``None`` if the plan is free or Stripe is not configured.
     Raises ``ValueError`` for unknown plans.
@@ -65,6 +70,14 @@ def create_checkout_session(
     if stripe is None:
         return None
 
+    extra: dict[str, Any] = {}
+    if client_reference_id:
+        extra["client_reference_id"] = client_reference_id
+    if customer:
+        extra["customer"] = customer
+    elif customer_email:
+        extra["customer_email"] = customer_email  # never both with customer
+
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{"price": plan.stripe_price_id, "quantity": 1}],
@@ -72,6 +85,7 @@ def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={"plan_id": plan_id},
+        **extra,
     )
     return session.url
 
@@ -95,6 +109,8 @@ def retrieve_session(session_id: str) -> Optional[dict[str, Any]]:
         "subscription": getattr(sess, "subscription", None),
         "mode": getattr(sess, "mode", None),
         "metadata": dict(getattr(sess, "metadata", {}) or {}),
+        "client_reference_id": getattr(sess, "client_reference_id", None),
+        "customer_email": getattr(sess, "customer_email", None),
     }
 
 

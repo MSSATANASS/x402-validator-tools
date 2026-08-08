@@ -284,3 +284,182 @@ class TestDashboard:
         assert r.status_code == 303
         assert get_store().get(token) is None
         assert kid not in db_client.get("/dashboard").text
+
+
+class TestStripeCheckoutExtensions:
+    def test_create_checkout_passes_user_link_params(self, monkeypatch):
+        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_dummy")
+        import api_server.stripe_integration as si
+        captured = {}
+
+        class FakeSession:
+            url = "https://checkout.stripe.com/mock"
+
+            @staticmethod
+            def create(**kwargs):
+                captured.update(kwargs)
+                return FakeSession()
+
+        class FakeCheckout:
+            Session = FakeSession
+
+        class FakeStripe:
+            checkout = FakeCheckout()
+
+        monkeypatch.setattr(si, "_get_stripe", lambda: FakeStripe())
+        url = si.create_checkout_session(
+            "pro", success_url="https://x/success", cancel_url="https://x/cancel",
+            client_reference_id="user:7", customer_email="a@b.co",
+        )
+        assert url == "https://checkout.stripe.com/mock"
+        assert captured["client_reference_id"] == "user:7"
+        assert captured["customer_email"] == "a@b.co"
+        assert "customer" not in captured  # never both email and customer
+
+    def test_retrieve_session_includes_link_fields(self, monkeypatch):
+        import api_server.stripe_integration as si
+
+        class Sess:
+            id = "cs_1"
+            customer = "cus_1"
+            amount_total = 900
+            subscription = None
+            mode = "subscription"
+            metadata = {"plan_id": "pro"}
+            client_reference_id = "user:3"
+            customer_email = "a@b.co"
+
+        class FakeSession:
+            @staticmethod
+            def retrieve(sid):
+                return Sess()
+
+        class FakeCheckout:
+            Session = FakeSession
+
+        class FakeStripe:
+            checkout = FakeCheckout()
+
+        monkeypatch.setattr(si, "_get_stripe", lambda: FakeStripe())
+        d = si.retrieve_session("cs_1")
+        assert d["client_reference_id"] == "user:3"
+        assert d["customer_email"] == "a@b.co"
+
+
+@needs_db
+class TestUpgradeAndWebhook:
+    def test_upgrade_rejects_bad_plans(self, db_client):
+        db_client.cookies.clear()
+        _signup(db_client)
+        r = db_client.get("/dashboard/upgrade?plan_id=free",
+                          follow_redirects=False)
+        assert r.status_code == 303
+        assert r.headers["location"] == "/dashboard"
+        r = db_client.get("/dashboard/upgrade?plan_id=nope",
+                          follow_redirects=False)
+        assert r.status_code == 400
+
+    def test_upgrade_without_stripe_503(self, db_client):
+        db_client.cookies.clear()
+        _signup(db_client)
+        with patch("api_server.auth_pages.stripe_integration"
+                   ".create_checkout_session", return_value=None):
+            r = db_client.get("/dashboard/upgrade?plan_id=pro")
+        assert r.status_code == 503
+
+    def test_upgrade_redirects_with_client_reference(self, db_client):
+        db_client.cookies.clear()
+        email, _ = _signup(db_client)
+        captured = {}
+
+        def fake_create(plan_id, *, success_url, cancel_url, **kw):
+            captured.update(plan_id=plan_id, success_url=success_url,
+                            cancel_url=cancel_url, **kw)
+            return "https://checkout.stripe.com/mock"
+
+        with patch("api_server.auth_pages.stripe_integration"
+                   ".create_checkout_session", fake_create):
+            r = db_client.get("/dashboard/upgrade?plan_id=pro",
+                              follow_redirects=False)
+        assert r.status_code == 303
+        assert r.headers["location"] == "https://checkout.stripe.com/mock"
+        assert captured["plan_id"] == "pro"
+        assert captured["client_reference_id"].startswith("user:")
+        assert captured["customer_email"] == email
+        assert captured.get("customer") is None
+
+    def test_webhook_links_purchase_to_user(self, db_client):
+        from api_server import auth as auth_mod
+        from api_server.keystore import get_store
+        db_client.cookies.clear()
+        email, _ = _signup(db_client)
+        uid = auth_mod.get_user_store().authenticate(email, "password123")
+        session_id = f"cs_user_{secrets.token_hex(4)}"
+        event = {"type": "checkout.session.completed",
+                 "data": {"object": {"id": session_id}}}
+        session = {"id": session_id, "customer": "cus_linked",
+                   "amount_total": None, "subscription": "sub_x",
+                   "mode": "subscription", "metadata": {"plan_id": "pro"},
+                   "client_reference_id": f"user:{uid}",
+                   "customer_email": email}
+        with patch("api_server.stripe_integration.verify_webhook",
+                   return_value=event), \
+             patch("api_server.stripe_integration.retrieve_session",
+                   return_value=session):
+            r = db_client.post("/stripe-webhook", content=b"{}",
+                               headers={"stripe-signature": "ok"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["minted"] is True
+        assert body["user_id"] == uid
+        u = auth_mod.get_user_store().get_user(uid)
+        assert u["plan_id"] == "pro"
+        assert u["stripe_customer_id"] == "cus_linked"
+        claim = get_store().claim_by_session(session_id)
+        assert claim is not None
+        assert auth_mod.get_user_store().key_owner(claim["api_key"]) == uid
+        # the key shows up on the dashboard (session still valid)
+        dash = db_client.get("/dashboard")
+        assert dash.status_code == 200
+        assert auth_mod.kid_for_token(claim["api_key"]) in dash.text
+
+    def test_webhook_anonymous_flow_unchanged(self, db_client):
+        db_client.cookies.clear()
+        session_id = f"cs_anon_{secrets.token_hex(4)}"
+        event = {"type": "checkout.session.completed",
+                 "data": {"object": {"id": session_id}}}
+        session = {"id": session_id, "customer": "cus_anon",
+                   "amount_total": None, "subscription": None,
+                   "mode": "subscription", "metadata": {"plan_id": "pro"},
+                   "client_reference_id": None, "customer_email": None}
+        with patch("api_server.stripe_integration.verify_webhook",
+                   return_value=event), \
+             patch("api_server.stripe_integration.retrieve_session",
+                   return_value=session):
+            r = db_client.post("/stripe-webhook", content=b"{}",
+                               headers={"stripe-signature": "ok"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["minted"] is True
+        assert "user_id" not in body  # anonymous: no linking
+
+    def test_webhook_bad_user_ref_falls_back_to_anonymous(self, db_client):
+        db_client.cookies.clear()
+        session_id = f"cs_badref_{secrets.token_hex(4)}"
+        event = {"type": "checkout.session.completed",
+                 "data": {"object": {"id": session_id}}}
+        session = {"id": session_id, "customer": "cus_bad",
+                   "amount_total": None, "subscription": None,
+                   "mode": "subscription", "metadata": {"plan_id": "pro"},
+                   "client_reference_id": "user:99999999",  # no such user
+                   "customer_email": None}
+        with patch("api_server.stripe_integration.verify_webhook",
+                   return_value=event), \
+             patch("api_server.stripe_integration.retrieve_session",
+                   return_value=session):
+            r = db_client.post("/stripe-webhook", content=b"{}",
+                               headers={"stripe-signature": "ok"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["minted"] is True          # purchase never lost
+        assert "user_id" not in body

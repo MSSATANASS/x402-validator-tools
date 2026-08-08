@@ -45,6 +45,7 @@ from api_server.models import (
 from api_server import stripe_integration
 from api_server import ratelimit
 from api_server import ai_advisor
+from api_server import auth
 from api_server import auth_pages
 from api_server.keystore import get_store
 from api_server.pages import (
@@ -2040,11 +2041,39 @@ async def stripe_webhook(
                     "reason": "could not resolve plan", "session_id": session_id}
 
         customer_id = detail.get("customer")
-        token = get_store().issue(
-            plan_id, customer_id=customer_id, session_id=session_id
-        )
-        return {"received": True, "type": event_type, "minted": True,
-                "plan_id": plan_id, "session_id": session_id}
+
+        # Checkouts started from a logged-in account carry
+        # client_reference_id="user:<id>": link the purchase to it so the
+        # key appears in the user's dashboard. Never lose a payment on a
+        # linking failure — fall back to the anonymous flow.
+        linked_user_id = None
+        ref = detail.get("client_reference_id") or ""
+        if ref.startswith("user:"):
+            try:
+                candidate = int(ref.split(":", 1)[1])
+            except ValueError:
+                candidate = None
+            if candidate is not None:
+                user_store = auth.get_user_store()
+                if user_store is not None and user_store.get_user(candidate):
+                    try:
+                        user_store.link_purchase(
+                            candidate, plan_id, customer_id, session_id
+                        )
+                        linked_user_id = candidate
+                    except Exception:
+                        linked_user_id = None
+
+        if linked_user_id is None:
+            get_store().issue(
+                plan_id, customer_id=customer_id, session_id=session_id
+            )
+
+        result = {"received": True, "type": event_type, "minted": True,
+                  "plan_id": plan_id, "session_id": session_id}
+        if linked_user_id is not None:
+            result["user_id"] = linked_user_id
+        return result
 
     return {"received": True, "type": event_type}
 

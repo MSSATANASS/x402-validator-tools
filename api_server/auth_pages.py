@@ -382,3 +382,33 @@ async def dashboard_revoke_key(request: Request, kid: str = Form(...)):
     if not store.revoke_key_by_kid(user["id"], kid):
         raise HTTPException(404, "Key not found")
     return RedirectResponse("/dashboard", status_code=303)
+
+
+@router.get("/dashboard/upgrade", include_in_schema=False)
+async def dashboard_upgrade(request: Request, plan_id: str):
+    user = current_user(request)
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    store = _require_store()
+    if plan_id not in PLANS:
+        raise HTTPException(400, f"Unknown plan: {plan_id!r}")
+    plan = PLANS[plan_id]
+    if plan.price_cents == 0:
+        # free plan: nothing to buy — the user already has it
+        return RedirectResponse("/dashboard", status_code=303)
+    base = os.environ.get(
+        "PUBLIC_URL", "https://x402-validator-tools.onrender.com"
+    )
+    full_user = store.get_user(user["id"]) or {}
+    stripe_customer = full_user.get("stripe_customer_id") or None
+    url = stripe_integration.create_checkout_session(
+        plan_id,
+        success_url=f"{base}/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{base}/cancel",
+        client_reference_id=f"user:{user['id']}",
+        customer=stripe_customer,
+        customer_email=None if stripe_customer else user["email"],
+    )
+    if url is None:
+        raise HTTPException(503, "Stripe is not configured (set STRIPE_SECRET_KEY)")
+    return RedirectResponse(url, status_code=303)
