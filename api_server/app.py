@@ -45,6 +45,7 @@ from api_server.models import (
 from api_server import stripe_integration
 from api_server import ratelimit
 from api_server import ai_advisor
+from api_server import auth_pages
 from api_server.keystore import get_store
 from api_server.pages import (
     PAGE_CSS as _PAGE_CSS,
@@ -2090,6 +2091,13 @@ async def admin_revoke_key(key: str) -> dict:
     if not get_store().revoke(key):
         raise HTTPException(404, "Key not found")
     return {"revoked": True}
+
+
+# ---------------------------------------------------------------------------
+# Account routes (signup / login / dashboard — api_server.auth_pages)
+# ---------------------------------------------------------------------------
+
+app.include_router(auth_pages.router)
 
 
 # ---------------------------------------------------------------------------
