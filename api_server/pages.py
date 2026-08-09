@@ -225,10 +225,30 @@ code {
 }
 a { color: var(--accent); }
 a:hover { color: var(--brand); }
-table.cmp { width: 100%; border-collapse: collapse; margin: 18px 0 8px; }
+/* Comparison tables: card surface + mobile-safe wrap (vs page) */
+.cmp-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 18px 0 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+table.cmp {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  margin: 0;
+}
 table.cmp th, table.cmp td {
   text-align: left; padding: 10px 12px; font-size: 0.92rem;
   border-bottom: 1px solid var(--glass-border); vertical-align: top;
+}
+table.cmp tr:last-child th, table.cmp tr:last-child td { border-bottom: none; }
+@media (max-width: 640px) {
+  table.cmp th, table.cmp td { padding: 8px 10px; font-size: 0.82rem; }
 }
 table.cmp th { color: var(--fg); font-weight: 600; }
 table.cmp td { color: var(--fg-70); }

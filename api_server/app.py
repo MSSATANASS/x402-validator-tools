@@ -1238,6 +1238,10 @@ footer {
   max-width: 1100px; margin: 0 auto;
 }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) {
+  .foot-grid { grid-template-columns: 1fr; gap: 28px; }
+  .foot-sub { white-space: normal; }
+}
 /* Footer brand lockup: pure SVG + type — zero PNG, zero black plate */
 .foot-lockup {
   display: flex;
@@ -1693,7 +1697,8 @@ html[data-theme="light"] .audit-summary .badge.ERROR { color: #b45309; backgroun
   border-radius: 10px;
   padding: 12px 14px;
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  /* auto-fit CRITICAL_FAIL stamps — fixed 76px clipped long verdicts */
+  grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
   gap: 12px;
   margin-bottom: 8px;
   font-family: 'Instrument Sans', sans-serif;
@@ -1713,13 +1718,30 @@ html[data-theme="light"] .audit-summary .badge.ERROR { color: #b45309; backgroun
 .check-row .check-status {
   align-self: start;
   font-size: 0.62rem; font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 5px 6px;
+  letter-spacing: 0.04em;
+  padding: 5px 8px;
   text-align: center;
   text-transform: uppercase;
   line-height: 1.15;
   border-radius: 999px;
   background: rgba(255,255,255,0.04);
+  white-space: nowrap;
+  max-width: 100%;
+}
+@media (max-width: 520px) {
+  .check-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+  .check-row .check-status {
+    justify-self: start;
+    font-size: 0.6rem;
+  }
+  .audit-results.receipt { padding: 12px 10px 8px; }
+  .receipt-meta { font-size: 0.7rem; }
+  .receipt-header { gap: 8px; }
+  .btn-copy-json { padding: 7px 12px; font-size: 0.75rem; }
 }
 .check-row .check-status.PASS {
   color: #34d399;
@@ -2835,6 +2857,7 @@ __PAGE_NAV__
      Everything below comes from both products' own public pages and repos.</p>
 
   <h2>What each one runs</h2>
+  <div class="cmp-scroll" role="region" aria-label="Capability comparison table" tabindex="0">
   <table class="cmp">
     <tr><th>Capability</th><th>x402 Doctor</th><th>x402 Validator</th></tr>
     <tr><td>Reachability probe</td><td class="y">✓</td><td class="y">✓ (every check)</td></tr>
@@ -2854,6 +2877,7 @@ __PAGE_NAV__
     <tr><td>Free tier</td><td class="y">10 checks/min</td><td class="y">3 audits/day per IP, then Pro from $9/mo</td></tr>
     <tr><td>Open source engine</td><td class="n">checker not published</td><td class="y">Apache-2.0, <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">full repo</a>, 203 tests</td></tr>
   </table>
+  </div>
 
   <h2>Where x402 Doctor wins</h2>
   <ul>
