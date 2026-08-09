@@ -10,15 +10,34 @@ paying buyers keep working — revenue looks fine, discovery is broken.
 ``check_directory_cold_probe`` implements that probe as a CheckResult-shaped
 dict, mirroring the engine's never-raise contract (status in
 ``{"PASS", "FAIL", "ERROR"}`` with an operator-actionable message).
+
+``run_directory_cold_probe`` is the same probe plus a ``ResponseSnapshot`` so
+orchestrators can reuse the 402 body/headers (e.g. batch settlement) without
+a second fetch. Snapshot is ``None`` on transport/timeout ERROR.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
 CHECK_NAME = "directory_cold_probe"
+
+
+@dataclass
+class ResponseSnapshot:
+    """Minimal HTTP response capture for reuse by downstream checks.
+
+    Headers may be original-cased; callers that decode x402 should
+    normalize case themselves. Filled for any completed HTTP response;
+    ``None`` is returned instead of this type on transport failure.
+    """
+
+    status_code: int
+    headers: dict[str, str]
+    body: str
 
 
 def _result(status: str, message: str, status_code: int | None) -> dict[str, Any]:
@@ -31,44 +50,16 @@ def _result(status: str, message: str, status_code: int | None) -> dict[str, Any
     }
 
 
-async def check_directory_cold_probe(
-    url: str,
-    timeout: float = 10.0,
-    *,
-    transport: httpx.AsyncBaseTransport | None = None,
-) -> dict[str, Any]:
-    """POST to ``url`` with no body and no auth; PASS only on a 402 challenge.
+def _snapshot_from_response(response: httpx.Response) -> ResponseSnapshot:
+    return ResponseSnapshot(
+        status_code=response.status_code,
+        headers={k: v for k, v in response.headers.items()},
+        body=response.text,
+    )
 
-    This replays the discovery probe directories (Bazaar/CDP) run against a
-    merchant endpoint. Returns a CheckResult-shaped dict and never raises:
-    network/timeout/unexpected failures come back as ``status="ERROR"``.
 
-    Args:
-        url: Target endpoint URL (the audited merchant URL).
-        timeout: HTTP request timeout in seconds.
-        transport: Optional httpx transport (testing with MockTransport).
-    """
-    try:
-        async with httpx.AsyncClient(
-            timeout=timeout, follow_redirects=True, transport=transport
-        ) as client:
-            response = await client.post(url)
-    except httpx.TimeoutException:
-        return _result(
-            "ERROR",
-            f"Directory cold probe timed out after {timeout}s. "
-            f"Verify the endpoint is reachable.",
-            None,
-        )
-    except Exception as e:  # noqa: BLE001 — checks never raise
-        return _result(
-            "ERROR",
-            f"Could not run the directory cold probe: {e}. "
-            f"Verify the URL is live and reachable.",
-            None,
-        )
-
-    code = response.status_code
+def _check_from_status_code(code: int) -> dict[str, Any]:
+    """Map an HTTP status from the cold probe to a CheckResult dict."""
     if code == 402:
         return _result(
             "PASS",
@@ -115,3 +106,68 @@ async def check_directory_cold_probe(
         f"payment gate.",
         code,
     )
+
+
+async def run_directory_cold_probe(
+    url: str,
+    timeout: float = 10.0,
+    *,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> tuple[dict[str, Any], ResponseSnapshot | None]:
+    """POST bare; return ``(check_result, snapshot)``.
+
+    ``snapshot`` is filled for any completed HTTP response (any status).
+    On timeout or other transport/exception failure, ``snapshot`` is
+    ``None`` and ``check_result["status"]`` is ``"ERROR"``. Never raises.
+    """
+    try:
+        async with httpx.AsyncClient(
+            timeout=timeout, follow_redirects=True, transport=transport
+        ) as client:
+            response = await client.post(url)
+    except httpx.TimeoutException:
+        return (
+            _result(
+                "ERROR",
+                f"Directory cold probe timed out after {timeout}s. "
+                f"Verify the endpoint is reachable.",
+                None,
+            ),
+            None,
+        )
+    except Exception as e:  # noqa: BLE001 — checks never raise
+        return (
+            _result(
+                "ERROR",
+                f"Could not run the directory cold probe: {e}. "
+                f"Verify the URL is live and reachable.",
+                None,
+            ),
+            None,
+        )
+
+    snap = _snapshot_from_response(response)
+    return _check_from_status_code(response.status_code), snap
+
+
+async def check_directory_cold_probe(
+    url: str,
+    timeout: float = 10.0,
+    *,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> dict[str, Any]:
+    """POST to ``url`` with no body and no auth; PASS only on a 402 challenge.
+
+    Thin wrapper over :func:`run_directory_cold_probe` that returns only the
+    CheckResult-shaped dict. Never raises: network/timeout/unexpected
+    failures come back as ``status="ERROR"``.
+
+    Args:
+        url: Target endpoint URL (the audited merchant URL).
+        timeout: HTTP request timeout in seconds.
+        transport: Optional httpx transport (testing with MockTransport).
+    """
+    result, _ = await run_directory_cold_probe(
+        url, timeout, transport=transport
+    )
+    return result

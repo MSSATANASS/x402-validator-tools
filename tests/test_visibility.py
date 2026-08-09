@@ -25,7 +25,13 @@ TARGET = "https://merchant.example.com/api"
 # ---------------------------------------------------------------------------
 
 
-def _probe(status_code: int | None = None, exc: Exception | None = None):
+def _probe(
+    status_code: int | None = None,
+    exc: Exception | None = None,
+    *,
+    body: str = "",
+    headers: dict[str, str] | None = None,
+):
     """Run the cold probe against a MockTransport returning ``status_code``
     (or raising ``exc``); return ``(result, seen_request)``."""
     seen: dict = {}
@@ -34,13 +40,42 @@ def _probe(status_code: int | None = None, exc: Exception | None = None):
         seen["request"] = request
         if exc is not None:
             raise exc
-        return httpx.Response(status_code)
+        return httpx.Response(
+            status_code, content=body.encode("utf-8"), headers=headers or {}
+        )
 
     transport = httpx.MockTransport(handler)
     result = asyncio.run(
         visibility.check_directory_cold_probe(TARGET, timeout=5.0, transport=transport)
     )
     return result, seen.get("request")
+
+
+def _run_probe(
+    status_code: int | None = None,
+    exc: Exception | None = None,
+    *,
+    body: str = "",
+    headers: dict[str, str] | None = None,
+):
+    """Like ``_probe`` but via ``run_directory_cold_probe`` (result + snapshot)."""
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["request"] = request
+        if exc is not None:
+            raise exc
+        return httpx.Response(
+            status_code, content=body.encode("utf-8"), headers=headers or {}
+        )
+
+    transport = httpx.MockTransport(handler)
+    result, snapshot = asyncio.run(
+        visibility.run_directory_cold_probe(
+            TARGET, timeout=5.0, transport=transport
+        )
+    )
+    return result, snapshot, seen.get("request")
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +179,52 @@ class TestErrorPath:
         result = asyncio.run(visibility.check_directory_cold_probe(TARGET))
         assert result["status"] == "ERROR"
         assert result["check_name"] == "directory_cold_probe"
+
+
+# ---------------------------------------------------------------------------
+# Unit: ResponseSnapshot from run_directory_cold_probe
+# ---------------------------------------------------------------------------
+
+
+class TestResponseSnapshot:
+    def test_402_fills_snapshot_with_body_and_headers(self) -> None:
+        payload = '{"x402Version":2,"accepts":[]}'
+        result, snap, _ = _run_probe(
+            402,
+            body=payload,
+            headers={"Content-Type": "application/json", "X-Payment-Required": "1"},
+        )
+        assert result["status"] == "PASS"
+        assert snap is not None
+        assert isinstance(snap, visibility.ResponseSnapshot)
+        assert snap.status_code == 402
+        assert snap.body == payload
+        # httpx may normalize header names; values must be present
+        lowered = {k.lower(): v for k, v in snap.headers.items()}
+        assert lowered.get("content-type") == "application/json"
+        assert lowered.get("x-payment-required") == "1"
+
+    def test_non_402_http_still_fills_snapshot(self) -> None:
+        result, snap, _ = _run_probe(400, body="bad request")
+        assert result["status"] == "FAIL"
+        assert snap is not None
+        assert snap.status_code == 400
+        assert snap.body == "bad request"
+
+    def test_transport_error_snapshot_is_none(self) -> None:
+        result, snap, _ = _run_probe(exc=httpx.ConnectError("connection refused"))
+        assert result["status"] == "ERROR"
+        assert snap is None
+
+    def test_timeout_snapshot_is_none(self) -> None:
+        result, snap, _ = _run_probe(exc=httpx.ReadTimeout("timed out"))
+        assert result["status"] == "ERROR"
+        assert snap is None
+
+    def test_wrapper_returns_only_dict(self) -> None:
+        result, _ = _probe(402)
+        assert isinstance(result, dict)
+        assert "check_name" in result
 
 
 # ---------------------------------------------------------------------------
