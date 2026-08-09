@@ -266,8 +266,25 @@ class DBKeyStore:
                      caller_plan, source),
                 )
         except Exception as e:  # pragma: no cover - defensive
-            print(f"[dbkeystore] record_audit failed (ignored): {e}",
-                  file=sys.stderr)
+            # Structured when the API logger is configured; stderr fallback otherwise.
+            try:
+                from api_server.logging_config import get_logger
+
+                get_logger().warning(
+                    "record_audit_failed",
+                    extra={
+                        "event": "db.record_audit_failed",
+                        "error_type": type(e).__name__,
+                        "url": url,
+                        "mode": mode,
+                        "source": source,
+                    },
+                )
+            except Exception:
+                print(
+                    f"[dbkeystore] record_audit failed (ignored): {e}",
+                    file=sys.stderr,
+                )
 
     def usage_this_month(self, key: str) -> int:
         """Audits served to ``key`` since the start of the current month."""

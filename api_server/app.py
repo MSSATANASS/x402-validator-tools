@@ -36,6 +36,11 @@ from pydantic import BaseModel
 
 from api_server import ai_advisor, auth, auth_pages, ratelimit, stripe_integration
 from api_server.keystore import get_store
+from api_server.logging_config import (
+    RequestContextMiddleware,
+    get_logger,
+    setup_logging,
+)
 from api_server.models import (
     PLANS,
     CheckoutResponse,
@@ -63,12 +68,39 @@ from api_server.pages import (
 # App + state
 # ---------------------------------------------------------------------------
 
+setup_logging()
+log = get_logger()
+
+_OPENAPI_DESCRIPTION = """
+Audit x402 merchant endpoints for strict-v2 conformance.
+
+## Authentication
+- `POST /validate` requires header `X-API-Key`.
+- Admin routes require `X-Admin-Secret`.
+
+## Validation errors (HTTP 422)
+JSON bodies for audit and admin key issuance are validated with Pydantic:
+
+| Field | Rule |
+|-------|------|
+| `url` | Absolute `http`/`https` URL with a host (max 2048 chars) |
+| `mode` | `standard` or `marketplace` only |
+| `plan_id` | `free`, `pro`, or `enterprise` |
+| unknown fields | Rejected (`extra=forbid`) |
+
+Invalid payloads return FastAPI's standard `{"detail":[…]}` 422 envelope.
+
+## Correlation
+Every response includes `X-Request-Id`. Send the same header to continue a trace.
+""".strip()
 
 app = FastAPI(
     title="x402 Validator API",
     version="0.3.0",
-    description="Audit x402 endpoint conformance as a service.",
+    description=_OPENAPI_DESCRIPTION,
 )
+
+app.add_middleware(RequestContextMiddleware)
 
 # Static assets (logo, favicon, og-image) live alongside this package.
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -2070,6 +2102,17 @@ async def validate(
     try:
         report, probe, batch = await _run_audit(req.url, req.mode)
     except Exception as e:
+        log.warning(
+            "audit_failed",
+            extra={
+                "event": "audit.failed",
+                "url": req.url,
+                "mode": req.mode,
+                "source": "api",
+                "plan_id": plan_id,
+                "error_type": type(e).__name__,
+            },
+        )
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
     checks = _flatten_checks(report)
@@ -2087,6 +2130,21 @@ async def validate(
         details=batch["details"],
     ))
     overall, summary = _aggregate_check_results(checks)
+    failed = sum(1 for c in checks if c.status not in ("PASS",))
+    log.info(
+        "audit_completed",
+        extra={
+            "event": "audit.completed",
+            "url": report.target_url,
+            "mode": req.mode,
+            "overall": overall,
+            "latency_ms": elapsed_ms,
+            "source": "api",
+            "plan_id": plan_id,
+            "checks_total": len(checks),
+            "checks_failed": failed,
+        },
+    )
     store.record_audit(
         url=report.target_url,
         mode=req.mode,
@@ -2154,6 +2212,17 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
     try:
         report, probe, batch = await _run_audit(req.url, req.mode)
     except Exception as e:
+        log.warning(
+            "audit_failed",
+            extra={
+                "event": "audit.failed",
+                "url": req.url,
+                "mode": req.mode,
+                "source": "public",
+                "client_ip": client_ip,
+                "error_type": type(e).__name__,
+            },
+        )
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
     checks = [
@@ -2179,6 +2248,21 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         "details": batch["details"],
     })
     overall, summary = _aggregate_check_results(checks)
+    failed = sum(1 for c in checks if c.get("status") not in ("PASS",))
+    log.info(
+        "audit_completed",
+        extra={
+            "event": "audit.completed",
+            "url": report.target_url,
+            "mode": req.mode,
+            "overall": overall,
+            "latency_ms": elapsed_ms,
+            "source": "public",
+            "client_ip": client_ip,
+            "checks_total": len(checks),
+            "checks_failed": failed,
+        },
+    )
     get_store().record_audit(
         url=report.target_url,
         mode=req.mode,
