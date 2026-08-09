@@ -630,10 +630,8 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
 html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
 .nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
 .nav-left .icon {
-  width: 28px; height: 28px; display: block;
-  border-radius: 7px;
-  object-fit: cover;
-  box-shadow: 0 0 0 1px rgba(255,77,0,0.25);
+  width: 28px; height: 28px;
+  object-fit: contain;
 }
 .nav-brand-text {
   color: var(--fg);
@@ -1242,16 +1240,36 @@ footer {
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
 .foot-brand .mark-hex {
   width: 40px; height: 40px; display: block;
-  border-radius: 9px;
-  object-fit: cover;
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent;
 }
 .foot-brand .logo-wordmark {
   display: block;
-  width: min(240px, 100%);
+  width: min(220px, 100%);
   height: auto;
-  border-radius: 10px;
-  margin-bottom: 4px;
+  border-radius: 0;
+  margin: 0 0 12px;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  object-fit: contain;
 }
+/* Wordmark: transparent PNGs — dark uses light-on-transparent; light uses ink-on-transparent */
+.foot-brand .logo-wordmark.for-light { display: none; }
+.foot-brand .logo-wordmark.for-dark { display: block; }
+html[data-theme="light"] .foot-brand .logo-wordmark.for-dark { display: none; }
+html[data-theme="light"] .foot-brand .logo-wordmark.for-light { display: block; }
+.nav-left .icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  object-fit: contain;
+}
+.nav-left .icon.for-light { display: none; }
+.nav-left .icon.for-dark { display: block; }
+html[data-theme="light"] .nav-left .icon.for-dark { display: none; }
+html[data-theme="light"] .nav-left .icon.for-light { display: block; }
 .foot-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
   font-size: 0.78rem; letter-spacing: 0.08em;
@@ -2011,7 +2029,8 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
 <nav class="navbar" id="topNav">
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="x402 validator home">
-      <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28">
+      <img class="icon for-dark" src="/static/logo-mark-512.png" alt="" width="28" height="28">
+      <img class="icon for-light" src="/static/logo-mark-512-light.png" alt="" width="28" height="28">
       <span class="nav-brand-text">x402 validator</span>
     </a>
   </div>
@@ -2370,7 +2389,8 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
 <footer>
   <div class="foot-grid">
     <div class="foot-brand">
-      <img class="logo-wordmark" src="/static/logo-wordmark.png" alt="x402 validator tools" width="240" height="106">
+      <img class="logo-wordmark for-dark" src="/static/logo-wordmark.png" alt="x402 validator tools" width="240" height="106">
+      <img class="logo-wordmark for-light" src="/static/logo-wordmark-light.png" alt="x402 validator tools" width="240" height="106">
       <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
     </div>
     <div class="foot-col">

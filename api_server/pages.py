@@ -122,6 +122,17 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
 html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+.nav-left .icon {
+  width: 28px; height: 28px;
+  object-fit: contain;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.nav-left .icon.for-light { display: none !important; }
+.nav-left .icon.for-dark { display: block !important; }
+html[data-theme="light"] .nav-left .icon.for-dark { display: none !important; }
+html[data-theme="light"] .nav-left .icon.for-light { display: block !important; }
 .theme-toggle[aria-pressed="true"] {
   border-color: rgba(255,77,0,0.40);
   box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
@@ -265,7 +276,8 @@ PAGE_NAV = """
 <nav class="navbar" id="pageNav">
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="x402 validator home">
-      <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;box-shadow:0 0 0 1px rgba(255,77,0,0.25);">
+      <img class="icon for-dark" src="/static/logo-mark-512.png" alt="" width="28" height="28">
+      <img class="icon for-light" src="/static/logo-mark-512-light.png" alt="" width="28" height="28">
       <span class="nav-brand-text">x402 validator</span>
     </a>
   </div>
