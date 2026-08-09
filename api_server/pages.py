@@ -64,6 +64,7 @@ body {
 nav.navbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 12px 28px;
   background: var(--nav-bg);
@@ -77,13 +78,16 @@ nav.navbar {
   font-size: 15px;
   letter-spacing: -0.01em;
 }
-.nav-links { display: flex; gap: 22px; flex-wrap: wrap; }
+.nav-links {
+  display: flex; gap: 22px; flex-wrap: wrap;
+  align-items: center;
+}
 .nav-links a, .nav-right a {
   color: var(--fg-70); text-decoration: none; font-size: 0.92rem;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 .nav-links a:hover, .nav-right a:hover { color: var(--brand); }
-.nav-right { display: flex; gap: 14px; align-items: center; flex-shrink: 0; }
+.nav-right { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 .btn-primary-pill {
   background: var(--brand); color: #fff !important;
   padding: 8px 18px; border-radius: 999px; font-weight: 600;
@@ -96,9 +100,71 @@ nav.navbar {
   box-shadow: 0 0 20px rgba(255,77,0,0.35);
   transform: translateY(-1px);
 }
+.nav-menu-btn {
+  appearance: none;
+  display: none;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.nav-menu-btn:hover {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
+.nav-menu-btn svg { width: 18px; height: 18px; display: block; }
+.nav-menu-btn .icon-close { display: none; }
+.nav-menu-btn[aria-expanded="true"] .icon-open { display: none; }
+.nav-menu-btn[aria-expanded="true"] .icon-close { display: block; }
+.nav-menu-btn[aria-expanded="true"] {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
 @media (max-width: 720px) {
-  nav.navbar { padding: 12px 16px; }
-  .nav-links { display: none; }
+  nav.navbar { padding: 12px 16px; row-gap: 0; }
+  .nav-brand-text { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-menu-btn { display: inline-flex; }
+  .nav-right .nav-contact { display: none; }
+  .nav-right .btn-primary-pill { padding: 8px 12px; font-size: 0.82rem; }
+  .nav-links {
+    display: none;
+    order: 3;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin: 10px 0 4px;
+    padding: 12px 8px 8px;
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    position: relative;
+    box-shadow: 0 16px 40px -20px rgba(0,0,0,0.55);
+  }
+  .nav-links::before {
+    content: '';
+    position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: linear-gradient(to left, #2B2644, #FF4D00, #FF8A4D);
+    opacity: 0.9;
+  }
+  nav.navbar.nav-open .nav-links { display: flex; }
+  .nav-links a {
+    padding: 12px 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .nav-links a:hover, .nav-links a:focus-visible {
+    background: var(--muted-fill);
+    color: var(--fg);
+    outline: none;
+  }
   .wrap { padding: 88px 18px 48px; }
 }
 ::selection { background: rgba(255,77,0,0.28); color: #fff; }
@@ -157,7 +223,7 @@ footer a:hover { color: var(--fg); }
 }
 """
 
-# Theme bootstrap runs as soon as nav is parsed (body). Matches landing key.
+# Theme bootstrap + mobile menu (body). Matches landing key / nav panel pattern.
 PAGE_NAV = """
 <script>
 (function () {
@@ -170,14 +236,14 @@ PAGE_NAV = """
   }
 })();
 </script>
-<nav class="navbar">
+<nav class="navbar" id="pageNav">
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="x402 validator home">
       <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;box-shadow:0 0 0 1px rgba(255,77,0,0.25);">
       <span class="nav-brand-text">x402 validator</span>
     </a>
   </div>
-  <div class="nav-links">
+  <div class="nav-links" id="pageNavLinks">
     <a href="/#audit">Try It Free</a>
     <a href="/#pricing">Pricing</a>
     <a href="/vs-x402-doctor">Compare</a>
@@ -186,10 +252,48 @@ PAGE_NAV = """
   </div>
   <div class="nav-right">
     <a href="/login">Log in</a>
-    <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
+    <a class="nav-contact" href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
+    <button type="button" class="nav-menu-btn" id="pageNavMenuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="pageNavLinks" title="Menu">
+      <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
 </nav>
+<script>
+(function () {
+  var nav = document.getElementById("pageNav");
+  var btn = document.getElementById("pageNavMenuBtn");
+  var links = document.getElementById("pageNavLinks");
+  if (!nav || !btn) return;
+  function setOpen(open) {
+    if (open) nav.classList.add("nav-open");
+    else nav.classList.remove("nav-open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    btn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    btn.title = open ? "Close menu" : "Menu";
+  }
+  btn.addEventListener("click", function () {
+    setOpen(!nav.classList.contains("nav-open"));
+  });
+  if (links) {
+    links.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { setOpen(false); });
+    });
+  }
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") setOpen(false);
+  });
+  document.addEventListener("click", function (ev) {
+    if (!nav.classList.contains("nav-open")) return;
+    if (nav.contains(ev.target)) return;
+    setOpen(false);
+  });
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 720) setOpen(false);
+  });
+})();
+</script>
 """
 
 PAGE_FOOTER = """
