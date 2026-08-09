@@ -267,6 +267,52 @@ class TestLanding:
         assert 'href="/vs-x402-doctor"' in r.text
         assert 'href="/open"' in r.text
 
+    def test_landing_protocol_polish_markers(self, client: TestClient) -> None:
+        r = client.get("/")
+        assert r.status_code == 200
+        # a11y + chrome
+        assert 'class="skip-link"' in r.text
+        assert 'id="topNav"' in r.text
+        assert 'name="theme-color"' in r.text
+        # structure
+        assert 'class="trust-bar"' in r.text
+        assert 'id="how"' in r.text
+        assert "From URL to verdict in three steps" in r.text
+        # demo UX
+        assert 'class="sample-chips"' in r.text
+        assert "Copy JSON" in r.text or "copyAuditJson" in r.text
+        assert "btn-copy-json" in r.text
+        assert "operator-actionable errors" in r.text
+        # footer honesty
+        assert r.text.count("GitHub Issues") <= 2
+        assert "api_keys.json" not in r.text
+        assert (
+            "Postgres keystore" in r.text
+            or "Neon" in r.text
+            or "hosted on Render" in r.text
+        )
+
+    def test_landing_audit_results_use_receipt_framing(self, client: TestClient) -> None:
+        r = client.get("/")
+        assert "receipt" in r.text
+        assert "btn-copy-json" in r.text
+        assert "__x402LastAudit" in r.text
+
+    def test_landing_hero_locked_copy(self, client: TestClient) -> None:
+        t = client.get("/").text
+        assert "Ship x402 endpoints with confidence" in t
+        assert "Audit x402 in Seconds" in t
+        assert "Get Your API Key" in t
+        assert 'href="#audit">Try It Free</a>' in t
+
+    def test_landing_pricing_and_faq_anchors(self, client: TestClient) -> None:
+        t = client.get("/").text
+        assert 'id="pricing"' in t
+        assert 'id="faq"' in t
+        assert "Most popular" in t
+        assert "$9" in t and "$49" in t
+        assert "<details" in t
+
 
 class TestPlans:
     def test_lists_all_three(self, client: TestClient) -> None:

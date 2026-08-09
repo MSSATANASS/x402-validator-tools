@@ -287,6 +287,8 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
 <meta name="twitter:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
 <meta name="robots" content="index, follow">
+<meta name="theme-color" content="#FF4D00">
+<meta name="color-scheme" content="light">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -525,6 +527,14 @@ a { color: inherit; }
 /* ============================================================
    NAVBAR (fixed glass)
    ============================================================ */
+.skip-link {
+  position: absolute; left: 12px; top: -48px; z-index: 100;
+  background: var(--fg); color: #fff; padding: 10px 14px;
+  border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+  text-decoration: none; transition: top 0.15s;
+}
+.skip-link:focus { top: 12px; outline: 2px solid var(--brand); outline-offset: 2px; }
+
 .navbar {
   position: fixed; top: 0; left: 0; width: 100%;
   z-index: 50;
@@ -534,6 +544,12 @@ a { color: inherit; }
   border-bottom: 1px solid rgba(10,10,10,0.07);
   padding: 12px 24px;
   display: flex; align-items: center; justify-content: space-between;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.navbar.scrolled {
+  background: rgba(245,245,245,0.92);
+  border-bottom-color: rgba(10,10,10,0.10);
+  box-shadow: 0 8px 28px -18px rgba(43,38,68,0.35);
 }
 .nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
 .nav-left .icon {
@@ -615,7 +631,7 @@ a { color: inherit; }
   width: calc(100% - 48px);
   max-width: 88rem;
   margin: 72px auto 0;
-  min-height: calc(100vh - 120px);
+  min-height: min(720px, calc(100vh - 120px));
   background: linear-gradient(165deg, #EFEDF7 0%, #EAF3EF 45%, #F3EDE8 100%);
   color: var(--fg);
   overflow: hidden;
@@ -1171,12 +1187,75 @@ footer {
   margin: 10px 4px 0;
   text-align: center;
 }
-.audit-hint a { color: var(--accent); text-decoration: none; }
+.audit-hint a { color: var(--brand); text-decoration: none; font-weight: 600; }
 .audit-hint a:hover { text-decoration: underline; }
+
+.sample-chips {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  margin: 0 auto 18px; max-width: 760px;
+}
+.sample-chip {
+  appearance: none; border: 1px solid rgba(10,10,10,0.10);
+  background: #fff; color: var(--fg-70);
+  border-radius: 999px; padding: 7px 12px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.12s;
+  font-family: 'Instrument Sans', sans-serif;
+}
+.sample-chip:hover {
+  border-color: rgba(255,77,0,0.40); color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+  transform: translateY(-1px);
+}
+.sample-chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .audit-results {
   max-width: 760px;
   margin: 20px auto 0;
+}
+.audit-results.receipt {
+  border: 1px solid rgba(10,10,10,0.10);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-md);
+  padding: 16px 16px 8px;
+  position: relative;
+}
+.audit-results.receipt::before {
+  content: "SETTLEMENT RECEIPT";
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--fg-50);
+  margin: 0 0 10px 2px;
+}
+.receipt-meta {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--fg-50);
+  margin: 0 0 12px;
+}
+.audit-results-toolbar {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin: 0 0 10px;
+}
+.btn-copy-json {
+  appearance: none; border: 1px solid rgba(10,10,10,0.12);
+  background: #fff; color: var(--fg);
+  border-radius: 999px; padding: 8px 14px;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  font-family: 'Instrument Sans', sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.btn-copy-json:hover {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
+.btn-copy-json.copied {
+  border-color: rgba(16,185,129,0.45);
+  color: #047857;
+  background: rgba(16,185,129,0.08);
 }
 .audit-summary {
   background: #ffffff;
@@ -1187,9 +1266,11 @@ footer {
   margin-bottom: 10px;
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
 }
-.audit-summary.overall-PASS { border-color: rgba(16,185,129,0.4); }
-.audit-summary.overall-FAIL { border-color: rgba(239,68,68,0.4); }
-.audit-summary strong { color: var(--fg); font-weight: 700; }
+.audit-summary.overall-PASS { border-color: rgba(16,185,129,0.4); background: linear-gradient(180deg, rgba(16,185,129,0.06), #fff 55%); }
+.audit-summary.overall-FAIL,
+.audit-summary.overall-CRITICAL_FAIL { border-color: rgba(239,68,68,0.4); background: linear-gradient(180deg, rgba(239,68,68,0.05), #fff 55%); }
+.audit-summary.overall-ERROR { border-color: rgba(245,158,11,0.45); background: linear-gradient(180deg, rgba(245,158,11,0.06), #fff 55%); }
+.audit-summary strong { color: var(--fg); font-weight: 700; word-break: break-all; }
 .audit-summary .badge {
   display: inline-block; padding: 4px 10px;
   border-radius: 999px;
@@ -1197,8 +1278,10 @@ footer {
   letter-spacing: 0.06em; text-transform: uppercase;
 }
 .audit-summary .badge.PASS { background: rgba(5,150,105,0.14); color: #047857; }
-.audit-summary .badge.FAIL { background: rgba(220,38,38,0.12); color: #b91c1c; }
-.audit-summary .latency { color: var(--fg-50); font-size: 0.85rem; margin-left: auto; }
+.audit-summary .badge.FAIL,
+.audit-summary .badge.CRITICAL_FAIL { background: rgba(220,38,38,0.12); color: #b91c1c; }
+.audit-summary .badge.ERROR { background: rgba(245,158,11,0.16); color: #b45309; }
+.audit-summary .latency { color: var(--fg-50); font-size: 0.85rem; margin-left: auto; font-variant-numeric: tabular-nums; }
 
 .check-row {
   background: #ffffff;
@@ -1207,7 +1290,7 @@ footer {
   border-radius: 10px;
   padding: 12px 14px;
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 88px 1fr;
   gap: 12px;
   margin-bottom: 6px;
   font-family: 'Instrument Sans', sans-serif;
@@ -1216,22 +1299,107 @@ footer {
 }
 .check-row:hover { box-shadow: var(--shadow-sm); }
 .check-row.status-PASS { border-color: rgba(16,185,129,0.25); border-left-color: #10B981; }
-.check-row.status-FAIL { border-color: rgba(239,68,68,0.25); border-left-color: #EF4444; }
+.check-row.status-FAIL,
+.check-row.status-CRITICAL_FAIL { border-color: rgba(239,68,68,0.25); border-left-color: #EF4444; }
 .check-row.status-ERROR { border-color: rgba(245,158,11,0.30); border-left-color: #F59E0B; }
 .check-row .check-status {
   align-self: start;
-  font-size: 0.7rem; font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.04em;
   padding: 4px 0; text-align: center; text-transform: uppercase;
+  line-height: 1.2;
 }
 .check-row .check-status.PASS { color: #047857; }
-.check-row .check-status.FAIL { color: #b91c1c; }
+.check-row .check-status.FAIL,
+.check-row .check-status.CRITICAL_FAIL { color: #b91c1c; }
+.check-row .check-status.ERROR { color: #b45309; }
 .check-row .check-name {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--fg); font-weight: 600;
   display: block; margin-bottom: 2px;
 }
 .check-row .check-msg { color: var(--fg-70); font-size: 0.86rem; line-height: 1.55; }
+
+/* Trust metrics + how-it-works */
+.trust-bar {
+  max-width: 88rem; margin: -36px auto 0; padding: 0 24px 8px;
+  position: relative; z-index: 2;
+}
+@media (max-width: 640px) {
+  .trust-bar { margin-top: 16px; }
+}
+#audit, #how, #pricing, #faq {
+  scroll-margin-top: 88px;
+}
+.trust-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  background: #fff;
+  border: 1px solid rgba(10,10,10,0.08);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow-md);
+}
+@media (min-width: 800px) {
+  .trust-grid { grid-template-columns: repeat(4, 1fr); padding: 22px 8px; }
+}
+.trust-item {
+  text-align: center; padding: 8px 10px;
+  border-right: 1px solid transparent;
+}
+@media (min-width: 800px) {
+  .trust-item { border-right: 1px solid rgba(10,10,10,0.06); }
+  .trust-item:last-child { border-right: none; }
+}
+.trust-item .t-num {
+  font-size: 1.45rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--fg); font-variant-numeric: tabular-nums;
+}
+.trust-item .t-num .accent { color: var(--brand); }
+.trust-item .t-lbl {
+  margin-top: 4px; font-size: 0.8rem; color: var(--fg-60); line-height: 1.35;
+}
+
+.how-section {
+  padding: 72px 24px 24px;
+  max-width: 1000px; margin: 0 auto;
+}
+.how-headline {
+  text-align: center; font-weight: 600;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.025em; margin: 0 0 28px;
+}
+.how-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 800px) {
+  .how-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+.how-card {
+  background: #fff;
+  border: 1px solid rgba(10,10,10,0.08);
+  border-radius: var(--radius-md);
+  padding: 22px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.how-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(255,77,0,0.28);
+}
+.how-step {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 999px;
+  background: rgba(255,77,0,0.10); color: #B83A00;
+  font-size: 0.8rem; font-weight: 700; margin-bottom: 12px;
+}
+.how-card h3 {
+  margin: 0 0 8px; font-size: 1.05rem; letter-spacing: -0.02em;
+}
+.how-card p {
+  margin: 0; color: var(--fg-70); font-size: 0.92rem; line-height: 1.55;
+}
 
 .audit-error, .audit-rate {
   background: rgba(239,68,68,0.08);
@@ -1258,11 +1426,15 @@ footer {
 .audit-loading .spinner {
   width: 14px; height: 14px;
   border: 2px solid rgba(10,10,10,0.18);
-  border-top-color: var(--accent);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+.audit-empty {
+  text-align: center; color: var(--fg-50); font-size: 0.9rem;
+  padding: 8px;
+}
 
 /* ============================================================
    FAQ section
@@ -1358,11 +1530,12 @@ footer {
 </style>
 </head>
 <body>
+<a class="skip-link" href="#audit">Skip to live audit</a>
 
 <!-- =================== NAVBAR (fixed, transparent) =================== -->
-<nav class="navbar">
+<nav class="navbar" id="topNav">
   <div class="nav-left">
-    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="x402 validator home">
       <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28">
       <span class="nav-brand-text">x402 validator</span>
     </a>
@@ -1370,6 +1543,7 @@ footer {
 
   <div class="nav-links">
     <a href="#audit">Try It Free</a>
+    <a href="#how">How it works</a>
     <a href="#pricing">Pricing</a>
     <a href="/vs-x402-doctor">Compare</a>
     <a href="/open">Open</a>
@@ -1462,6 +1636,50 @@ footer {
   </div>
 </section>
 
+<!-- =================== TRUST METRICS =================== -->
+<section class="trust-bar" aria-label="Product metrics">
+  <div class="trust-grid">
+    <div class="trust-item">
+      <div class="t-num"><span class="accent">9</span></div>
+      <div class="t-lbl">conformance checks<br/>per audit</div>
+    </div>
+    <div class="trust-item">
+      <div class="t-num">~580<span class="accent">ms</span></div>
+      <div class="t-lbl">median end-to-end<br/>audit latency</div>
+    </div>
+    <div class="trust-item">
+      <div class="t-num">3<span class="accent">/day</span></div>
+      <div class="t-lbl">free public demos<br/>per IP</div>
+    </div>
+    <div class="trust-item">
+      <div class="t-num">A2.0</div>
+      <div class="t-lbl">Apache-2.0 engine<br/>open source core</div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== HOW IT WORKS =================== -->
+<section id="how" class="how-section">
+  <h2 class="how-headline">From URL to verdict in three steps</h2>
+  <div class="how-grid">
+    <article class="how-card">
+      <div class="how-step">1</div>
+      <h3>Paste a merchant URL</h3>
+      <p>Any x402 endpoint — root catalog or product resource. Standard or marketplace mode.</p>
+    </article>
+    <article class="how-card">
+      <div class="how-step">2</div>
+      <h3>We run nine checks</h3>
+      <p>Manifest, CAIP-2, JSON resilience, Bazaar, bot-wall, accepts[], discovery, cold probe, batch-settlement.</p>
+    </article>
+    <article class="how-card">
+      <div class="how-step">3</div>
+      <h3>Get actionable JSON</h3>
+      <p>PASS / FAIL / ERROR per check with operator-actionable errors — ready for CI or a team channel.</p>
+    </article>
+  </div>
+</section>
+
 <!-- =================== MEET THE ENGINE (Halo-style card grid) =================== -->
 <section class="cards-section">
   <div class="cards-inner">
@@ -1539,6 +1757,11 @@ footer {
   <h2 class="audit-demo-headline">Audit an x402 endpoint right now</h2>
   <p class="audit-demo-sub">Paste any merchant URL. We run nine checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, discovery listing, directory visibility &mdash; the Bazaar cold probe, and batch-settlement requirements. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
 
+  <div class="sample-chips" role="group" aria-label="Sample endpoints">
+    <button type="button" class="sample-chip" data-url="https://observer.137-184-67-179.sslip.io">Live observer sample</button>
+    <button type="button" class="sample-chip" data-url="https://your-merchant.example">your-merchant.example</button>
+  </div>
+
   <!-- action="/method=get" keep the form well-formed; the inline onsubmit guard
        returns false until the bound JS handler flips window.__x402AuditReady
        to true, so a degraded submit NEVER silently resets the page. -->
@@ -1549,6 +1772,8 @@ footer {
       <input type="url" id="auditUrl" name="url" required
              value="https://observer.137-184-67-179.sslip.io"
              placeholder="https://your-merchant.com"
+             spellcheck="false"
+             inputmode="url"
              aria-label="x402 merchant URL to audit" />
       <select id="auditMode" name="mode" aria-label="audit mode">
         <option value="standard">Standard</option>
@@ -1556,7 +1781,7 @@ footer {
       </select>
       <button type="submit" class="audit-submit">Audit free</button>
     </div>
-    <p class="audit-hint" id="auditHint">No URL handy? <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">Load a live x402 endpoint</a> and audit it.</p>
+    <p class="audit-hint" id="auditHint">No URL handy? <a href="#" onclick="fillUrl('https://observer.137-184-67-179.sslip.io');return false">Load a live x402 endpoint</a> and audit it. Results stay in this browser — we do not sell audit payloads.</p>
     <noscript>
       <p style="margin-top:10px;color:var(--fg-50);font-size:0.85rem;">The audit demo requires JavaScript. <a href="/health">Check status</a> or enable scripts and refresh.</p>
     </noscript>
@@ -1585,7 +1810,7 @@ footer {
       <a class="plan-cta outline" href="/create-checkout-session?plan_id=free">Start free</a>
     </div>
 
-    <div class="plan featured">
+    <div class="plan featured" aria-label="Pro plan, most popular">
       <h3 class="plan-name">Pro</h3>
       <p class="plan-desc">For shipping x402 merchants.</p>
       <div class="plan-value"><div class="plan-price">$9</div><span class="plan-period-small">/mo</span></div>
@@ -1675,14 +1900,14 @@ footer {
     </div>
     <div class="foot-col">
       <h4>Contact</h4>
-      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues">GitHub Issues</a>
-      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">GitHub issues</a>
-      <a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>
+      <a href="https://github.com/MSSATANASS/x402-validator-tools/issues" rel="noopener">GitHub Issues</a>
+      <a href="https://github.com/MSSATANASS" rel="noopener">GitHub: MSSATANASS</a>
+      <a href="/health">API status</a>
     </div>
   </div>
   <div class="foot-bottom">
     <div>© 2026 x402 validator · Apache-2.0</div>
-    <div>stripe • persistent key store in <code>api_keys.json</code></div>
+    <div>Stripe billing · hosted on Render · Postgres keystore when configured</div>
   </div>
 </footer>
 
@@ -1712,6 +1937,7 @@ footer {
   function renderResults(el, body, status) {
     if (!el) return;
     if (status === 429) {
+      el.className = 'audit-results';
       el.innerHTML =
         '<div class="audit-rate">Daily limit reached (3 per IP). ' +
         'Get unlimited audits with Pro — ' +
@@ -1719,19 +1945,33 @@ footer {
       return;
     }
     if (!body || body.detail) {
+      el.className = 'audit-results';
       el.innerHTML =
         '<div class="audit-error">' + esc(body && body.detail || 'Audit failed') + '</div>';
       return;
     }
+    window.__x402LastAudit = body;
+    el.className = 'audit-results receipt';
     var checksHTML = (body.checks || []).map(function (c) {
-      return '<div class="check-row status-' + esc(c.status) + '">' +
-             '<span class="check-status ' + esc(c.status) + '">' + esc(c.status) + '</span>' +
+      var st = c.status || 'ERROR';
+      return '<div class="check-row status-' + esc(st) + '">' +
+             '<span class="check-status ' + esc(st) + '">' + esc(st) + '</span>' +
              '<div>' +
                '<span class="check-name">' + esc(c.name) + '</span>' +
                '<span class="check-msg">' + esc(c.message || '') + '</span>' +
              '</div></div>';
     }).join('');
+    var remaining = body.remaining_today != null
+      ? esc(body.remaining_today) + ' free audits left today'
+      : '';
+    var nChecks = (body.checks || []).length;
     el.innerHTML =
+      '<div class="audit-results-toolbar">' +
+        '<button type="button" class="btn-copy-json" id="copyAuditJson">Copy JSON</button>' +
+      '</div>' +
+      '<p class="receipt-meta">state=' + esc(body.overall) +
+        ' · checks=' + esc(nChecks) +
+        ' · latency_ms=' + esc(body.latency_ms) + '</p>' +
       '<div class="audit-summary overall-' + esc(body.overall) + '">' +
         '<span class="badge ' + esc(body.overall) + '">' + esc(body.overall) + '</span>' +
         '<strong>' + esc(body.url) + '</strong>' +
@@ -1741,9 +1981,31 @@ footer {
       checksHTML +
       '<p style="text-align:center;margin-top:18px;font-size:0.85rem;color:var(--fg-50);">' +
         'Want this on every merchant in your catalog? ' +
-        '<a href="/create-checkout-session?plan_id=pro" style="color:var(--accent);">Buy Pro</a> · ' +
-        (body.remaining_today != null ? esc(body.remaining_today) + ' free audits left today' : '') +
+        '<a href="/create-checkout-session?plan_id=pro" style="color:var(--brand);font-weight:600;">Buy Pro</a>' +
+        (remaining ? ' · ' + remaining : '') +
       '</p>';
+    var copyBtn = document.getElementById('copyAuditJson');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var payload = JSON.stringify(window.__x402LastAudit || {}, null, 2);
+        var done = function () {
+          copyBtn.textContent = 'Copied';
+          copyBtn.classList.add('copied');
+          setTimeout(function () {
+            copyBtn.textContent = 'Copy JSON';
+            copyBtn.classList.remove('copied');
+          }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(payload).then(done).catch(function () {
+            window.prompt('Copy audit JSON:', payload);
+          });
+        } else {
+          window.prompt('Copy audit JSON:', payload);
+          done();
+        }
+      });
+    }
   }
 
   function runAudit(url, mode, results, submitBtn) {
@@ -1785,6 +2047,7 @@ footer {
         if (submitBtn) submitBtn.disabled = true;
         if (results) {
           results.hidden = false;
+          results.className = 'audit-results';
           results.innerHTML =
             '<div class="audit-loading"><span class="spinner"></span>Auditing ' + esc(url) + '…</div>';
         }
@@ -1798,8 +2061,34 @@ footer {
       if (urlEl) {
         urlEl.value = u;
         urlEl.focus();
+        try { urlEl.select(); } catch (e) {}
       }
     };
+
+    // Sample chips → fill URL (and optional auto-focus)
+    document.querySelectorAll('.sample-chip[data-url]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var u = btn.getAttribute('data-url') || '';
+        if (u.indexOf('example') !== -1) {
+          window.fillUrl('https://');
+          var urlEl = $('auditUrl');
+          if (urlEl) urlEl.placeholder = 'https://your-merchant.com';
+          return;
+        }
+        window.fillUrl(u);
+      });
+    });
+
+    // Navbar elevation on scroll
+    var nav = document.getElementById('topNav');
+    if (nav) {
+      var onScroll = function () {
+        if (window.scrollY > 8) nav.classList.add('scrolled');
+        else nav.classList.remove('scrolled');
+      };
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
 
     // Progressive enhancement: if we ever land at "/" with ?url=&mode= in the
     // query string (the symptom Ali reported — a degraded native GET submit),
