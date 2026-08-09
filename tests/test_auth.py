@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
+import sys
+import types
 
 import pytest
 
@@ -87,6 +89,370 @@ class TestPrimitives:
         joined = " ".join(auth.AUTH_SCHEMA_STATEMENTS).upper()
         assert "X402_USERS" in joined
         assert "X402_SESSIONS" in joined
+
+
+# ---------------------------------------------------------------------------
+# UserStore with a hermetic fake pool (no Neon / TEST_DATABASE_URL)
+# ---------------------------------------------------------------------------
+
+
+class _FakeCursor:
+    def __init__(self, row=None, rows=None, rowcount: int = 0):
+        self._row = row
+        self._rows = rows if rows is not None else ([] if row is None else [row])
+        self.rowcount = rowcount
+
+    def fetchone(self):
+        return self._row
+
+    def fetchall(self):
+        return list(self._rows)
+
+
+class _FakeConn:
+    """Minimal connection: routes SQL by substring to canned results."""
+
+    def __init__(self, router: dict):
+        # router: list of (predicate, cursor_or_callable)
+        self._router = router
+        self.executes: list[tuple[str, object]] = []
+        self._tx = False
+
+    def execute(self, sql: str, params=None):
+        self.executes.append((sql, params))
+        for pred, handler in self._router:
+            if pred(sql, params):
+                if callable(handler):
+                    return handler(sql, params)
+                return handler
+        return _FakeCursor()
+
+    def transaction(self):
+        # Context manager for `with conn.transaction()`
+        class _Tx:
+            def __enter__(self_inner):
+                return self_inner
+
+            def __exit__(self_inner, *a):
+                return False
+
+        return _Tx()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+class _FakePool:
+    def __init__(self, router: dict | list | None = None):
+        # Accept list of (pred, handler) pairs
+        self._router = list(router or [])
+        self.conns: list[_FakeConn] = []
+
+    def connection(self):
+        conn = _FakeConn(self._router)
+        self.conns.append(conn)
+        return conn
+
+
+def _sql_contains(*needles: str):
+    needles_u = [n.upper() for n in needles]
+
+    def pred(sql: str, _params) -> bool:
+        s = sql.upper()
+        return all(n in s for n in needles_u)
+
+    return pred
+
+
+class TestUserStoreMocked:
+    """Cover UserStore branches without a real database."""
+
+    def test_init_runs_schema_statements(self):
+        pool = _FakePool()
+        store = auth.UserStore(pool)
+        assert store._pool is pool
+        # __init__ opens one connection and runs every AUTH_SCHEMA statement
+        assert len(pool.conns) == 1
+        assert len(pool.conns[0].executes) == len(auth.AUTH_SCHEMA_STATEMENTS)
+
+    def test_create_user_returns_id(self):
+        pool = _FakePool([
+            (_sql_contains("INSERT INTO X402_USERS"), _FakeCursor(row=(42,))),
+        ])
+        store = auth.UserStore(pool)
+        # Reset executes from schema init so we only assert create
+        pool.conns.clear()
+        uid = store.create_user("  New@Example.COM ", "password123")
+        assert uid == 42
+        # Email was normalized
+        sql, params = pool.conns[-1].executes[0]
+        assert params[0] == "new@example.com"
+        assert params[1].startswith("$argon2")
+
+    def test_create_user_duplicate_raises(self, monkeypatch):
+        class UniqueViolation(Exception):
+            pass
+
+        # Inject the exception type that UserStore imports from psycopg.errors
+        fake_mod = types.ModuleType("psycopg.errors")
+        fake_mod.UniqueViolation = UniqueViolation  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "psycopg.errors", fake_mod)
+
+        def boom(_sql, _params):
+            raise UniqueViolation()
+
+        pool = _FakePool([
+            (_sql_contains("INSERT INTO X402_USERS"), boom),
+        ])
+        store = auth.UserStore(pool)
+        with pytest.raises(auth.DuplicateEmail):
+            store.create_user("dup@example.com", "password123")
+
+    def test_get_user_found_and_missing(self):
+        from datetime import datetime, timezone
+
+        created = datetime(2026, 8, 1, tzinfo=timezone.utc)
+        pool = _FakePool([
+            (
+                _sql_contains("FROM X402_USERS WHERE ID"),
+                _FakeCursor(row=(7, "a@b.co", "pro", "cus_1", created)),
+            ),
+        ])
+        store = auth.UserStore(pool)
+        u = store.get_user(7)
+        assert u == {
+            "id": 7,
+            "email": "a@b.co",
+            "plan_id": "pro",
+            "stripe_customer_id": "cus_1",
+            "created_at": created,
+        }
+
+        pool2 = _FakePool([
+            (_sql_contains("FROM X402_USERS WHERE ID"), _FakeCursor(row=None)),
+        ])
+        store2 = auth.UserStore(pool2)
+        assert store2.get_user(999) is None
+
+    def test_authenticate_success_wrong_and_missing(self):
+        h = auth.hash_password("correct-horse")
+        pool = _FakePool([
+            (
+                _sql_contains("PASSWORD_HASH"),
+                _FakeCursor(row=(11, h)),
+            ),
+        ])
+        store = auth.UserStore(pool)
+        assert store.authenticate("user@ex.com", "correct-horse") == 11
+        assert store.authenticate("user@ex.com", "wrong-password") is None
+
+        # Missing email: burns dummy hash, returns None
+        pool_miss = _FakePool([
+            (_sql_contains("PASSWORD_HASH"), _FakeCursor(row=None)),
+        ])
+        store_miss = auth.UserStore(pool_miss)
+        assert store_miss.authenticate("nobody@ex.com", "whatever") is None
+        # Second miss reuses global _dummy_hash
+        assert store_miss.authenticate("nobody@ex.com", "whatever") is None
+
+    def test_set_plan(self):
+        pool = _FakePool()
+        store = auth.UserStore(pool)
+        pool.conns.clear()
+        store.set_plan(3, "enterprise", "cus_x")
+        sql, params = pool.conns[-1].executes[0]
+        assert "UPDATE X402_USERS" in sql.upper()
+        assert params == ("enterprise", "cus_x", 3)
+
+    def test_create_and_revoke_session(self):
+        pool = _FakePool()
+        store = auth.UserStore(pool)
+        pool.conns.clear()
+        token = store.create_session(5)
+        assert isinstance(token, str) and len(token) > 20
+        # DELETE expired + INSERT
+        assert len(pool.conns[-1].executes) == 2
+        assert "DELETE FROM X402_SESSIONS" in pool.conns[-1].executes[0][0].upper()
+        assert "INSERT INTO X402_SESSIONS" in pool.conns[-1].executes[1][0].upper()
+
+        pool.conns.clear()
+        store.revoke_session(token)
+        assert "DELETE FROM X402_SESSIONS" in pool.conns[-1].executes[0][0].upper()
+        store.revoke_session("")  # no-op, no new execute beyond empty path
+
+    def test_get_session_user_empty_token(self):
+        pool = _FakePool()
+        store = auth.UserStore(pool)
+        assert store.get_session_user("") is None
+        assert store.get_session_user(None) is None  # type: ignore[arg-type]
+
+    def test_get_session_user_valid(self):
+        from datetime import datetime, timedelta, timezone
+
+        future = datetime.now(timezone.utc) + timedelta(days=1)
+        pool = _FakePool([
+            (
+                _sql_contains("JOIN X402_USERS"),
+                _FakeCursor(row=(9, "s@ex.com", "free", future)),
+            ),
+        ])
+        store = auth.UserStore(pool)
+        user = store.get_session_user("tok-valid")
+        assert user == {"id": 9, "email": "s@ex.com", "plan_id": "free"}
+
+    def test_get_session_user_missing(self):
+        pool = _FakePool([
+            (_sql_contains("JOIN X402_USERS"), _FakeCursor(row=None)),
+        ])
+        store = auth.UserStore(pool)
+        assert store.get_session_user("ghost") is None
+
+    def test_get_session_user_expired_naive_and_aware(self):
+        from datetime import datetime, timedelta, timezone
+
+        # Naive expired timestamp (forces tzinfo branch)
+        past_naive = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
+        deletes: list = []
+
+        def expired_handler(sql, params):
+            if "DELETE FROM" in sql.upper():
+                deletes.append(params)
+                return _FakeCursor()
+            return _FakeCursor(row=(1, "e@x.com", "free", past_naive))
+
+        pool = _FakePool([
+            (lambda s, p: "X402_SESSIONS" in s.upper(), expired_handler),
+        ])
+        store = auth.UserStore(pool)
+        assert store.get_session_user("expired-tok") is None
+        assert deletes  # session row deleted
+
+        past_aware = datetime.now(timezone.utc) - timedelta(days=2)
+        pool2 = _FakePool([
+            (
+                _sql_contains("JOIN X402_USERS"),
+                _FakeCursor(row=(2, "e2@x.com", "free", past_aware)),
+            ),
+            (_sql_contains("DELETE FROM X402_SESSIONS"), _FakeCursor()),
+        ])
+        store2 = auth.UserStore(pool2)
+        assert store2.get_session_user("expired-2") is None
+
+    def test_issue_and_list_keys(self):
+        from datetime import datetime, timezone
+
+        created = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        # issue_key uses INSERT; list_keys uses SELECT
+        token_holder: dict = {}
+
+        def list_handler(sql, params):
+            return _FakeCursor(rows=[(token_holder["t"], "pro", created)])
+
+        pool = _FakePool([
+            (_sql_contains("INSERT INTO X402_API_KEYS"), _FakeCursor()),
+            (_sql_contains("SELECT TOKEN, PLAN_ID"), list_handler),
+        ])
+        store = auth.UserStore(pool)
+        pool.conns.clear()
+        tok = store.issue_key(1, "pro")
+        token_holder["t"] = tok
+        keys = store.list_keys(1)
+        assert len(keys) == 1
+        assert keys[0]["plan_id"] == "pro"
+        assert keys[0]["token"] == tok
+        assert keys[0]["kid"] == auth.kid_for_token(tok)
+        assert keys[0]["created_at"] == created
+
+    def test_revoke_key_by_kid_found_and_miss(self):
+        real = secrets.token_urlsafe(16)
+        kid = auth.kid_for_token(real)
+
+        def select_handler(sql, params):
+            return _FakeCursor(rows=[(real,), ("other-token",)])
+
+        pool = _FakePool([
+            (_sql_contains("SELECT TOKEN FROM X402_API_KEYS"), select_handler),
+            (
+                _sql_contains("DELETE FROM X402_API_KEYS"),
+                _FakeCursor(rowcount=1),
+            ),
+        ])
+        store = auth.UserStore(pool)
+        assert store.revoke_key_by_kid(1, kid) is True
+        assert store.revoke_key_by_kid(1, "deadbeefdead") is False
+
+    def test_revoke_key_rowcount_zero(self):
+        real = secrets.token_urlsafe(8)
+        kid = auth.kid_for_token(real)
+        pool = _FakePool([
+            (
+                _sql_contains("SELECT TOKEN FROM X402_API_KEYS"),
+                _FakeCursor(rows=[(real,)]),
+            ),
+            (
+                _sql_contains("DELETE FROM X402_API_KEYS"),
+                _FakeCursor(rowcount=0),
+            ),
+        ])
+        store = auth.UserStore(pool)
+        assert store.revoke_key_by_kid(1, kid) is False
+
+    def test_key_owner(self):
+        pool = _FakePool([
+            (
+                _sql_contains("SELECT USER_ID FROM X402_API_KEYS"),
+                _FakeCursor(row=(55,)),
+            ),
+        ])
+        store = auth.UserStore(pool)
+        assert store.key_owner("tok") == 55
+
+        pool2 = _FakePool([
+            (
+                _sql_contains("SELECT USER_ID"),
+                _FakeCursor(row=(None,)),
+            ),
+        ])
+        assert auth.UserStore(pool2).key_owner("x") is None
+        pool3 = _FakePool([
+            (_sql_contains("SELECT USER_ID"), _FakeCursor(row=None)),
+        ])
+        assert auth.UserStore(pool3).key_owner("x") is None
+
+    def test_link_purchase(self):
+        pool = _FakePool()
+        store = auth.UserStore(pool)
+        pool.conns.clear()
+        token = store.link_purchase(3, "pro", "cus_99", "cs_sess_1")
+        assert isinstance(token, str) and len(token) > 10
+        conn = pool.conns[-1]
+        # 3 statements: insert key, insert claim, update user
+        assert len(conn.executes) == 3
+        assert "INSERT INTO X402_API_KEYS" in conn.executes[0][0].upper()
+        assert "INSERT INTO X402_CLAIMS" in conn.executes[1][0].upper()
+        assert "UPDATE X402_USERS" in conn.executes[2][0].upper()
+        assert conn.executes[0][1][0] == token
+        assert conn.executes[1][1][0] == "cs_sess_1"
+
+    def test_get_user_store_caches_per_store(self, monkeypatch):
+        pool = _FakePool()
+
+        class FakeStore:
+            backend = "postgres"
+
+            def __init__(self):
+                self.pool = pool
+
+        fake = FakeStore()
+        monkeypatch.setattr(auth, "get_store", lambda: fake)
+        auth._user_stores.clear()
+        a = auth.get_user_store()
+        b = auth.get_user_store()
+        assert a is b
+        assert isinstance(a, auth.UserStore)
 
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
