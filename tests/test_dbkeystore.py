@@ -80,6 +80,147 @@ class TestJsonCompat:
         assert store.record_audit(url="https://x", mode="standard") is None
 
 
+class TestDBKeyStoreUnit:
+    """Hermetic coverage for pure helpers + mock-backed methods (no Postgres)."""
+
+    def test_iso_none_and_naive_datetime(self):
+        from datetime import datetime, timezone
+
+        from api_server.dbkeystore import _iso
+
+        assert _iso(None) is None
+        naive = datetime(2026, 8, 1, 12, 0, 0)
+        out = _iso(naive)
+        assert out is not None and out.endswith("+00:00")
+        aware = datetime(2026, 8, 1, 12, 0, 0, tzinfo=timezone.utc)
+        assert _iso(aware) == aware.isoformat()
+        assert _iso("already-a-string") == "already-a-string"
+
+    def test_ensure_schema_runs_all_statements(self):
+        from api_server.dbkeystore import SCHEMA_STATEMENTS, ensure_schema
+
+        class FakeConn:
+            def __init__(self):
+                self.stmts: list[str] = []
+
+            def execute(self, stmt):
+                self.stmts.append(stmt)
+
+        conn = FakeConn()
+        ensure_schema(conn)
+        assert len(conn.stmts) == len(SCHEMA_STATEMENTS)
+        assert any("x402_api_keys" in s for s in conn.stmts)
+
+    def test_audit_stats_with_mock_pool(self):
+        from api_server.dbkeystore import DBKeyStore
+
+        class FakeResult:
+            def __init__(self, value):
+                self._value = value
+
+            def fetchone(self):
+                return (self._value,)
+
+        class FakeConn:
+            def execute(self, sql, params=None):
+                if "overall = 'PASS'" in sql:
+                    return FakeResult(2)
+                if "date_trunc" in sql:
+                    return FakeResult(5)
+                return FakeResult(10)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        class FakePool:
+            def connection(self):
+                return FakeConn()
+
+            def close(self):
+                pass
+
+        store = object.__new__(DBKeyStore)
+        store._pool = FakePool()  # type: ignore[attr-defined]
+        stats = store.audit_stats()
+        assert stats == {"total": 10, "this_month": 5, "pass_this_month": 2}
+
+    def test_audit_stats_empty_rows_are_zero(self):
+        from api_server.dbkeystore import DBKeyStore
+
+        class FakeResult:
+            def fetchone(self):
+                return None
+
+        class FakeConn:
+            def execute(self, sql, params=None):
+                return FakeResult()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        class FakePool:
+            def connection(self):
+                return FakeConn()
+
+        store = object.__new__(DBKeyStore)
+        store._pool = FakePool()  # type: ignore[attr-defined]
+        assert store.audit_stats() == {
+            "total": 0,
+            "this_month": 0,
+            "pass_this_month": 0,
+        }
+
+    def test_quota_allows_unknown_plan_and_limit(self, monkeypatch):
+        from api_server.dbkeystore import DBKeyStore
+
+        store = object.__new__(DBKeyStore)
+        store.usage_this_month = lambda key: 10  # type: ignore[method-assign]
+        assert store.quota_allows("k", "unknown-plan") is True
+        # free plan is 100/month in PLANS — usage 10 should allow
+        assert store.quota_allows("k", "free") is True
+        store.usage_this_month = lambda key: 10_000  # type: ignore[method-assign]
+        assert store.quota_allows("k", "free") is False
+
+    def test_get_missing_key_with_mock_pool(self):
+        from api_server.dbkeystore import DBKeyStore
+
+        class FakeResult:
+            def fetchone(self):
+                return None
+
+        class FakeConn:
+            def execute(self, sql, params=None):
+                return FakeResult()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        class FakePool:
+            def connection(self):
+                return FakeConn()
+
+        store = object.__new__(DBKeyStore)
+        store._pool = FakePool()  # type: ignore[attr-defined]
+        assert store.get("nope") is None
+        assert "nope" not in store
+
+    def test_init_requires_database_url(self, monkeypatch):
+        from api_server.dbkeystore import DBKeyStore
+
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        with pytest.raises(RuntimeError, match="DATABASE_URL"):
+            DBKeyStore("")
+
+
 # ---------------------------------------------------------------------------
 # Endpoint wiring: /validate must 429 when the store reports quota exhausted
 # (no DB needed — the store is stubbed)

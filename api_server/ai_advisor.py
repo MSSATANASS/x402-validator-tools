@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import httpx
 
@@ -97,7 +97,7 @@ def _summary_payload(url: str, overall: str, summary: str, checks: Sequence) -> 
     }
 
 
-async def _chat(payload: dict, timeout: float) -> Optional[str]:
+async def _chat(payload: dict, timeout: float) -> str | None:
     """POST ``payload`` to the chat endpoint; None on any failure."""
     key = os.environ.get("DASHSCOPE_API_KEY")
     if not key:
@@ -123,7 +123,7 @@ async def advise(
     summary: str,
     checks: Sequence,
     timeout: float = _TIMEOUT_S,
-) -> Optional[str]:
+) -> str | None:
     """Return short remediation advice, or None when unavailable."""
     return await _chat(_payload(url, overall, summary, checks), timeout)
 
@@ -134,6 +134,6 @@ async def summarize(
     summary: str,
     checks: Sequence,
     timeout: float = _TIMEOUT_S,
-) -> Optional[str]:
+) -> str | None:
     """Return a plain-language summary for non-experts, or None when unavailable."""
     return await _chat(_summary_payload(url, overall, summary, checks), timeout)

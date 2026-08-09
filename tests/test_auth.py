@@ -52,6 +52,42 @@ class TestPrimitives:
         assert kid == auth.kid_for_token("tok-abc")      # deterministic
         assert kid != auth.kid_for_token("tok-xyz")
 
+    def test_password_none_and_whitespace_email(self):
+        assert not auth.is_valid_password(None)  # type: ignore[arg-type]
+        assert auth.normalize_email(None) == ""  # type: ignore[arg-type]
+        assert not auth.is_valid_email("")
+
+    def test_token_hash_length_and_constants(self):
+        assert auth.SESSION_COOKIE == "x402_session"
+        assert auth.SESSION_TTL_DAYS == 30
+        assert auth.PASSWORD_MIN_LEN == 8
+        h = auth._token_hash("abc")
+        assert len(h) == 64
+        assert h == hashlib.sha256(b"abc").hexdigest()
+
+    def test_get_user_store_none_without_postgres(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "keys.json"))
+        import api_server.keystore as km
+
+        km.reset_default_store()
+        assert auth.get_user_store() is None
+
+    def test_get_user_store_none_when_pool_missing(self, monkeypatch):
+        class FakeStore:
+            backend = "postgres"
+            # no .pool attribute
+
+        monkeypatch.setattr(auth, "get_store", lambda: FakeStore())
+        auth._user_stores.clear()
+        assert auth.get_user_store() is None
+
+    def test_auth_schema_statements_are_sql(self):
+        assert len(auth.AUTH_SCHEMA_STATEMENTS) >= 4
+        joined = " ".join(auth.AUTH_SCHEMA_STATEMENTS).upper()
+        assert "X402_USERS" in joined
+        assert "X402_SESSIONS" in joined
+
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
 needs_db = pytest.mark.skipif(

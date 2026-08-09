@@ -17,7 +17,6 @@ import hashlib
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from argon2 import PasswordHasher
 
@@ -30,7 +29,7 @@ KID_LEN = 12
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _hasher = PasswordHasher()
-_dummy_hash: Optional[str] = None  # lazy; equalizes login timing
+_dummy_hash: str | None = None  # lazy; equalizes login timing
 
 
 class DuplicateEmail(Exception):
@@ -92,8 +91,10 @@ AUTH_SCHEMA_STATEMENTS: tuple[str, ...] = (
         created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
     )
     """,
-    "CREATE UNIQUE INDEX IF NOT EXISTS x402_users_email_idx "
-    "ON x402_users (lower(email))",
+    (
+        "CREATE UNIQUE INDEX IF NOT EXISTS x402_users_email_idx "
+        "ON x402_users (lower(email))"
+    ),
     """
     CREATE TABLE IF NOT EXISTS x402_sessions (
         token_hash TEXT PRIMARY KEY,
@@ -102,10 +103,14 @@ AUTH_SCHEMA_STATEMENTS: tuple[str, ...] = (
         expires_at TIMESTAMPTZ NOT NULL
     )
     """,
-    "ALTER TABLE x402_api_keys ADD COLUMN IF NOT EXISTS user_id BIGINT "
-    "REFERENCES x402_users(id) ON DELETE SET NULL",
-    "CREATE INDEX IF NOT EXISTS x402_api_keys_user_idx "
-    "ON x402_api_keys (user_id)",
+    (
+        "ALTER TABLE x402_api_keys ADD COLUMN IF NOT EXISTS user_id BIGINT "
+        "REFERENCES x402_users(id) ON DELETE SET NULL"
+    ),
+    (
+        "CREATE INDEX IF NOT EXISTS x402_api_keys_user_idx "
+        "ON x402_api_keys (user_id)"
+    ),
 )
 
 
@@ -134,7 +139,7 @@ class UserStore:
             raise DuplicateEmail(email)
         return int(row[0])
 
-    def get_user(self, user_id: int) -> Optional[dict]:
+    def get_user(self, user_id: int) -> dict | None:
         with self._pool.connection() as conn:
             row = conn.execute(
                 "SELECT id, email, plan_id, stripe_customer_id, created_at "
@@ -148,7 +153,7 @@ class UserStore:
             "stripe_customer_id": row[3], "created_at": row[4],
         }
 
-    def authenticate(self, email: str, password: str) -> Optional[int]:
+    def authenticate(self, email: str, password: str) -> int | None:
         """Return the user id on success, else None. The failure path is
         identical whether the email exists or not (no user enumeration)."""
         global _dummy_hash
@@ -168,7 +173,7 @@ class UserStore:
         return int(row[0])
 
     def set_plan(self, user_id: int, plan_id: str,
-                 stripe_customer_id: Optional[str] = None) -> None:
+                 stripe_customer_id: str | None = None) -> None:
         with self._pool.connection() as conn:
             conn.execute(
                 "UPDATE x402_users SET plan_id = %s, "
@@ -191,7 +196,7 @@ class UserStore:
             )
         return token
 
-    def get_session_user(self, token: str) -> Optional[dict]:
+    def get_session_user(self, token: str) -> dict | None:
         if not token:
             return None
         th = _token_hash(token)
@@ -273,7 +278,7 @@ class UserStore:
                     return cur.rowcount > 0
         return False
 
-    def key_owner(self, token: str) -> Optional[int]:
+    def key_owner(self, token: str) -> int | None:
         with self._pool.connection() as conn:
             row = conn.execute(
                 "SELECT user_id FROM x402_api_keys WHERE token = %s",
@@ -286,34 +291,33 @@ class UserStore:
     # ----- Stripe purchase linking -----
 
     def link_purchase(self, user_id: int, plan_id: str,
-                      customer_id: Optional[str], session_id: str) -> str:
+                      customer_id: str | None, session_id: str) -> str:
         """Mint the key for a completed checkout tied to an account.
 
         One transaction: the key (with user_id), the claim row (idempotency
         + one-time view on /success), and the plan upgrade on the user.
         """
         token = secrets.token_urlsafe(32)
-        with self._pool.connection() as conn:
-            with conn.transaction():
-                conn.execute(
-                    "INSERT INTO x402_api_keys "
-                    "(token, plan_id, customer_id, user_id) "
-                    "VALUES (%s, %s, %s, %s)",
-                    (token, plan_id, customer_id, user_id),
-                )
-                conn.execute(
-                    "INSERT INTO x402_claims "
-                    "(session_id, plan_id, api_key, customer_id, issued_at) "
-                    "VALUES (%s, %s, %s, %s, %s)",
-                    (session_id, plan_id, token, customer_id,
-                     datetime.now(timezone.utc)),
-                )
-                conn.execute(
-                    "UPDATE x402_users SET plan_id = %s, "
-                    "stripe_customer_id = COALESCE(%s, stripe_customer_id) "
-                    "WHERE id = %s",
-                    (plan_id, customer_id, user_id),
-                )
+        with self._pool.connection() as conn, conn.transaction():
+            conn.execute(
+                "INSERT INTO x402_api_keys "
+                "(token, plan_id, customer_id, user_id) "
+                "VALUES (%s, %s, %s, %s)",
+                (token, plan_id, customer_id, user_id),
+            )
+            conn.execute(
+                "INSERT INTO x402_claims "
+                "(session_id, plan_id, api_key, customer_id, issued_at) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (session_id, plan_id, token, customer_id,
+                 datetime.now(timezone.utc)),
+            )
+            conn.execute(
+                "UPDATE x402_users SET plan_id = %s, "
+                "stripe_customer_id = COALESCE(%s, stripe_customer_id) "
+                "WHERE id = %s",
+                (plan_id, customer_id, user_id),
+            )
         return token
 
 
@@ -321,12 +325,12 @@ class UserStore:
 # Module-level accessor (mirrors keystore.get_store)
 # ---------------------------------------------------------------------------
 
-from api_server.keystore import get_store  # noqa: E402  (after classes)
+from api_server.keystore import get_store
 
-_user_stores: dict[int, "UserStore"] = {}
+_user_stores: dict[int, UserStore] = {}
 
 
-def get_user_store() -> Optional[UserStore]:
+def get_user_store() -> UserStore | None:
     """UserStore sharing the live Postgres keystore's pool; None in JSON mode.
 
     Cached per store instance so module reloads in tests get a fresh store.
@@ -334,8 +338,11 @@ def get_user_store() -> Optional[UserStore]:
     store = get_store()
     if getattr(store, "backend", "") != "postgres":
         return None
+    pool = getattr(store, "pool", None)
+    if pool is None:
+        return None
     cached = _user_stores.get(id(store))
     if cached is None:
-        cached = UserStore(store.pool)
+        cached = UserStore(pool)
         _user_stores[id(store)] = cached
     return cached

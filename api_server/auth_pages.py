@@ -324,7 +324,8 @@ async def logout(request: Request):
 
 
 @router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
-async def dashboard(request: Request) -> HTMLResponse:
+async def dashboard(request: Request):
+    # May return HTMLResponse or RedirectResponse (unauthenticated).
     user = current_user(request)
     if user is None:
         return RedirectResponse("/login", status_code=303)

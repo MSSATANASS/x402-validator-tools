@@ -26,10 +26,9 @@ import os
 import secrets
 import sys
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from api_server.models import PLANS
-
 
 # ---------------------------------------------------------------------------
 # Schema (idempotent; each statement runs independently)
@@ -78,7 +77,7 @@ def ensure_schema(conn) -> None:
         conn.execute(stmt)
 
 
-def _iso(dt: Any) -> Optional[str]:
+def _iso(dt: Any) -> str | None:
     """Normalize a DB timestamp to the ISO shape the JSON store uses."""
     if dt is None:
         return None
@@ -101,7 +100,7 @@ class DBKeyStore:
 
     def __init__(
         self,
-        database_url: Optional[str] = None,
+        database_url: str | None = None,
         *,
         min_size: int = 1,
         max_size: int = 5,
@@ -146,7 +145,7 @@ class DBKeyStore:
             raise KeyError(key)
         return plan
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         with self._pool.connection() as conn:
             row = conn.execute(
                 "SELECT plan_id FROM x402_api_keys WHERE token = %s", (key,)
@@ -166,8 +165,8 @@ class DBKeyStore:
         self,
         plan_id: str,
         *,
-        customer_id: Optional[str] = None,
-        session_id: Optional[str] = None,
+        customer_id: str | None = None,
+        session_id: str | None = None,
     ) -> str:
         """Mint a new random API key; atomically persist key (+claim)."""
         token = secrets.token_urlsafe(32)
@@ -197,7 +196,7 @@ class DBKeyStore:
 
     # ----- claim lookup (used by /success) -----
 
-    def claim_by_session(self, session_id: Optional[str]) -> Optional[dict]:
+    def claim_by_session(self, session_id: str | None) -> dict | None:
         if not session_id:
             return None
         with self._pool.connection() as conn:
@@ -249,10 +248,10 @@ class DBKeyStore:
         *,
         url: str,
         mode: str,
-        overall: Optional[str] = None,
-        latency_ms: Optional[float] = None,
-        caller_key: Optional[str] = None,
-        caller_plan: Optional[str] = None,
+        overall: str | None = None,
+        latency_ms: float | None = None,
+        caller_key: str | None = None,
+        caller_plan: str | None = None,
         source: str = "api",
     ) -> None:
         """Append one audit row. Best-effort: never raises."""
@@ -280,7 +279,7 @@ class DBKeyStore:
             ).fetchone()
         return int(row[0]) if row else 0
 
-    def quota_allows(self, key: str, plan_id: Optional[str]) -> bool:
+    def quota_allows(self, key: str, plan_id: str | None) -> bool:
         """False once the plan's monthly audit quota is exhausted."""
         plan = PLANS.get(plan_id or "")
         if plan is None:
@@ -290,19 +289,19 @@ class DBKeyStore:
     def audit_stats(self) -> dict:
         """Live counters for the /open page (all-time + current month)."""
         with self._pool.connection() as conn:
-            total = conn.execute(
+            total_row = conn.execute(
                 "SELECT count(*) FROM x402_audits"
-            ).fetchone()[0]
-            month = conn.execute(
+            ).fetchone()
+            month_row = conn.execute(
                 "SELECT count(*) FROM x402_audits "
                 "WHERE ts >= date_trunc('month', now())"
-            ).fetchone()[0]
-            pass_month = conn.execute(
+            ).fetchone()
+            pass_row = conn.execute(
                 "SELECT count(*) FROM x402_audits "
                 "WHERE ts >= date_trunc('month', now()) AND overall = 'PASS'"
-            ).fetchone()[0]
+            ).fetchone()
         return {
-            "total": int(total),
-            "this_month": int(month),
-            "pass_this_month": int(pass_month),
+            "total": int(total_row[0]) if total_row else 0,
+            "this_month": int(month_row[0]) if month_row else 0,
+            "pass_this_month": int(pass_row[0]) if pass_row else 0,
         }

@@ -31,8 +31,7 @@ import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock
-from typing import Any, Optional, Union
-
+from typing import Any
 
 _LOCK = RLock()
 _DEFAULT_PATH = Path(os.environ.get("API_KEYS_FILE", "api_keys.json"))
@@ -42,7 +41,7 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _migrate(raw: Union[dict, Any]) -> dict:
+def _migrate(raw: dict | Any) -> dict:
     """Normalize any on-disk shape into the wrapped ``{"keys", "claims"}`` shape.
 
     Accepts the legacy ``{token: plan_id_str}`` flat format too.
@@ -91,7 +90,7 @@ def _save(data: dict, path: Path = _DEFAULT_PATH) -> None:
 class KeyStore:
     """Thread-safe, JSON-backed key+claims store."""
 
-    def __init__(self, path: Optional[Path] = None) -> None:
+    def __init__(self, path: Path | None = None) -> None:
         self._path = Path(path) if path else _DEFAULT_PATH
         with _LOCK:
             self._data = _load(self._path)
@@ -108,7 +107,7 @@ class KeyStore:
     def __getitem__(self, key: str) -> str:
         return self._data["keys"][key]
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         return self._data["keys"].get(key)
 
     def all(self) -> dict[str, str]:
@@ -121,8 +120,8 @@ class KeyStore:
         self,
         plan_id: str,
         *,
-        customer_id: Optional[str] = None,
-        session_id: Optional[str] = None,
+        customer_id: str | None = None,
+        session_id: str | None = None,
     ) -> str:
         """Mint a new random API key for ``plan_id``; persist it; return the key.
 
@@ -159,7 +158,7 @@ class KeyStore:
 
     # ----- claim lookup (used by /success) -----
 
-    def claim_by_session(self, session_id: Optional[str]) -> Optional[dict[str, Any]]:
+    def claim_by_session(self, session_id: str | None) -> dict[str, Any] | None:
         """Return the persisted claim for ``session_id`` (or ``None``)."""
         if not session_id:
             return None
@@ -189,7 +188,7 @@ class KeyStore:
     def usage_this_month(self, key: str) -> int:
         return 0
 
-    def quota_allows(self, key: str, plan_id: Optional[str]) -> bool:
+    def quota_allows(self, key: str, plan_id: str | None) -> bool:
         return True
 
     def record_audit(self, **kwargs: Any) -> None:
@@ -201,7 +200,8 @@ class KeyStore:
 _store = None
 
 
-def _make_default_store() -> "KeyStore":
+def _make_default_store() -> Any:
+    """JSON ``KeyStore`` or Postgres ``DBKeyStore`` (duck-typed interface)."""
     db_url = os.environ.get("DATABASE_URL", "").strip()
     if db_url:
         from api_server.dbkeystore import DBKeyStore  # lazy import
@@ -209,7 +209,7 @@ def _make_default_store() -> "KeyStore":
     return KeyStore()
 
 
-def get_store() -> "KeyStore":
+def get_store() -> Any:
     """Return the module-level default store (JSON or PostgreSQL-backed)."""
     global _store
     if _store is None:
@@ -217,7 +217,7 @@ def get_store() -> "KeyStore":
     return _store
 
 
-def reset_store(path: Optional[Path] = None) -> KeyStore:
+def reset_store(path: Path | None = None) -> KeyStore:
     """Replace the default store with a fresh JSON one (tests, etc.)."""
     global _store
     _store = KeyStore(path)

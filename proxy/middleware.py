@@ -13,17 +13,14 @@ result. Operators can opt out of this rewrite via the config flag
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 import aiohttp
 import yaml
 from aiohttp import web
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,7 +44,7 @@ class ProxyConfig:
     header_report: str = "X-Validation-Report"
 
     @classmethod
-    def from_yaml(cls, path: str) -> "ProxyConfig":
+    def from_yaml(cls, path: str) -> ProxyConfig:
         if not os.path.exists(path):
             return cls()
         with open(path) as f:
@@ -108,7 +105,7 @@ async def _validate_upstream(url: str, timeout: float) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _extract_target(request: web.Request) -> Optional[str]:
+def _extract_target(request: web.Request) -> str | None:
     """Pull the target URL out of ``/forward/<host>/<path>``."""
     path = request.match_info.get("path", "")
     if not path:
@@ -139,14 +136,13 @@ async def _fetch_upstream(
 ) -> tuple[int, bytes, dict[str, str]]:
     """Forward the request to the upstream and return ``(status, body, headers)``."""
     timeout = aiohttp.ClientTimeout(total=30)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.request(
-            method=method,
-            url=url,
-            headers=headers,
-        ) as resp:
-            body = await resp.read()
-            return resp.status, body, dict(resp.headers)
+    async with aiohttp.ClientSession(timeout=timeout) as session, session.request(
+        method=method,
+        url=url,
+        headers=headers,
+    ) as resp:
+        body = await resp.read()
+        return resp.status, body, dict(resp.headers)
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +158,7 @@ async def _proxy_handler(request: web.Request) -> web.Response:
             status=400,
         )
 
-    config: ProxyConfig = request.app["config"]
+    config: ProxyConfig = request.app[CONFIG_KEY]
     log.info("Proxying %s %s", request.method, target)
 
     try:
@@ -232,13 +228,16 @@ async def _health_handler(request: web.Request) -> web.Response:
 # App factory + entry point
 # ---------------------------------------------------------------------------
 
+# Typed app-key so aiohttp does not warn about bare string keys (NotAppKeyWarning).
+CONFIG_KEY = web.AppKey("config", ProxyConfig)
 
-def build_app(config: Optional[ProxyConfig] = None) -> web.Application:
+
+def build_app(config: ProxyConfig | None = None) -> web.Application:
     """Build the aiohttp app; ``config`` defaults to whatever YAML at default path says."""
     if config is None:
         config = ProxyConfig.from_yaml("proxy/config.yaml")
     app = web.Application()
-    app["config"] = config
+    app[CONFIG_KEY] = config
     app.router.add_route("*", "/forward/{path:.*}", _proxy_handler)
     app.router.add_route("*", "/health", _health_handler)
     app.router.add_route("*", "/", _root_handler)

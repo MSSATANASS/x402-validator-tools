@@ -6,10 +6,7 @@ These models are the public response shape. The internal AuditReport from
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Plan catalog (single source of truth)
@@ -23,7 +20,7 @@ class Plan(BaseModel):
     name: str
     requests_per_month: int
     price_cents: int
-    stripe_price_id: Optional[str] = None
+    stripe_price_id: str | None = None
 
 
 PLANS: dict[str, Plan] = {
@@ -79,7 +76,7 @@ class CheckResultItem(BaseModel):
     name: str
     status: str
     message: str
-    details: Optional[dict] = None
+    details: dict | None = None
 
 
 class ValidateResponse(BaseModel):
@@ -89,15 +86,15 @@ class ValidateResponse(BaseModel):
     overall: str
     summary: str
     checks: list[CheckResultItem]
-    latency_ms: Optional[float] = None
+    latency_ms: float | None = None
     timestamp: str
-    ai_advice: Optional[str] = None
-    ai_summary: Optional[str] = None
+    ai_advice: str | None = None
+    ai_summary: str | None = None
 
 
 class CheckoutResponse(BaseModel):
     """Stripe checkout session creation response."""
 
-    checkout_url: Optional[str] = None
-    note: Optional[str] = None
+    checkout_url: str | None = None
+    note: str | None = None
     plan_id: str

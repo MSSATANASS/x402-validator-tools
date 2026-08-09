@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 def _lower_headers(headers: Mapping[str, str] | None) -> dict[str, str]:

@@ -135,7 +135,7 @@ async def run_directory_cold_probe(
             ),
             None,
         )
-    except Exception as e:  # noqa: BLE001 — checks never raise
+    except Exception as e:
         return (
             _result(
                 "ERROR",

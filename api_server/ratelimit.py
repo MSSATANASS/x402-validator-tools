@@ -9,8 +9,7 @@ from __future__ import annotations
 import threading
 import time as _time
 from collections import defaultdict, deque
-from typing import Callable, Deque, Dict
-
+from collections.abc import Callable
 
 _WINDOW_SECONDS = 86_400  # 24h sliding window
 
@@ -24,10 +23,10 @@ class IpRateLimiter:
     ) -> None:
         self._lock = threading.Lock()
         self._window = window_seconds
-        self._buckets: Dict[str, Deque[float]] = defaultdict(deque)
+        self._buckets: dict[str, deque[float]] = defaultdict(deque)
         self._now = time_func
 
-    def _trim(self, bucket: Deque[float], now: float) -> None:
+    def _trim(self, bucket: deque[float], now: float) -> None:
         cutoff = now - self._window
         while bucket and bucket[0] < cutoff:
             bucket.popleft()

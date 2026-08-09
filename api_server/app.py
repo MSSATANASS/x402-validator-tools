@@ -27,34 +27,34 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from api_server import ai_advisor, auth, auth_pages, ratelimit, stripe_integration
+from api_server.keystore import get_store
 from api_server.models import (
     PLANS,
-    CheckResultItem,
     CheckoutResponse,
+    CheckResultItem,
     Plan,
     ValidateRequest,
     ValidateResponse,
 )
-from api_server import stripe_integration
-from api_server import ratelimit
-from api_server import ai_advisor
-from api_server import auth
-from api_server import auth_pages
-from api_server.keystore import get_store
 from api_server.pages import (
     PAGE_CSS as _PAGE_CSS,
+)
+from api_server.pages import (
     PAGE_FOOTER as _PAGE_FOOTER,
+)
+from api_server.pages import (
     PAGE_NAV as _PAGE_NAV,
+)
+from api_server.pages import (
     auth_nav_links as _auth_nav_links,
 )
-
 
 # ---------------------------------------------------------------------------
 # App + state
@@ -93,9 +93,10 @@ async def _run_audit(url: str, mode: str, timeout: float = 10.0):
     """
     import httpx
     from x402_conformance_suite._engine import run_audit  # lazy import
-    from api_server.visibility import run_directory_cold_probe
-    from api_server.payment_required import decode_payment_required
+
     from api_server.batch_settlement import evaluate_batch_settlement_requirements
+    from api_server.payment_required import decode_payment_required
+    from api_server.visibility import run_directory_cold_probe
 
     report, (probe, snap) = await asyncio.gather(
         run_audit(url, timeout=timeout, mode=mode),
@@ -124,7 +125,7 @@ async def _run_audit(url: str, mode: str, timeout: float = 10.0):
                 body=response.text, headers=response.headers
             )
             source = "fallback_get"
-        except Exception:  # noqa: BLE001 — never-raise contract for tools checks
+        except Exception:
             pass
 
     batch = evaluate_batch_settlement_requirements(
@@ -2011,7 +2012,10 @@ async def open_metrics() -> HTMLResponse:
         track_section = _WHAT_WE_TRACK_JSON
     else:
         try:
-            stats = store.audit_stats()
+            stats_fn = getattr(store, "audit_stats", None)
+            if stats_fn is None:
+                raise RuntimeError("store has no audit_stats")
+            stats = stats_fn()
             track_section = _WHAT_WE_TRACK_DB.format(
                 total=stats["total"], this_month=stats["this_month"]
             )
@@ -2090,12 +2094,12 @@ async def validate(
         source="api",
     )
     ai_advice = ai_summary = None
-    ai_args = dict(
-        url=report.target_url,
-        overall=overall,
-        summary=summary,
-        checks=checks,
-    )
+    ai_args = {
+        "url": report.target_url,
+        "overall": overall,
+        "summary": summary,
+        "checks": checks,
+    }
     if req.advise and req.explain:
         ai_advice, ai_summary = await asyncio.gather(
             ai_advisor.advise(**ai_args),
@@ -2241,7 +2245,7 @@ async def create_checkout_session_link(plan_id: str) -> RedirectResponse:
 
 class StripeWebhookPayload(BaseModel):
     type: str
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 @app.post("/stripe-webhook")
@@ -2301,21 +2305,22 @@ async def stripe_webhook(
         # client_reference_id="user:<id>": link the purchase to it so the
         # key appears in the user's dashboard. Never lose a payment on a
         # linking failure — fall back to the anonymous flow.
-        linked_user_id = None
+        linked_user_id: int | None = None
         ref = detail.get("client_reference_id") or ""
         if ref.startswith("user:"):
+            user_id_candidate: int | None
             try:
-                candidate = int(ref.split(":", 1)[1])
+                user_id_candidate = int(ref.split(":", 1)[1])
             except ValueError:
-                candidate = None
-            if candidate is not None:
+                user_id_candidate = None
+            if user_id_candidate is not None:
                 user_store = auth.get_user_store()
-                if user_store is not None and user_store.get_user(candidate):
+                if user_store is not None and user_store.get_user(user_id_candidate):
                     try:
                         user_store.link_purchase(
-                            candidate, plan_id, customer_id, session_id
+                            user_id_candidate, plan_id, customer_id, session_id
                         )
-                        linked_user_id = candidate
+                        linked_user_id = user_id_candidate
                     except Exception:
                         linked_user_id = None
 
@@ -2488,7 +2493,7 @@ def _success_html(api_key: str, plan_id: str, session_id: str,
 
 @app.get("/success", response_class=HTMLResponse, include_in_schema=False)
 async def success_page(request: Request,
-                       session_id: Optional[str] = None) -> HTMLResponse:
+                       session_id: str | None = None) -> HTMLResponse:
     """Display a one-time key view when ``session_id`` is valid, fall back otherwise."""
     if session_id:
         claim = get_store().claim_by_session(session_id)

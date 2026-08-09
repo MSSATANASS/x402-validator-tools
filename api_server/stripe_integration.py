@@ -8,10 +8,9 @@ the package can be loaded in environments without a key (tests, CI).
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 from api_server.models import PLANS, Plan
-
 
 # Lazy Stripe import — keeps tests fast when no STRIPE_SECRET_KEY is set
 _stripe = None
@@ -23,7 +22,7 @@ def _get_stripe():
     if _stripe is not None:
         return _stripe
     try:
-        import stripe  # type: ignore
+        import stripe
     except ImportError:
         return None
 
@@ -45,10 +44,10 @@ def create_checkout_session(
     *,
     success_url: str,
     cancel_url: str,
-    client_reference_id: Optional[str] = None,
-    customer_email: Optional[str] = None,
-    customer: Optional[str] = None,
-) -> Optional[str]:
+    client_reference_id: str | None = None,
+    customer_email: str | None = None,
+    customer: str | None = None,
+) -> str | None:
     """Create a Stripe Checkout session for ``plan_id`` and return its URL.
 
     Embeds ``metadata.plan_id`` so the webhook handler can route the paid
@@ -90,7 +89,7 @@ def create_checkout_session(
     return session.url
 
 
-def retrieve_session(session_id: str) -> Optional[dict[str, Any]]:
+def retrieve_session(session_id: str) -> dict[str, Any] | None:
     """Fetch a checkout session by id and return a plain dict for our webhook handler.
 
     Returns ``None`` if Stripe is unconfigured or the lookup fails.
@@ -114,7 +113,7 @@ def retrieve_session(session_id: str) -> Optional[dict[str, Any]]:
     }
 
 
-def verify_webhook(payload: bytes, signature: str) -> Optional[dict]:
+def verify_webhook(payload: bytes, signature: str) -> dict | None:
     """Verify a Stripe webhook signature and return the parsed event.
 
     Returns ``None`` if the secret is missing or the signature is invalid.
