@@ -24,7 +24,6 @@ from typing import Any
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
-
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_FILE = DATA_DIR / "results.json"
