@@ -369,7 +369,11 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: space-between;
 }
 .nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
-.nav-left .icon { width: 24px; height: 24px; display: block; }
+.nav-left .icon {
+  width: 28px; height: 28px; display: block;
+  border-radius: 7px;
+  object-fit: cover;
+}
 
 .nav-links {
   display: none;
@@ -801,7 +805,18 @@ footer {
   max-width: 1100px; margin: 0 auto;
 }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
-.foot-brand .mark-hex { width: 34px; height: 34px; display: block; }
+.foot-brand .mark-hex {
+  width: 40px; height: 40px; display: block;
+  border-radius: 9px;
+  object-fit: cover;
+}
+.foot-brand .logo-wordmark {
+  display: block;
+  width: min(240px, 100%);
+  height: auto;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
 .foot-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
   font-size: 0.78rem; letter-spacing: 0.08em;
@@ -1117,7 +1132,7 @@ footer {
 <nav class="navbar">
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-      <svg class="icon" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3.5 27.7 10.25v13.5L16 30.5 4.3 23.75V10.25Z" stroke="#FF4D00" stroke-width="3" stroke-linejoin="round"/></svg>
+      <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28">
       <span style="color:#0a0a0a;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
     </a>
   </div>
@@ -1406,9 +1421,7 @@ footer {
 <footer>
   <div class="foot-grid">
     <div class="foot-brand">
-      <svg class="mark-hex" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3.5 27.7 10.25v13.5L16 30.5 4.3 23.75V10.25Z" stroke="#FF4D00" stroke-width="2.5" stroke-linejoin="round"/></svg>
-      <div class="name">x402 validator</div>
-      <div class="foot-mono"><span class="brk">[</span> x402-validator-tools <span class="brk">]</span></div>
+      <img class="logo-wordmark" src="/static/logo-wordmark.png" alt="x402 validator tools" width="240" height="106">
       <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
     </div>
     <div class="foot-col">

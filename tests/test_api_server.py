@@ -185,8 +185,9 @@ class TestLanding:
         # Real PNG favicon + apple-touch-icon (replaces the old inline SVG data URI)
         assert 'rel="icon" type="image/png" href="/static/favicon-32.png"' in r.text
         assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in r.text
-        # Brand hexagon mark (orange outline) in navbar/footer + mono tagline
-        assert 'stroke="#FF4D00"' in r.text
+        # Brand assets: hex mark in navbar, full wordmark in footer + mono tagline
+        assert '/static/logo-mark-512.png' in r.text
+        assert '/static/logo-wordmark.png' in r.text
         assert 'class="brand-eyebrow' in r.text
         assert 'x402-validator-tools' in r.text
         assert '<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">' in r.text
