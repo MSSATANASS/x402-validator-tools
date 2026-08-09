@@ -256,11 +256,11 @@ _LANDING_HTML = """<!DOCTYPE html>
       "@type": "FAQPage",
       "mainEntity": [
         {"@type": "Question", "name": "What is x402 conformance and why should I care?",
-         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all eight checks in ~580 ms and returns actionable operator errors."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all nine checks in ~580 ms and returns actionable operator errors."}},
         {"@type": "Question", "name": "What does the public demo actually check?",
-         "acceptedAnswer": {"@type": "Answer", "text": "The same eight checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance, bot_wall, accepts_completeness, discovery_resource_listing, directory_cold_probe. Rate-limited to 3 audits per IP per day."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "The same nine checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance, bot_wall, accepts_completeness, discovery_resource_listing, directory_cold_probe, batch_settlement_requirements. Rate-limited to 3 audits per IP per day."}},
         {"@type": "Question", "name": "How long does an audit take?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all eight checks in parallel where independent."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all nine checks in parallel where independent."}},
         {"@type": "Question", "name": "Can I cancel a Pro / Enterprise plan?",
          "acceptedAnswer": {"@type": "Answer", "text": "Yes — cancel from your Stripe dashboard any time; you keep access until the end of the billing period."}},
         {"@type": "Question", "name": "What happens if my endpoint fails an audit?",
@@ -1292,6 +1292,7 @@ footer {
         <span class="marquee-item" style="font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:0.04em;font-size:14px;">accepts[]</span>
         <span class="marquee-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:-0.03em;font-size:13px;">discovery_listing</span>
         <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;font-style:italic;">cold_probe</span>
+        <span class="marquee-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.06em;font-size:13px;">batch_settlement</span>
         <span class="marquee-item" style="font-family:Georgia,serif;font-weight:700;letter-spacing:-0.02em;font-size:15px;">manifest_discovery</span>
         <span class="marquee-item" style="font-family:Arial,sans-serif;font-weight:900;letter-spacing:0.08em;font-size:13px;text-transform:uppercase;">caip2</span>
         <span class="marquee-item" style="font-family:'Trebuchet MS',sans-serif;font-weight:600;letter-spacing:0.01em;font-size:15px;font-style:italic;">json_resilience</span>
@@ -1300,6 +1301,7 @@ footer {
         <span class="marquee-item" style="font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:0.04em;font-size:14px;">accepts[]</span>
         <span class="marquee-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:-0.03em;font-size:13px;">discovery_listing</span>
         <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;font-style:italic;">cold_probe</span>
+        <span class="marquee-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.06em;font-size:13px;">batch_settlement</span>
       </div>
     </div>
   </div>
@@ -1324,10 +1326,10 @@ footer {
     <div class="card-grid">
       <div class="hcard light wide">
         <div>
-          <p class="hcard-mono">8 checks &middot; standard mode</p>
+          <p class="hcard-mono">9 checks &middot; standard mode</p>
           <h3 class="hcard-title">Depth, not a ping</h3>
         </div>
-        <p class="hcard-body">Manifest, CAIP-2 inside v2 <code>accepts[]</code>, JSON resilience, Bazaar shape, bot-wall detection, atomic-unit amounts, catalog listing, and directory cold-probe visibility &mdash; each with an operator-actionable message.</p>
+        <p class="hcard-body">Manifest, CAIP-2 inside v2 <code>accepts[]</code>, JSON resilience, Bazaar shape, bot-wall detection, atomic-unit amounts, catalog listing, directory cold-probe visibility, and batch-settlement requirements &mdash; each with an operator-actionable message.</p>
       </div>
 
       <div class="hcard ink">
@@ -1380,7 +1382,7 @@ footer {
 <section id="audit" class="audit-demo-section">
   <div class="pricing-eyebrow-row"><span class="pricing-pill">Live demo · No signup</span></div>
   <h2 class="audit-demo-headline">Audit an x402 endpoint right now</h2>
-  <p class="audit-demo-sub">Paste any merchant URL. We run eight checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, discovery listing, and directory visibility &mdash; the Bazaar cold probe. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
+  <p class="audit-demo-sub">Paste any merchant URL. We run nine checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, discovery listing, directory visibility &mdash; the Bazaar cold probe, and batch-settlement requirements. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
 
   <!-- action="/method=get" keep the form well-formed; the inline onsubmit guard
        returns false until the bound JS handler flips window.__x402AuditReady
@@ -1421,7 +1423,7 @@ footer {
       <div class="plan-value"><div class="plan-price">$0</div><span class="plan-period-small">/mo</span></div>
       <div class="plan-period-line">100 audits / month · forever</div>
       <ul class="plan-features">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 7 conformance checks</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>All 9 conformance checks</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>JSON response</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Community support</li>
       </ul>
@@ -1464,11 +1466,11 @@ footer {
   <div class="faq-list">
     <details class="faq-item">
       <summary>What is x402 conformance and why should I care?</summary>
-      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all eight checks in ~580 ms and returns actionable operator errors.</p>
+      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all nine checks in ~580 ms and returns actionable operator errors.</p>
     </details>
     <details class="faq-item">
       <summary>What does the public demo actually check?</summary>
-      <p>The same eight checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>, <code>bot_wall</code>, <code>accepts_completeness</code>, <code>discovery_resource_listing</code>, <code>directory_cold_probe</code>. The demo is rate-limited to 3 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
+      <p>The same nine checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>, <code>bot_wall</code>, <code>accepts_completeness</code>, <code>discovery_resource_listing</code>, <code>directory_cold_probe</code>, <code>batch_settlement_requirements</code>. The demo is rate-limited to 3 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
     </details>
     <details class="faq-item">
       <summary>Is the public demo really free? What about my data?</summary>
@@ -1476,7 +1478,7 @@ footer {
     </details>
     <details class="faq-item">
       <summary>How long does an audit take?</summary>
-      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all eight checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
+      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all nine checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
     </details>
     <details class="faq-item">
       <summary>Can I cancel a Pro / Enterprise plan?</summary>
@@ -1702,7 +1704,7 @@ _VS_DOCTOR_HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>x402 Validator vs x402 Doctor — checker depth, compared honestly</title>
-<meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 8 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
+<meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 9 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
 <link rel="canonical" href="https://x402-validator-tools.onrender.com/vs-x402-doctor">
 <meta property="og:title" content="x402 Validator vs x402 Doctor">
 <meta property="og:description" content="Quick checker vs strict-v2 conformance engine. What each one actually runs, verified against both products' own docs.">

@@ -227,13 +227,15 @@ class TestLanding:
         assert 'href="/health">Status</a>' in r.text
         # Pricing headline no longer repeats the "at the speed of thought" tic
         assert "at the speed of thought" not in r.text
-        # Check count reflects the engine's 7 standard checks + the
-        # directory cold probe, and the new check is listed by name.
-        assert "We run eight checks against it" in r.text
-        assert "all eight checks" in r.text
-        assert "8 checks" in r.text
+        # Check count reflects the engine's standard suite + tools-side
+        # cold probe and batch settlement; both are listed by name.
+        assert "We run nine checks against it" in r.text
+        assert "all nine checks" in r.text
+        assert "9 checks" in r.text
         assert "directory_cold_probe" in r.text
+        assert "batch_settlement_requirements" in r.text
         assert "seven checks" not in r.text
+        assert "eight checks" not in r.text
 
     def test_vs_doctor_page(self, client: TestClient) -> None:
         r = client.get("/vs-x402-doctor")
