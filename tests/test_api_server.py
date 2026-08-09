@@ -121,11 +121,13 @@ class TestLanding:
         assert "hls.js" not in r.text
         assert "stream.mux.com" not in r.text
         assert "images.unsplash.com" not in r.text
-        # Violet + emerald crypto palette
-        assert "rgba(124,58,237,0.30)" in r.text   # violet mesh
+        # Brand palette: orange mesh/decor + emerald secondary
+        assert "rgba(255,77,0,0.22)" in r.text   # brand orange mesh
         assert "rgba(16,185,129,0.28)" in r.text   # emerald mesh
-        assert "rgba(124,58,237,0.20)" in r.text   # violet decor blob
+        assert "rgba(255,77,0,0.16)" in r.text   # brand orange decor blob
         assert "rgba(16,185,129,0.20)" in r.text   # emerald decor blob
+        # Brand hexagon lattice overlay on the hero
+        assert "hero-video-wrap::after" in r.text
         # Ledger grid + settlement flow animation
         assert "hero-grid" in r.text
         assert "hero-flow" in r.text
@@ -183,8 +185,11 @@ class TestLanding:
         # Real PNG favicon + apple-touch-icon (replaces the old inline SVG data URI)
         assert 'rel="icon" type="image/png" href="/static/favicon-32.png"' in r.text
         assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in r.text
-        # Navbar uses the real logo mark image, not a generic sunburst icon
-        assert '/static/logo-mark-512.png' in r.text
+        # Brand hexagon mark (orange outline) in navbar/footer + mono tagline
+        assert 'stroke="#FF4D00"' in r.text
+        assert 'class="brand-eyebrow' in r.text
+        assert 'x402-validator-tools' in r.text
+        assert '<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">' in r.text
         # Navbar only links to sections/routes that actually exist —
         # no dead links to #stories, /docs, or a non-existent "Book A Demo"
         assert "#stories" not in r.text

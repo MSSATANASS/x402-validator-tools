@@ -150,6 +150,7 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
 <meta name="twitter:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
 <meta name="robots" content="index, follow">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
@@ -213,7 +214,9 @@ _LANDING_HTML = """<!DOCTYPE html>
   --primary-text-dark: #ffffff;
   --glass-border: rgba(10,10,10,0.10);
   --ink: #2B2644;
-  --hero-grad: linear-gradient(to left, #2B2644, #3054ff, #6366f1);
+  --hero-grad: linear-gradient(to left, #2B2644, #FF4D00, #FF8A4D);
+  --brand: #FF4D00;
+  --brand-glow: rgba(255,77,0,0.30);
 }
 
 * { box-sizing: border-box; }
@@ -399,7 +402,7 @@ a { color: inherit; }
   transition: box-shadow 0.2s, transform 0.15s;
   display: inline-block;
 }
-.btn-primary-pill:hover { box-shadow: 0 0 20px rgba(10,10,10,0.3); }
+.btn-primary-pill:hover { box-shadow: 0 0 20px var(--brand-glow); }
 
 @media (min-width: 640px) { .book-demo { display: inline-flex; } }
 @media (min-width: 768px) { .nav-links { display: flex; } }
@@ -439,7 +442,7 @@ a { color: inherit; }
 .mesh-violet {
   width: 62%; height: 78%;
   top: -18%; right: -8%;
-  background: radial-gradient(circle, rgba(124,58,237,0.30) 0%, rgba(124,58,237,0.10) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,77,0,0.22) 0%, rgba(255,77,0,0.08) 45%, transparent 70%);
   animation: drift-a 26s ease-in-out infinite;
 }
 .mesh-emerald {
@@ -476,6 +479,16 @@ a { color: inherit; }
   background-size: 64px 64px;
   -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 35%, transparent 100%);
   mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 35%, transparent 100%);
+}
+
+/* Brand hexagon lattice (seamless 28x48 honeycomb tile, ~5% orange) */
+.hero-video-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cg fill='none' stroke='%23FF4D00' stroke-opacity='0.05' stroke-width='1.2'%3E%3Cpath d='M14 -4 28 4v16l-14 8L0 20V4Z'/%3E%3Cpath d='M0 20l14 8v16l-14 8-14-8V28Z'/%3E%3Cpath d='M28 20l14 8v16l-14 8-14-8V28Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 28px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, #000 30%, transparent 95%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, #000 30%, transparent 95%);
 }
 
 /* Settlement flow lines */
@@ -531,7 +544,7 @@ a { color: inherit; }
 .hero-decor.tl {
   top: -20%; left: 20%;
   width: 600px; height: 600px;
-  background: rgba(124,58,237,0.20);  /* violet-600/20 */
+  background: rgba(255,77,0,0.16);  /* brand orange */
 }
 .hero-decor.br {
   bottom: -10%; right: 20%;
@@ -555,6 +568,15 @@ a { color: inherit; }
 /* ============================================================
    HeroCopy — pre-headline (serif), main (gradient), sub
    ============================================================ */
+.brand-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  color: var(--fg-70);
+  margin: 0;
+}
+.brand-eyebrow .brk { color: var(--brand); font-weight: 700; }
+
 .pre-headline {
   font-family: 'Instrument Serif', 'Instrument Sans', serif;
   font-weight: 400;
@@ -620,7 +642,7 @@ a { color: inherit; }
 }
 .cta-primary:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(10,10,10,0.30);
+  box-shadow: 0 0 24px var(--brand-glow);
 }
 .cta-primary .label {
   font-family: 'Instrument Sans', sans-serif;
@@ -633,12 +655,12 @@ a { color: inherit; }
 .cta-primary .arrow {
   width: 40px; height: 40px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--brand);
   display: inline-flex; align-items: center; justify-content: center;
-  color: var(--fg);
-  transition: background 0.2s;
+  color: #fff;
+  transition: background 0.2s, transform 0.2s;
 }
-.cta-primary:hover .arrow { background: var(--accent-hover); }
+.cta-primary:hover .arrow { background: #E64500; transform: translateX(2px); }
 .cta-primary .arrow svg { width: 20px; height: 20px; }
 
 .cta-secondary {
@@ -721,7 +743,7 @@ a { color: inherit; }
 .plan:hover { transform: translateY(-3px); }
 .plan.featured {
   border: 1px solid var(--accent);
-  box-shadow: 0 16px 48px -16px rgba(48,84,255,0.35);
+  box-shadow: 0 16px 48px -16px rgba(255,77,0,0.30);
 }
 .plan.featured::before {
   content: "Most popular";
@@ -779,15 +801,13 @@ footer {
   max-width: 1100px; margin: 0 auto;
 }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
-.foot-brand .mark {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--hero-grad);
-  display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 800;
-  font-family: 'Instrument Sans', sans-serif;
-  font-size: 0.85rem;
+.foot-brand .mark-hex { width: 34px; height: 34px; display: block; }
+.foot-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
+  font-size: 0.78rem; letter-spacing: 0.08em;
+  color: var(--fg-50); margin: 2px 0 8px;
 }
+.foot-mono .brk { color: var(--brand); font-weight: 700; }
 .foot-brand .name { font-weight: 700; font-size: 1rem; margin: 10px 0 6px; color: var(--fg); font-family: 'Instrument Sans', sans-serif; }
 .foot-brand .tag { font-size: 0.875rem; max-width: 280px; color: var(--fg-50); }
 
@@ -875,8 +895,8 @@ footer {
   min-width: 0;
 }
 .audit-form input[type="url"]:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(43,38,68,0.18);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.15);
 }
 .audit-form select {
   background: #ffffff;
@@ -901,7 +921,7 @@ footer {
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
 }
-.audit-submit:hover { background: var(--accent-hover); }
+.audit-submit:hover { background: var(--brand); }
 .audit-submit:active { transform: scale(0.98); }
 .audit-submit[disabled] { opacity: 0.6; cursor: progress; }
 
@@ -1048,7 +1068,7 @@ footer {
   transition: transform 0.2s;
   flex-shrink: 0;
 }
-.faq-item[open] summary::after { content: '−'; color: var(--accent); }
+.faq-item[open] summary::after { content: '−'; color: var(--brand); }
 .faq-item p {
   padding: 0 20px 18px;
   margin: 0;
@@ -1097,7 +1117,7 @@ footer {
 <nav class="navbar">
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-      <img class="icon" src="/static/logo-mark-512.png" alt="x402 validator" width="28" height="28" style="border-radius:6px;">
+      <svg class="icon" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3.5 27.7 10.25v13.5L16 30.5 4.3 23.75V10.25Z" stroke="#FF4D00" stroke-width="3" stroke-linejoin="round"/></svg>
       <span style="color:#0a0a0a;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.01em;">x402 validator</span>
     </a>
   </div>
@@ -1130,9 +1150,9 @@ footer {
     <svg class="hero-flow" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
       <defs>
         <linearGradient id="flowViolet" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#7C3AED" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#7C3AED" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#FF4D00" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#FF4D00" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#FF4D00" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="flowEmerald" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="#10B981" stop-opacity="0"/>
@@ -1154,6 +1174,7 @@ footer {
   <div class="hero-decor br"></div>
 
   <div class="hero-content">
+    <p class="brand-eyebrow anim-fade-up"><span class="brk">[</span> x402-validator-tools <span class="brk">]</span></p>
     <p class="pre-headline anim-fade-up">Ship x402 endpoints with confidence</p>
     <h1 class="main-headline anim-scale">Audit x402 in Seconds</h1>
     <p class="sub-headline">Manifest, CAIP-2, JSON resilience, and Bazaar compliance — checked against any merchant URL in ~580 ms, with operator-actionable errors.</p>
@@ -1385,8 +1406,9 @@ footer {
 <footer>
   <div class="foot-grid">
     <div class="foot-brand">
-      <div class="mark">x4</div>
+      <svg class="mark-hex" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3.5 27.7 10.25v13.5L16 30.5 4.3 23.75V10.25Z" stroke="#FF4D00" stroke-width="2.5" stroke-linejoin="round"/></svg>
       <div class="name">x402 validator</div>
+      <div class="foot-mono"><span class="brk">[</span> x402-validator-tools <span class="brk">]</span></div>
       <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
     </div>
     <div class="foot-col">
