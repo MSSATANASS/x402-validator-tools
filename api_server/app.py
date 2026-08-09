@@ -27,8 +27,9 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -39,7 +40,9 @@ from api_server.models import (
     PLANS,
     CheckoutResponse,
     CheckResultItem,
+    IssueKeyRequest,
     Plan,
+    PlanId,
     ValidateRequest,
     ValidateResponse,
 )
@@ -2197,7 +2200,10 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
 
 
 @app.post("/create-checkout-session", response_model=CheckoutResponse)
-async def create_checkout_session(plan_id: str) -> CheckoutResponse:
+async def create_checkout_session(
+    plan_id: Annotated[PlanId, Query(description="free | pro | enterprise")],
+) -> CheckoutResponse:
+    # plan_id is constrained by PlanId (422 on unknown); PLANS lookup is belt-and-suspenders.
     if plan_id not in PLANS:
         raise HTTPException(400, f"Unknown plan: {plan_id!r}")
 
@@ -2224,7 +2230,9 @@ async def create_checkout_session(plan_id: str) -> CheckoutResponse:
 
 
 @app.get("/create-checkout-session", response_class=RedirectResponse, include_in_schema=False)
-async def create_checkout_session_link(plan_id: str) -> RedirectResponse:
+async def create_checkout_session_link(
+    plan_id: Annotated[PlanId, Query(description="free | pro | enterprise")],
+) -> RedirectResponse:
     """Redirect-friendly GET: lets ``<a href="...plan_id=pro">`` buttons go straight
     to Stripe. Mirrors the POST handler but returns 302 instead of JSON."""
     if plan_id not in PLANS:
@@ -2241,11 +2249,6 @@ async def create_checkout_session_link(plan_id: str) -> RedirectResponse:
     if PLANS[plan_id].price_cents == 0:
         return RedirectResponse(f"{base}/success", status_code=303)
     raise HTTPException(503, "Stripe is not configured (set STRIPE_SECRET_KEY)")
-
-
-class StripeWebhookPayload(BaseModel):
-    type: str
-    data: dict | None = None
 
 
 @app.post("/stripe-webhook")
@@ -2343,10 +2346,6 @@ async def stripe_webhook(
 # ---------------------------------------------------------------------------
 
 
-class IssueKeyRequest(BaseModel):
-    plan_id: str
-
-
 class IssueKeyResponse(BaseModel):
     api_key: str
     plan_id: str
@@ -2355,8 +2354,7 @@ class IssueKeyResponse(BaseModel):
 
 @app.post("/admin/keys", response_model=IssueKeyResponse, dependencies=[Depends(_require_admin)])
 async def admin_issue_key(req: IssueKeyRequest) -> IssueKeyResponse:
-    if req.plan_id not in PLANS:
-        raise HTTPException(400, f"Unknown plan: {req.plan_id!r}")
+    # plan_id already constrained to PlanId by Pydantic (422 on unknown).
     key = get_store().issue(req.plan_id)
     return IssueKeyResponse(
         api_key=key,

@@ -6,7 +6,19 @@ These models are the public response shape. The internal AuditReport from
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# ---------------------------------------------------------------------------
+# Shared enums / constants
+# ---------------------------------------------------------------------------
+
+AuditMode = Literal["standard", "marketplace"]
+PlanId = Literal["free", "pro", "enterprise"]
+PLAN_IDS: tuple[str, ...] = ("free", "pro", "enterprise")
+MAX_AUDIT_URL_LEN = 2048
 
 # ---------------------------------------------------------------------------
 # Plan catalog (single source of truth)
@@ -53,10 +65,24 @@ PLANS: dict[str, Plan] = {
 
 
 class ValidateRequest(BaseModel):
-    """Client request: audit a single URL."""
+    """Client request: audit a single merchant URL (``/validate``, ``/audit-public``).
 
-    url: str = Field(..., description="Target base URL to audit")
-    mode: str = Field(
+    Strict validation:
+    - ``url`` must be absolute ``http``/``https`` with a host (max 2048 chars)
+    - ``mode`` is only ``standard`` or ``marketplace``
+    - unknown JSON fields are rejected (``extra=forbid``)
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    url: str = Field(
+        ...,
+        min_length=8,
+        max_length=MAX_AUDIT_URL_LEN,
+        description="Target merchant URL to audit (http or https)",
+        examples=["https://merchant.example.com/pay"],
+    )
+    mode: AuditMode = Field(
         default="standard",
         description="standard | marketplace",
     )
@@ -68,6 +94,33 @@ class ValidateRequest(BaseModel):
         default=False,
         description="Attach a plain-language AI summary of the result for non-experts (requires DASHSCOPE_API_KEY server-side)",
     )
+
+    @field_validator("url")
+    @classmethod
+    def url_must_be_http_with_host(cls, v: str) -> str:
+        raw = (v or "").strip()
+        if not raw:
+            raise ValueError("url is required")
+        if any(ch.isspace() for ch in raw):
+            raise ValueError("url must not contain whitespace")
+        parsed = urlparse(raw)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("url must use http or https scheme")
+        if not parsed.netloc:
+            raise ValueError("url must include a host")
+        # Reject obviously non-network schemes that urlparse might still parse
+        host = parsed.hostname or ""
+        if not host:
+            raise ValueError("url must include a host")
+        return raw
+
+
+class IssueKeyRequest(BaseModel):
+    """Admin request to mint an API key."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    plan_id: PlanId = Field(..., description="free | pro | enterprise")
 
 
 class CheckResultItem(BaseModel):

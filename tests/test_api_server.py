@@ -325,7 +325,8 @@ class TestValidate:
 class TestCheckoutSession:
     def test_unknown_plan_rejected(self, client: TestClient) -> None:
         r = client.post("/create-checkout-session?plan_id=nope")
-        assert r.status_code == 400
+        # PlanId is a Literal — FastAPI returns 422 validation error
+        assert r.status_code == 422
 
     def test_free_plan_no_checkout(self, client: TestClient) -> None:
         r = client.post("/create-checkout-session?plan_id=free")
@@ -343,7 +344,7 @@ class TestCheckoutSession:
 
     def test_get_unknown_plan_rejected(self, client: TestClient) -> None:
         r = client.get("/create-checkout-session?plan_id=nope", follow_redirects=False)
-        assert r.status_code == 400
+        assert r.status_code == 422
 
     def test_get_free_plan_redirects_to_success(self, client: TestClient) -> None:
         r = client.get("/create-checkout-session?plan_id=free", follow_redirects=False)
