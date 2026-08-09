@@ -33,28 +33,34 @@ LOGIN_DAILY_LIMIT_DEFAULT = 50
 # ---------------------------------------------------------------------------
 
 _AUTH_CSS = """
-.auth-card{max-width:460px;margin:0 auto;background:#fff;border:1px solid var(--glass-border);border-radius:14px;padding:32px;}
-.auth-card h1{font-size:1.8rem;margin-bottom:6px;}
+.auth-card{max-width:460px;margin:0 auto;background:var(--surface);border:1px solid var(--card-border,var(--glass-border));border-radius:14px;padding:32px;box-shadow:0 16px 48px -24px rgba(0,0,0,0.45);}
+.auth-card h1{font-size:1.8rem;margin-bottom:6px;color:var(--fg);}
+.auth-card p{color:var(--fg-70);}
 .field{margin:14px 0;}
 .field label{display:block;font-size:0.85rem;color:var(--fg-70);margin-bottom:6px;}
-.field input{width:100%;padding:10px 12px;border:1px solid var(--glass-border);border-radius:8px;font:inherit;background:var(--bg);}
-.form-btn{margin-top:18px;width:100%;background:#0a0a0a;color:#fff;border:none;padding:12px;border-radius:999px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;}
-.form-btn:hover{background:var(--accent-hover);}
-.form-error{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:10px 12px;font-size:0.88rem;margin:12px 0;}
+.field input{width:100%;padding:10px 12px;border:1px solid var(--card-border,var(--glass-border));border-radius:8px;font:inherit;background:var(--input-bg,var(--bg));color:var(--fg);}
+.field input:focus{outline:none;border-color:var(--brand,#FF4D00);box-shadow:0 0 0 3px rgba(255,77,0,0.18);}
+.form-btn{margin-top:18px;width:100%;background:var(--brand,#FF4D00);color:#fff;border:none;padding:12px;border-radius:999px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;transition:background 0.15s,box-shadow 0.15s;}
+.form-btn:hover{background:#FF5C14;box-shadow:0 0 18px rgba(255,77,0,0.35);}
+.form-error{border:1px solid rgba(239,68,68,0.45);background:rgba(239,68,68,0.12);color:#fca5a5;border-radius:8px;padding:10px 12px;font-size:0.88rem;margin:12px 0;}
+html[data-theme="light"] .form-error{border-color:#fecaca;background:#fef2f2;color:#991b1b;}
 .form-note{font-size:0.85rem;color:var(--fg-60);margin-top:14px;text-align:center;}
 .form-note a{color:var(--accent);}
 table.keys{width:100%;border-collapse:collapse;margin:14px 0;}
-table.keys th,table.keys td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--glass-border);font-size:0.88rem;vertical-align:middle;}
+table.keys th,table.keys td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--glass-border);font-size:0.88rem;vertical-align:middle;color:var(--fg-70);}
+table.keys th{color:var(--fg);font-weight:600;}
 .mini-btn{background:none;border:1px solid var(--glass-border);border-radius:8px;padding:4px 10px;font-size:0.8rem;cursor:pointer;font-family:inherit;color:var(--fg-70);}
-.mini-btn:hover{border-color:#991b1b;color:#991b1b;}
-.key-box{background:#0a0a0a;color:#e5e5e5;border-radius:10px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all;margin:14px 0;user-select:all;}
+.mini-btn:hover{border-color:#f87171;color:#f87171;}
+.key-box{background:var(--input-bg,#1c1a24);color:var(--fg);border:1px solid var(--card-border,var(--glass-border));border-radius:10px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all;margin:14px 0;user-select:all;}
 """
 
 _SHELL = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0c0b10">
 <title>__TITLE__ · x402 validator</title>
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>

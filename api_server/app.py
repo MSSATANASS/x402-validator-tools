@@ -2449,10 +2449,12 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
 # module as _PAGE_CSS / _PAGE_NAV / _PAGE_FOOTER).
 
 _VS_DOCTOR_HTML = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0c0b10">
 <title>x402 Validator vs x402 Doctor — checker depth, compared honestly</title>
 <meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 9 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
 <link rel="canonical" href="https://x402-validator-tools.onrender.com/vs-x402-doctor">
@@ -2533,10 +2535,12 @@ __PAGE_FOOTER__
 """
 
 _OPEN_HTML = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0c0b10">
 <title>Open — real numbers behind x402 Validator</title>
 <meta name="description" content="Tests, corpus results, the CAIP-2 bug we shipped and fixed same-day, keys issued, revenue. Every number verifiable, none projected.">
 <link rel="canonical" href="https://x402-validator-tools.onrender.com/open">
