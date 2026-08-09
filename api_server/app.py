@@ -765,15 +765,20 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   50%      { transform: translate3d(-4%, -6%, 0) scale(1.12); }
 }
 
-/* Ledger grid */
+/* Ledger grid — brighter hairlines on dark so the protocol “ledger” reads */
 .hero-grid {
   position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(43,38,68,0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(43,38,68,0.055) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
   background-size: 64px 64px;
   -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 35%, transparent 100%);
   mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 35%, transparent 100%);
+}
+html[data-theme="light"] .hero-grid {
+  background-image:
+    linear-gradient(rgba(43,38,68,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43,38,68,0.055) 1px, transparent 1px);
 }
 
 /* Brand hexagon lattice (seamless 28x48 honeycomb tile, ~5% orange) */
@@ -804,9 +809,13 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   to   { stroke-dashoffset: 0; }
 }
 .flow-nodes circle {
+  fill: #FF8A4D;
+  opacity: 0.45;
+  animation: node-pulse 4s ease-in-out infinite;
+}
+html[data-theme="light"] .flow-nodes circle {
   fill: #2B2644;
   opacity: 0.35;
-  animation: node-pulse 4s ease-in-out infinite;
 }
 .flow-nodes circle:nth-child(2) { animation-delay: -1.3s; }
 .flow-nodes circle:nth-child(3) { animation-delay: -2.6s; }
@@ -820,21 +829,28 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   .mesh, .flow-line, .flow-nodes circle { animation: none !important; }
 }
 
+/* Dark default: ink veil so mesh/flow stay under type. Light keeps halo wash. */
 .hero-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(245,245,245,0.35) 0%, rgba(245,245,245,0.12) 45%, rgba(245,245,245,0.55) 100%);
+  background: linear-gradient(180deg, rgba(12,11,16,0.42) 0%, rgba(12,11,16,0.16) 42%, rgba(12,11,16,0.68) 100%);
   backdrop-filter: blur(1px);
   -webkit-backdrop-filter: blur(1px);
   z-index: 1;
+}
+html[data-theme="light"] .hero-overlay {
+  background: linear-gradient(180deg, rgba(245,245,245,0.35) 0%, rgba(245,245,245,0.12) 45%, rgba(245,245,245,0.55) 100%);
 }
 
 .hero-decor {
   position: absolute;
   border-radius: 50%;
   filter: blur(120px);
-  mix-blend-mode: multiply;
+  mix-blend-mode: soft-light;
   pointer-events: none;
   z-index: 2;
+}
+html[data-theme="light"] .hero-decor {
+  mix-blend-mode: multiply;
 }
 .hero-decor.tl {
   top: -20%; left: 20%;
@@ -889,11 +905,17 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   line-height: 0.9;
   letter-spacing: -0.05em;  /* tracking-tighter */
   margin: 0;
-  background: linear-gradient(115deg, #0a0a0a 0%, #0a0a0a 42%, #2B2644 68%, #FF4D00 100%);
+  /* Dark default: parchment → brand (near-black was invisible on dark hero) */
+  background: linear-gradient(115deg, #f4f2f0 0%, #f4f2f0 38%, #FF8A4D 68%, #FF4D00 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
+}
+html[data-theme="light"] .main-headline {
+  background: linear-gradient(115deg, #0a0a0a 0%, #0a0a0a 42%, #2B2644 68%, #FF4D00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .sub-headline {
@@ -1720,6 +1742,18 @@ html[data-theme="dark"] .mesh {
   filter: blur(100px);
   opacity: 0.92;
 }
+html[data-theme="dark"] .hero-flow {
+  opacity: 0.42;
+}
+/* Theme toggle: pressed = dark mode active (default) */
+.theme-toggle[aria-pressed="true"] {
+  border-color: rgba(255,77,0,0.40);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
 html[data-theme="dark"] .hcard.light {
   background: var(--surface);
   background-image: radial-gradient(circle at 78% 18%, rgba(255,77,0,0.16), transparent 55%),
@@ -1781,7 +1815,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
   </div>
 
   <div class="nav-right">
-    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark mode" title="Toggle theme">
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light mode" aria-pressed="true" title="Switch to light mode">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
         <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
       </svg>
@@ -2348,7 +2382,9 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
       var btn = document.getElementById('themeToggle');
       if (btn) {
         btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
-        btn.title = t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+        var label = t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
       }
     }
     var themeBtn = document.getElementById('themeToggle');
