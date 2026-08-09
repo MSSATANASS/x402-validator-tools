@@ -1,8 +1,19 @@
-"""Unit tests for pure evaluate_batch_settlement_requirements (no HTTP)."""
+"""Unit tests for pure evaluate_batch_settlement_requirements (no HTTP).
+
+Also integration tests for orchestration in ``_run_audit`` (cold reuse + GET
+fallback).
+"""
 from __future__ import annotations
 
+import json
 import re
 import string
+from datetime import datetime, timezone
+from unittest.mock import patch
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
 
 from api_server.batch_settlement import (
     CHECK_NAME,
@@ -10,6 +21,7 @@ from api_server.batch_settlement import (
     SPEC_REF,
     evaluate_batch_settlement_requirements,
 )
+from api_server.visibility import ResponseSnapshot
 
 VALID = {
     "scheme": "batch-settlement",
@@ -275,3 +287,202 @@ def test_spec_ref_commit_len_40_hex():
     r = _eval({"accepts": [dict(VALID)]})
     assert r["details"]["spec_ref"]["commit"] == commit
     assert len(r["details"]["spec_ref"]["commit"]) == 40
+
+
+# ---------------------------------------------------------------------------
+# Integration: _run_audit orchestration (cold 402 reuse + GET fallback)
+# ---------------------------------------------------------------------------
+
+
+_EXACT_ONLY_BODY = json.dumps(
+    {
+        "x402Version": 2,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:8453",
+                "amount": "1000",
+                "asset": VALID["asset"],
+                "payTo": VALID["payTo"],
+            }
+        ],
+    }
+)
+
+
+def _fake_engine_report():
+    class _Check:
+        check_name = "manifest_discovery"
+        status = "PASS"
+        message = "ok"
+        details = None
+
+    class _Report:
+        target_url = "https://example.com"
+        overall_status = "PASS"
+        summary = "1/1 checks passed"
+        timestamp = datetime(2026, 8, 8, 12, 0, 0, tzinfo=timezone.utc)
+        checks = [_Check()]
+
+    return _Report()
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    """App client with JSON keystore; no autouse cold-probe (tests control it)."""
+    import importlib
+    import sys
+
+    monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "api_keys.json"))
+    monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    import api_server.keystore  # noqa: F401
+    import api_server.app  # noqa: F401
+
+    keystore_mod = sys.modules["api_server.keystore"]
+    app_mod = sys.modules["api_server.app"]
+    importlib.reload(keystore_mod)
+    importlib.reload(app_mod)
+    app_mod.get_store().issue("pro")
+    return TestClient(app_mod.app)
+
+
+def test_audit_public_includes_batch_settlement_check(client, monkeypatch):
+    from api_server import ratelimit as rl_mod
+
+    rl_mod.reset_limiter()
+
+    async def fake_engine(url, mode="standard", **_kw):
+        return _fake_engine_report()
+
+    async def fake_cold(url, timeout=10.0, **_kw):
+        probe = {
+            "check_name": "directory_cold_probe",
+            "status": "PASS",
+            "message": "ok",
+            "details": {"method": "POST", "status_code": 402},
+        }
+        snap = ResponseSnapshot(
+            status_code=402, headers={}, body=_EXACT_ONLY_BODY
+        )
+        return probe, snap
+
+    with (
+        patch(
+            "x402_conformance_suite._engine.run_audit", side_effect=fake_engine
+        ),
+        patch(
+            "api_server.visibility.run_directory_cold_probe",
+            side_effect=fake_cold,
+        ),
+    ):
+        r = client.post("/audit-public", json={"url": "https://example.com"})
+
+    assert r.status_code == 200
+    body = r.json()
+    by_name = {c["name"]: c for c in body["checks"]}
+    assert "batch_settlement_requirements" in by_name
+    batch = by_name["batch_settlement_requirements"]
+    assert batch["status"] == "PASS"
+    assert batch["details"]["applicable"] is False
+    assert batch["details"]["payload_source"] == "cold_probe_post"
+    # engine + cold + batch
+    assert body["summary"] == "3/3 checks passed. Overall: PASS"
+    assert body["checks"][-1]["name"] == "batch_settlement_requirements"
+
+
+def test_no_fallback_get_when_cold_402(monkeypatch):
+    """When cold POST returns 402 with decodable body, tools must not GET."""
+    import asyncio
+    import sys
+
+    import api_server.app  # noqa: F401 — ensure module in sys.modules
+
+    app_mod = sys.modules["api_server.app"]
+    get_calls: list[str] = []
+
+    async def fake_engine(url, mode="standard", **_kw):
+        return _fake_engine_report()
+
+    async def fake_cold(url, timeout=10.0, **_kw):
+        probe = {
+            "check_name": "directory_cold_probe",
+            "status": "PASS",
+            "message": "ok",
+            "details": {"method": "POST", "status_code": 402},
+        }
+        return probe, ResponseSnapshot(
+            status_code=402, headers={}, body=_EXACT_ONLY_BODY
+        )
+
+    async def counting_get(self, url, **_kw):
+        get_calls.append(str(url))
+        raise AssertionError("GET fallback must not run on cold 402 path")
+
+    with (
+        patch(
+            "x402_conformance_suite._engine.run_audit", side_effect=fake_engine
+        ),
+        patch(
+            "api_server.visibility.run_directory_cold_probe",
+            side_effect=fake_cold,
+        ),
+        patch("httpx.AsyncClient.get", counting_get),
+    ):
+        report, probe, batch = asyncio.run(
+            app_mod._run_audit("https://example.com/pay", "standard")
+        )
+
+    assert get_calls == []
+    assert probe["check_name"] == "directory_cold_probe"
+    assert batch["check_name"] == CHECK_NAME
+    assert batch["details"]["payload_source"] == "cold_probe_post"
+    assert batch["status"] == "PASS"
+    assert batch["details"]["applicable"] is False
+
+
+def test_fallback_get_when_cold_not_402(monkeypatch):
+    """Cold 405 → one tools GET that yields 402 exact-only → fallback_get."""
+    import asyncio
+    import sys
+
+    import api_server.app  # noqa: F401 — ensure module in sys.modules
+
+    app_mod = sys.modules["api_server.app"]
+    get_calls: list[str] = []
+
+    async def fake_engine(url, mode="standard", **_kw):
+        return _fake_engine_report()
+
+    async def fake_cold(url, timeout=10.0, **_kw):
+        probe = {
+            "check_name": "directory_cold_probe",
+            "status": "FAIL",
+            "message": "POST not allowed",
+            "details": {"method": "POST", "status_code": 405},
+        }
+        return probe, ResponseSnapshot(status_code=405, headers={}, body="")
+
+    async def fake_get(self, url, **_kw):
+        get_calls.append(str(url))
+        return httpx.Response(402, text=_EXACT_ONLY_BODY)
+
+    with (
+        patch(
+            "x402_conformance_suite._engine.run_audit", side_effect=fake_engine
+        ),
+        patch(
+            "api_server.visibility.run_directory_cold_probe",
+            side_effect=fake_cold,
+        ),
+        patch("httpx.AsyncClient.get", fake_get),
+    ):
+        report, probe, batch = asyncio.run(
+            app_mod._run_audit("https://example.com/pay", "standard")
+        )
+
+    assert len(get_calls) == 1
+    assert batch["details"]["payload_source"] == "fallback_get"
+    assert batch["status"] == "PASS"
+    assert batch["details"]["applicable"] is False
+    assert batch["details"]["status_code"] == 402

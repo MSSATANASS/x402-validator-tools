@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api_server import visibility
+from api_server.visibility import ResponseSnapshot
 
 TARGET = "https://merchant.example.com/api"
 
@@ -288,13 +289,19 @@ class TestValidateIncludesProbe:
         async def fake_run_audit(url: str, mode: str = "standard", **_kw):
             return _make_fake_audit_report()
 
-        async def fake_probe(url, timeout=10.0, **_kw):
-            return probe
+        async def fake_run_probe(url, timeout=10.0, **_kw):
+            # Non-402 body → batch GET fallback; patch GET to avoid network.
+            return probe, ResponseSnapshot(status_code=400, headers={}, body="")
+
+        async def boom_get(self, url, **_kw):
+            raise RuntimeError("no network in tests")
 
         with patch(
             "x402_conformance_suite._engine.run_audit", side_effect=fake_run_audit
         ), patch(
-            "api_server.visibility.check_directory_cold_probe", side_effect=fake_probe
+            "api_server.visibility.run_directory_cold_probe", side_effect=fake_run_probe
+        ), patch(
+            "httpx.AsyncClient.get", boom_get
         ):
             r = client.post(
                 "/validate",
@@ -311,25 +318,43 @@ class TestValidateIncludesProbe:
             "message": "stub probe result",
             "details": {"method": "POST", "status_code": 400},
         }
+        assert "batch_settlement_requirements" in by_name
 
 
 class TestAuditPublicIncludesProbe:
     def test_checks_include_directory_cold_probe(self, client: TestClient) -> None:
+        import json
         from api_server import ratelimit as rl_mod
 
         rl_mod.reset_limiter()
         probe = _fake_probe_result(status="PASS", status_code=402)
+        exact_body = json.dumps(
+            {
+                "x402Version": 2,
+                "accepts": [
+                    {
+                        "scheme": "exact",
+                        "network": "eip155:8453",
+                        "amount": "1000",
+                        "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                        "payTo": "0x1111111111111111111111111111111111111111",
+                    }
+                ],
+            }
+        )
 
         async def fake_run_audit(url: str, mode: str = "standard", **_kw):
             return _make_fake_audit_report()
 
-        async def fake_probe(url, timeout=10.0, **_kw):
-            return probe
+        async def fake_run_probe(url, timeout=10.0, **_kw):
+            return probe, ResponseSnapshot(
+                status_code=402, headers={}, body=exact_body
+            )
 
         with patch(
             "x402_conformance_suite._engine.run_audit", side_effect=fake_run_audit
         ), patch(
-            "api_server.visibility.check_directory_cold_probe", side_effect=fake_probe
+            "api_server.visibility.run_directory_cold_probe", side_effect=fake_run_probe
         ):
             r = client.post(
                 "/audit-public", json={"url": "https://example.com"}
@@ -344,3 +369,5 @@ class TestAuditPublicIncludesProbe:
             "message": "stub probe result",
             "details": {"method": "POST", "status_code": 402},
         }
+        assert by_name["batch_settlement_requirements"]["status"] == "PASS"
+        assert by_name["batch_settlement_requirements"]["details"]["applicable"] is False

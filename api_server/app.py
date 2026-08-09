@@ -79,19 +79,61 @@ if _STATIC_DIR.is_dir():
 
 
 async def _run_audit(url: str, mode: str, timeout: float = 10.0):
-    """Run the x402 audit and the directory cold probe in parallel.
+    """Run engine audit + directory cold probe, then batch-settlement check.
 
-    Returns ``(report, probe)``: the engine's ``AuditReport`` plus the
-    CheckResult-shaped dict from ``visibility.check_directory_cold_probe``
-    (which never raises, so only the engine side can fail here).
+    Returns ``(report, probe, batch)``:
+    - ``report``: engine ``AuditReport``
+    - ``probe``: CheckResult-shaped dict from the cold POST
+    - ``batch``: CheckResult-shaped dict from
+      ``evaluate_batch_settlement_requirements``
+
+    Payload for batch prefers the cold-probe 402 snapshot (zero extra
+    fetches). Otherwise one never-raise GET fallback. Only the engine
+    side can raise here.
     """
+    import httpx
     from x402_conformance_suite._engine import run_audit  # lazy import
-    from api_server.visibility import check_directory_cold_probe
-    report, probe = await asyncio.gather(
+    from api_server.visibility import run_directory_cold_probe
+    from api_server.payment_required import decode_payment_required
+    from api_server.batch_settlement import evaluate_batch_settlement_requirements
+
+    report, (probe, snap) = await asyncio.gather(
         run_audit(url, timeout=timeout, mode=mode),
-        check_directory_cold_probe(url, timeout),
+        run_directory_cold_probe(url, timeout),
     )
-    return report, probe
+
+    payload = None
+    http_status: int | None = None
+    source = "none"
+
+    if snap is not None and snap.status_code == 402:
+        payload = decode_payment_required(body=snap.body, headers=snap.headers)
+        http_status = 402
+        if payload is not None:
+            source = "cold_probe_post"
+
+    if source == "none":
+        # Single GET fallback; never raise — leave payload/source on error.
+        try:
+            async with httpx.AsyncClient(
+                timeout=timeout, follow_redirects=True
+            ) as client:
+                response = await client.get(url)
+            http_status = response.status_code
+            payload = decode_payment_required(
+                body=response.text, headers=response.headers
+            )
+            source = "fallback_get"
+        except Exception:  # noqa: BLE001 — never-raise contract for tools checks
+            pass
+
+    batch = evaluate_batch_settlement_requirements(
+        payload,
+        http_status=http_status,
+        target_url=url,
+        payload_source=source,
+    )
+    return report, probe, batch
 
 
 def _require_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
@@ -1923,17 +1965,23 @@ async def validate(
 
     started = time.monotonic()
     try:
-        report, probe = await _run_audit(req.url, req.mode)
+        report, probe, batch = await _run_audit(req.url, req.mode)
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
     checks = _flatten_checks(report)
-    # Append the directory cold probe, matching the _flatten_checks entry shape.
+    # Append tools-side checks, matching the _flatten_checks entry shape.
     checks.append(CheckResultItem(
         name=probe["check_name"],
         status=probe["status"],
         message=probe["message"],
         details=probe["details"],
+    ))
+    checks.append(CheckResultItem(
+        name=batch["check_name"],
+        status=batch["status"],
+        message=batch["message"],
+        details=batch["details"],
     ))
     overall, summary = _aggregate_check_results(checks)
     store.record_audit(
@@ -2001,7 +2049,7 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         )
     started = time.monotonic()
     try:
-        report, probe = await _run_audit(req.url, req.mode)
+        report, probe, batch = await _run_audit(req.url, req.mode)
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
@@ -2014,12 +2062,18 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         }
         for c in report.checks
     ]
-    # Append the directory cold probe, matching the entry shape above.
+    # Append tools-side checks, matching the entry shape above.
     checks.append({
         "name": probe["check_name"],
         "status": probe["status"],
         "message": probe["message"],
         "details": probe["details"],
+    })
+    checks.append({
+        "name": batch["check_name"],
+        "status": batch["status"],
+        "message": batch["message"],
+        "details": batch["details"],
     })
     overall, summary = _aggregate_check_results(checks)
     get_store().record_audit(

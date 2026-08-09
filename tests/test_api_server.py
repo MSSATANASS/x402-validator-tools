@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -9,21 +10,45 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from api_server.visibility import ResponseSnapshot
+
+# Exact-only PaymentRequired so batch_settlement evaluates N/A PASS without network.
+_EXACT_ONLY_402_BODY = json.dumps(
+    {
+        "x402Version": 2,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:8453",
+                "amount": "1000",
+                "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                "payTo": "0x1111111111111111111111111111111111111111",
+            }
+        ],
+    }
+)
+
 
 @pytest.fixture(autouse=True)
 def _no_real_cold_probe():
-    """Keep the directory cold probe hermetic: no real network in tests."""
+    """Keep cold probe hermetic; supply 402 snapshot for batch (no GET)."""
 
-    async def fake_probe(url, timeout=10.0, **_kw):
-        return {
+    async def fake_run_probe(url, timeout=10.0, **_kw):
+        probe = {
             "check_name": "directory_cold_probe",
             "status": "PASS",
             "message": "ok",
             "details": {"method": "POST", "status_code": 402},
         }
+        snap = ResponseSnapshot(
+            status_code=402,
+            headers={},
+            body=_EXACT_ONLY_402_BODY,
+        )
+        return probe, snap
 
     with patch(
-        "api_server.visibility.check_directory_cold_probe", side_effect=fake_probe
+        "api_server.visibility.run_directory_cold_probe", side_effect=fake_run_probe
     ):
         yield
 
@@ -771,12 +796,13 @@ class TestAuditPublic:
         assert r.status_code == 200
         body = r.json()
         assert body["overall"] == "PASS"
-        # Engine fake has 1 PASS check + cold-probe fixture PASS → 2/2, not engine's "4/4"
-        assert body["summary"] == "2/2 checks passed. Overall: PASS"
+        # Engine 1 PASS + cold PASS + batch N/A PASS → 3/3, not engine's "4/4"
+        assert body["summary"] == "3/3 checks passed. Overall: PASS"
         assert body["remaining_today"] == 2  # default 3, one used
         assert isinstance(body["latency_ms"], (int, float))
         assert body["checks"][0]["name"] == "manifest_discovery"
-        assert body["checks"][-1]["name"] == "directory_cold_probe"
+        assert body["checks"][-1]["name"] == "batch_settlement_requirements"
+        assert any(c["name"] == "directory_cold_probe" for c in body["checks"])
 
     def test_summary_and_overall_include_failing_cold_probe(
         self, client, monkeypatch
@@ -790,19 +816,27 @@ class TestAuditPublic:
             return _make_fake_audit_report()
 
         async def fail_probe(url, timeout=10.0, **_kw):
-            return {
+            probe = {
                 "check_name": "directory_cold_probe",
                 "status": "FAIL",
                 "message": "POST is not allowed (HTTP 405)",
                 "details": {"method": "POST", "status_code": 405},
             }
+            # Non-402 snapshot → batch may attempt GET fallback; keep hermetic
+            # by leaving body empty (GET mocked below to also fail).
+            snap = ResponseSnapshot(status_code=405, headers={}, body="")
+            return probe, snap
+
+        async def boom_get(self, url, **_kw):
+            raise RuntimeError("no network in tests")
 
         with (
             patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run),
             patch(
-                "api_server.visibility.check_directory_cold_probe",
+                "api_server.visibility.run_directory_cold_probe",
                 side_effect=fail_probe,
             ),
+            patch("httpx.AsyncClient.get", boom_get),
         ):
             r = client.post(
                 "/audit-public",
@@ -811,8 +845,10 @@ class TestAuditPublic:
         assert r.status_code == 200
         body = r.json()
         assert body["overall"] == "FAIL"
-        assert body["summary"] == "1/2 checks passed. Overall: FAIL"
+        # engine PASS + cold FAIL + batch N/A PASS (no 402) → 2/3 FAIL
+        assert body["summary"] == "2/3 checks passed. Overall: FAIL"
         assert any(c["name"] == "directory_cold_probe" for c in body["checks"])
+        assert any(c["name"] == "batch_settlement_requirements" for c in body["checks"])
 
     def test_rate_limit_returns_429_after_n_calls(self, client, monkeypatch) -> None:
         self._setup_limits(monkeypatch, limit=3)

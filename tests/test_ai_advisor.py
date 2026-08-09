@@ -84,10 +84,21 @@ _PROBE = {
     "details": {"method": "POST", "status_code": 402},
 }
 
+_BATCH = {
+    "check_name": "batch_settlement_requirements",
+    "status": "PASS",
+    "message": "N/A — no batch-settlement offers",
+    "details": {
+        "applicable": False,
+        "payload_source": "cold_probe_post",
+        "status_code": 402,
+    },
+}
+
 
 async def _fake_audit(url, mode, timeout=10.0):
-    # _run_audit returns (report, probe) since the directory cold probe landed.
-    return _fake_report(), _PROBE
+    # _run_audit returns (report, probe, batch).
+    return _fake_report(), _PROBE, _BATCH
 
 
 class TestAdvisorUnit:
