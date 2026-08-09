@@ -70,11 +70,8 @@ class TestValidateEndpointValidation:
         monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "api_keys.json"))
         monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
         monkeypatch.delenv("DATABASE_URL", raising=False)
-        import api_server.app  # force load
-        import api_server.keystore  # force load
-
-        keystore_mod = sys.modules["api_server.keystore"]
-        app_mod = sys.modules["api_server.app"]
+        keystore_mod = importlib.import_module("api_server.keystore")
+        app_mod = importlib.import_module("api_server.app")
         importlib.reload(keystore_mod)
         importlib.reload(app_mod)
         app_mod.get_store().issue("pro")
