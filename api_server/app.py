@@ -1238,38 +1238,71 @@ footer {
   max-width: 1100px; margin: 0 auto;
 }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
-.foot-brand .mark-hex {
-  width: 40px; height: 40px; display: block;
-  border-radius: 0;
-  object-fit: contain;
-  background: transparent;
-}
-.foot-brand .logo-wordmark {
-  display: block;
-  width: min(220px, 100%);
-  height: auto;
-  border-radius: 0;
-  margin: 0 0 12px;
+/* Footer brand lockup: pure SVG + type — zero PNG, zero black plate */
+.foot-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  margin: 0 0 14px;
   background: transparent !important;
-  box-shadow: none !important;
   border: none !important;
-  object-fit: contain;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  max-width: 100%;
+  color: var(--fg);
 }
-/* Wordmark: transparent PNGs — dark uses light-on-transparent; light uses ink-on-transparent */
-.foot-brand .logo-wordmark.for-light { display: none; }
-.foot-brand .logo-wordmark.for-dark { display: block; }
-html[data-theme="light"] .foot-brand .logo-wordmark.for-dark { display: none; }
-html[data-theme="light"] .foot-brand .logo-wordmark.for-light { display: block; }
-.nav-left .icon {
+.foot-lockup:hover { color: var(--fg); }
+.foot-hex,
+.nav-hex {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: block;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: visible;
+}
+.nav-hex { width: 28px; height: 28px; }
+.foot-hex .hex-stroke,
+.nav-hex .hex-stroke {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.foot-lockup-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.foot-word {
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 1.65rem;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--fg);
+}
+.foot-sub {
+  font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--fg-50);
+  white-space: nowrap;
+}
+.foot-sub .brk { color: var(--brand); font-weight: 700; }
+.nav-left .icon,
+.nav-left .nav-hex {
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
   object-fit: contain;
 }
-.nav-left .icon.for-light { display: none; }
-.nav-left .icon.for-dark { display: block; }
-html[data-theme="light"] .nav-left .icon.for-dark { display: none; }
-html[data-theme="light"] .nav-left .icon.for-light { display: block; }
 .foot-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
   font-size: 0.78rem; letter-spacing: 0.08em;
@@ -2029,8 +2062,9 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
 <nav class="navbar" id="topNav">
   <div class="nav-left">
     <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="x402 validator home">
-      <img class="icon for-dark" src="/static/logo-mark-512.png" alt="" width="28" height="28">
-      <img class="icon for-light" src="/static/logo-mark-512-light.png" alt="" width="28" height="28">
+      <svg class="nav-hex" viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" focusable="false">
+        <polygon class="hex-stroke" points="20,3.5 34.5,11.75 34.5,28.25 20,36.5 5.5,28.25 5.5,11.75"/>
+      </svg>
       <span class="nav-brand-text">x402 validator</span>
     </a>
   </div>
@@ -2389,8 +2423,15 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
 <footer>
   <div class="foot-grid">
     <div class="foot-brand">
-      <img class="logo-wordmark for-dark" src="/static/logo-wordmark.png" alt="x402 validator tools" width="240" height="106">
-      <img class="logo-wordmark for-light" src="/static/logo-wordmark-light.png" alt="x402 validator tools" width="240" height="106">
+      <a class="foot-lockup" href="/" aria-label="x402 validator tools">
+        <svg class="foot-hex" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true" focusable="false">
+          <polygon class="hex-stroke" points="20,3.5 34.5,11.75 34.5,28.25 20,36.5 5.5,28.25 5.5,11.75"/>
+        </svg>
+        <span class="foot-lockup-copy">
+          <span class="foot-word">x402</span>
+          <span class="foot-sub"><span class="brk">[</span> x402-validator-tools <span class="brk">]</span></span>
+        </span>
+      </a>
       <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
     </div>
     <div class="foot-col">

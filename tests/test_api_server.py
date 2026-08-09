@@ -210,11 +210,17 @@ class TestLanding:
         # Real PNG favicon + apple-touch-icon (replaces the old inline SVG data URI)
         assert 'rel="icon" type="image/png" href="/static/favicon-32.png"' in r.text
         assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in r.text
-        # Brand assets: hex mark in navbar, full wordmark in footer + mono tagline
-        assert '/static/logo-mark-512.png' in r.text
-        assert '/static/logo-wordmark.png' in r.text
+        # Brand lockup: inline SVG hex + type (no baked-black PNG plate)
+        assert 'class="foot-lockup"' in r.text
+        assert 'class="foot-hex"' in r.text
+        assert 'class="nav-hex"' in r.text
+        assert 'class="hex-stroke"' in r.text
+        assert 'class="foot-word"' in r.text
         assert 'class="brand-eyebrow' in r.text
         assert 'x402-validator-tools' in r.text
+        # Legacy PNG wordmark must not reintroduce the black-box footer
+        assert 'logo-wordmark.png' not in r.text
+        assert 'logo-wordmark for-dark' not in r.text
         assert '<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">' in r.text
         # Navbar only links to sections/routes that actually exist —
         # no dead links to #stories, /docs, or a non-existent "Book A Demo"
