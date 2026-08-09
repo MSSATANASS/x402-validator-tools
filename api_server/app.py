@@ -66,7 +66,6 @@ from api_server.models import (
     ValidateRequest,
     ValidateResponse,
 )
-from api_server.telemetry import setup_telemetry, start_audit_span
 from api_server.pages import (
     PAGE_CSS as _PAGE_CSS,
 )
@@ -79,6 +78,7 @@ from api_server.pages import (
 from api_server.pages import (
     auth_nav_links as _auth_nav_links,
 )
+from api_server.telemetry import setup_telemetry, start_audit_span
 
 # ---------------------------------------------------------------------------
 # App + state
