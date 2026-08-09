@@ -100,6 +100,32 @@ nav.navbar {
   box-shadow: 0 0 20px rgba(255,77,0,0.35);
   transform: translateY(-1px);
 }
+.theme-toggle {
+  appearance: none;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  color: var(--fg);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+.theme-toggle:hover {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
+.theme-toggle:active { transform: scale(0.96); }
+.theme-toggle svg { width: 18px; height: 18px; display: block; }
+html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+.theme-toggle[aria-pressed="true"] {
+  border-color: rgba(255,77,0,0.40);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
 .nav-menu-btn {
   appearance: none;
   display: none;
@@ -251,6 +277,14 @@ PAGE_NAV = """
     <a href="/health">Status</a>
   </div>
   <div class="nav-right">
+    <button type="button" class="theme-toggle" id="pageThemeToggle" aria-label="Switch to light mode" aria-pressed="true" title="Switch to light mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"/>
+      </svg>
+    </button>
     <a href="/login">Log in</a>
     <a class="nav-contact" href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
@@ -262,6 +296,31 @@ PAGE_NAV = """
 </nav>
 <script>
 (function () {
+  function applyTheme(theme) {
+    var t = theme === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("x402-theme", t); } catch (e) {}
+    var metas = document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < metas.length; i++) {
+      metas[i].setAttribute("content", t === "dark" ? "#0c0b10" : "#FF4D00");
+    }
+    var toggle = document.getElementById("pageThemeToggle");
+    if (toggle) {
+      toggle.setAttribute("aria-pressed", t === "dark" ? "true" : "false");
+      var label = t === "dark" ? "Switch to light mode" : "Switch to dark mode";
+      toggle.title = label;
+      toggle.setAttribute("aria-label", label);
+    }
+  }
+  var themeBtn = document.getElementById("pageThemeToggle");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme") || "dark";
+      applyTheme(cur === "dark" ? "light" : "dark");
+    });
+    applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
+  }
+
   var nav = document.getElementById("pageNav");
   var btn = document.getElementById("pageNavMenuBtn");
   var links = document.getElementById("pageNavLinks");
