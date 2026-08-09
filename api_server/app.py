@@ -674,6 +674,91 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   display: inline-block;
 }
 
+/* Mobile menu control — protocol “channel open/close” */
+.nav-menu-btn {
+  appearance: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+.nav-menu-btn:hover {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
+.nav-menu-btn:active { transform: scale(0.96); }
+.nav-menu-btn svg { width: 18px; height: 18px; display: block; }
+.nav-menu-btn .icon-close { display: none; }
+.nav-menu-btn[aria-expanded="true"] .icon-open { display: none; }
+.nav-menu-btn[aria-expanded="true"] .icon-close { display: block; }
+.nav-menu-btn[aria-expanded="true"] {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.10);
+}
+
+/* Mobile dropdown: settlement-channel panel under fixed nav */
+@media (max-width: 767px) {
+  .navbar { flex-wrap: wrap; gap: 0; row-gap: 0; }
+  .nav-left { min-width: 0; }
+  .nav-brand-text { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-right { gap: 8px; }
+  .nav-right .btn-primary-pill { padding: 9px 14px; font-size: 13px; }
+  .nav-links {
+    display: none;
+    order: 3;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin: 10px 0 4px;
+    padding: 10px 8px 8px;
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+  }
+  .nav-links::before {
+    content: '';
+    position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: var(--hero-grad);
+    opacity: 0.9;
+  }
+  .navbar.nav-open .nav-links {
+    display: flex;
+    animation: navPanelIn 0.18s ease-out both;
+  }
+  .nav-links a {
+    padding: 12px 12px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .nav-links a::after { display: none; }
+  .nav-links a:hover,
+  .nav-links a:focus-visible {
+    background: var(--muted-fill);
+    color: var(--fg);
+    outline: none;
+  }
+  .nav-links .nav-status {
+    justify-content: space-between;
+  }
+}
+@keyframes navPanelIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar.nav-open .nav-links { animation: none; }
+}
+
 .book-demo {
   display: none;
   color: var(--fg-80); font-size: 14px; font-weight: 500;
@@ -698,7 +783,25 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
 }
 
 @media (min-width: 640px) { .book-demo { display: inline-flex; } }
-@media (min-width: 768px) { .nav-links { display: flex; } }
+@media (min-width: 768px) {
+  .nav-menu-btn { display: none; }
+  .nav-links {
+    display: flex;
+    order: unset;
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .nav-links::before { display: none; }
+  .navbar.nav-open .nav-links { animation: none; }
+}
 
 /* ============================================================
    HERO SECTION (full screen) — motion-style
@@ -1804,7 +1907,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
     </a>
   </div>
 
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="#audit">Try It Free</a>
     <a href="#how">How it works</a>
     <a href="#pricing">Pricing</a>
@@ -1826,6 +1929,14 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
     __AUTH_NAV__
     <a class="book-demo" href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
+    <button type="button" class="nav-menu-btn" id="navMenuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" title="Menu">
+      <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
   </div>
 </nav>
 
@@ -2370,6 +2481,39 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
       };
       onScroll();
       window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    // Mobile nav panel (links are desktop-only without this)
+    var menuBtn = document.getElementById('navMenuBtn');
+    var navLinks = document.getElementById('navLinks');
+    function setNavOpen(open) {
+      if (!nav || !menuBtn) return;
+      if (open) nav.classList.add('nav-open');
+      else nav.classList.remove('nav-open');
+      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      menuBtn.title = open ? 'Close menu' : 'Menu';
+    }
+    if (menuBtn && nav) {
+      menuBtn.addEventListener('click', function () {
+        setNavOpen(!nav.classList.contains('nav-open'));
+      });
+      if (navLinks) {
+        navLinks.querySelectorAll('a').forEach(function (a) {
+          a.addEventListener('click', function () { setNavOpen(false); });
+        });
+      }
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') setNavOpen(false);
+      });
+      document.addEventListener('click', function (ev) {
+        if (!nav.classList.contains('nav-open')) return;
+        if (nav.contains(ev.target)) return;
+        setNavOpen(false);
+      });
+      window.addEventListener('resize', function () {
+        if (window.innerWidth >= 768) setNavOpen(false);
+      });
     }
 
     // Theme toggle (default dark; persist in localStorage)
