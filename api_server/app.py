@@ -79,9 +79,19 @@ if _STATIC_DIR.is_dir():
 
 
 async def _run_audit(url: str, mode: str, timeout: float = 10.0):
-    """Run the x402 audit and return the report."""
+    """Run the x402 audit and the directory cold probe in parallel.
+
+    Returns ``(report, probe)``: the engine's ``AuditReport`` plus the
+    CheckResult-shaped dict from ``visibility.check_directory_cold_probe``
+    (which never raises, so only the engine side can fail here).
+    """
     from x402_conformance_suite._engine import run_audit  # lazy import
-    return await run_audit(url, timeout=timeout, mode=mode)
+    from api_server.visibility import check_directory_cold_probe
+    report, probe = await asyncio.gather(
+        run_audit(url, timeout=timeout, mode=mode),
+        check_directory_cold_probe(url, timeout),
+    )
+    return report, probe
 
 
 def _require_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
@@ -169,11 +179,11 @@ _LANDING_HTML = """<!DOCTYPE html>
       "@type": "FAQPage",
       "mainEntity": [
         {"@type": "Question", "name": "What is x402 conformance and why should I care?",
-         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all seven checks in ~580 ms and returns actionable operator errors."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all eight checks in ~580 ms and returns actionable operator errors."}},
         {"@type": "Question", "name": "What does the public demo actually check?",
-         "acceptedAnswer": {"@type": "Answer", "text": "The same seven checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance, bot_wall, accepts_completeness, discovery_resource_listing. Rate-limited to 3 audits per IP per day."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "The same eight checks as /validate: manifest_discovery, caip2_compliance, json_resilience, bazaar_compliance, bot_wall, accepts_completeness, discovery_resource_listing, directory_cold_probe. Rate-limited to 3 audits per IP per day."}},
         {"@type": "Question", "name": "How long does an audit take?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all seven checks in parallel where independent."}},
+         "acceptedAnswer": {"@type": "Answer", "text": "Median ~580 ms end-to-end. Hits the endpoint, parses the response, runs all eight checks in parallel where independent."}},
         {"@type": "Question", "name": "Can I cancel a Pro / Enterprise plan?",
          "acceptedAnswer": {"@type": "Answer", "text": "Yes — cancel from your Stripe dashboard any time; you keep access until the end of the billing period."}},
         {"@type": "Question", "name": "What happens if my endpoint fails an audit?",
@@ -1169,6 +1179,7 @@ footer {
         <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;">bot_wall</span>
         <span class="marquee-item" style="font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:0.04em;font-size:14px;">accepts[]</span>
         <span class="marquee-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:-0.03em;font-size:13px;">discovery_listing</span>
+        <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;font-style:italic;">cold_probe</span>
         <span class="marquee-item" style="font-family:Georgia,serif;font-weight:700;letter-spacing:-0.02em;font-size:15px;">manifest_discovery</span>
         <span class="marquee-item" style="font-family:Arial,sans-serif;font-weight:900;letter-spacing:0.08em;font-size:13px;text-transform:uppercase;">caip2</span>
         <span class="marquee-item" style="font-family:'Trebuchet MS',sans-serif;font-weight:600;letter-spacing:0.01em;font-size:15px;font-style:italic;">json_resilience</span>
@@ -1176,6 +1187,7 @@ footer {
         <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;">bot_wall</span>
         <span class="marquee-item" style="font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:0.04em;font-size:14px;">accepts[]</span>
         <span class="marquee-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:-0.03em;font-size:13px;">discovery_listing</span>
+        <span class="marquee-item" style="font-family:Palatino,'Book Antiqua',serif;font-weight:400;letter-spacing:-0.01em;font-size:16px;font-style:italic;">cold_probe</span>
       </div>
     </div>
   </div>
@@ -1200,10 +1212,10 @@ footer {
     <div class="card-grid">
       <div class="hcard light wide">
         <div>
-          <p class="hcard-mono">7 checks &middot; standard mode</p>
+          <p class="hcard-mono">8 checks &middot; standard mode</p>
           <h3 class="hcard-title">Depth, not a ping</h3>
         </div>
-        <p class="hcard-body">Manifest, CAIP-2 inside v2 <code>accepts[]</code>, JSON resilience, Bazaar shape, bot-wall detection, atomic-unit amounts, and catalog listing &mdash; each with an operator-actionable message.</p>
+        <p class="hcard-body">Manifest, CAIP-2 inside v2 <code>accepts[]</code>, JSON resilience, Bazaar shape, bot-wall detection, atomic-unit amounts, catalog listing, and directory cold-probe visibility &mdash; each with an operator-actionable message.</p>
       </div>
 
       <div class="hcard ink">
@@ -1256,7 +1268,7 @@ footer {
 <section id="audit" class="audit-demo-section">
   <div class="pricing-eyebrow-row"><span class="pricing-pill">Live demo · No signup</span></div>
   <h2 class="audit-demo-headline">Audit an x402 endpoint right now</h2>
-  <p class="audit-demo-sub">Paste any merchant URL. We run seven checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, and discovery listing. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
+  <p class="audit-demo-sub">Paste any merchant URL. We run eight checks against it: Manifest, CAIP-2, JSON resilience, Bazaar compliance, bot-wall detection, accepts[] completeness, discovery listing, and directory visibility &mdash; the Bazaar cold probe. No API key, no signup. <strong>3 audits per IP per day</strong> on the public demo.</p>
 
   <!-- action="/method=get" keep the form well-formed; the inline onsubmit guard
        returns false until the bound JS handler flips window.__x402AuditReady
@@ -1340,11 +1352,11 @@ footer {
   <div class="faq-list">
     <details class="faq-item">
       <summary>What is x402 conformance and why should I care?</summary>
-      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all seven checks in ~580 ms and returns actionable operator errors.</p>
+      <p>x402 is the HTTP-402-based payment protocol from Coinbase. Strict-v2 conformance means your merchant endpoint serves a Bazaar-compliant manifest, advertises its CAIP-2 network/asset identifiers, returns resilient JSON, and exposes the 402 channel your buyers need. If any of those checks fail, gateways refuse to list you and customers see cryptic errors. This API runs all eight checks in ~580 ms and returns actionable operator errors.</p>
     </details>
     <details class="faq-item">
       <summary>What does the public demo actually check?</summary>
-      <p>The same seven checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>, <code>bot_wall</code>, <code>accepts_completeness</code>, <code>discovery_resource_listing</code>. The demo is rate-limited to 3 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
+      <p>The same eight checks as <code>/validate</code>: <code>manifest_discovery</code>, <code>caip2_compliance</code>, <code>json_resilience</code>, <code>bazaar_compliance</code>, <code>bot_wall</code>, <code>accepts_completeness</code>, <code>discovery_resource_listing</code>, <code>directory_cold_probe</code>. The demo is rate-limited to 3 audits per IP per day — that's enough to convince you, not enough to abuse. Buy a Pro key for 500 audits/month; Enterprise gets you 5,000.</p>
     </details>
     <details class="faq-item">
       <summary>Is the public demo really free? What about my data?</summary>
@@ -1352,7 +1364,7 @@ footer {
     </details>
     <details class="faq-item">
       <summary>How long does an audit take?</summary>
-      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all seven checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
+      <p>Median <strong>~580 ms</strong> end-to-end. We hit your endpoint, parse the response, run all eight checks in parallel where independent, and return structured JSON. Failing checks ship with operator-actionable messages, not stack traces.</p>
     </details>
     <details class="faq-item">
       <summary>Can I cancel a Pro / Enterprise plan?</summary>
@@ -1579,7 +1591,7 @@ _VS_DOCTOR_HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>x402 Validator vs x402 Doctor — checker depth, compared honestly</title>
-<meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 7 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
+<meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 8 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
 <link rel="canonical" href="https://x402-validator-tools.onrender.com/vs-x402-doctor">
 <meta property="og:title" content="x402 Validator vs x402 Doctor">
 <meta property="og:description" content="Quick checker vs strict-v2 conformance engine. What each one actually runs, verified against both products' own docs.">
@@ -1842,7 +1854,7 @@ async def validate(
 
     started = time.monotonic()
     try:
-        report = await _run_audit(req.url, req.mode)
+        report, probe = await _run_audit(req.url, req.mode)
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
@@ -1856,6 +1868,13 @@ async def validate(
         source="api",
     )
     checks = _flatten_checks(report)
+    # Append the directory cold probe, matching the _flatten_checks entry shape.
+    checks.append(CheckResultItem(
+        name=probe["check_name"],
+        status=probe["status"],
+        message=probe["message"],
+        details=probe["details"],
+    ))
     ai_advice = ai_summary = None
     ai_args = dict(
         url=report.target_url,
@@ -1912,7 +1931,7 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         )
     started = time.monotonic()
     try:
-        report = await _run_audit(req.url, req.mode)
+        report, probe = await _run_audit(req.url, req.mode)
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
@@ -1934,6 +1953,13 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         }
         for c in report.checks
     ]
+    # Append the directory cold probe, matching the entry shape above.
+    checks.append({
+        "name": probe["check_name"],
+        "status": probe["status"],
+        "message": probe["message"],
+        "details": probe["details"],
+    })
     return {
         "url": report.target_url,
         "overall": report.overall_status,

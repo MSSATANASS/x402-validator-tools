@@ -10,6 +10,24 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def _no_real_cold_probe():
+    """Keep the directory cold probe hermetic: no real network in tests."""
+
+    async def fake_probe(url, timeout=10.0, **_kw):
+        return {
+            "check_name": "directory_cold_probe",
+            "status": "PASS",
+            "message": "ok",
+            "details": {"method": "POST", "status_code": 402},
+        }
+
+    with patch(
+        "api_server.visibility.check_directory_cold_probe", side_effect=fake_probe
+    ):
+        yield
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     """Reload the app module for each test and point KeyStore at tmp."""
@@ -178,6 +196,13 @@ class TestLanding:
         assert 'href="/health">Status</a>' in r.text
         # Pricing headline no longer repeats the "at the speed of thought" tic
         assert "at the speed of thought" not in r.text
+        # Check count reflects the engine's 7 standard checks + the
+        # directory cold probe, and the new check is listed by name.
+        assert "We run eight checks against it" in r.text
+        assert "all eight checks" in r.text
+        assert "8 checks" in r.text
+        assert "directory_cold_probe" in r.text
+        assert "seven checks" not in r.text
 
     def test_vs_doctor_page(self, client: TestClient) -> None:
         r = client.get("/vs-x402-doctor")

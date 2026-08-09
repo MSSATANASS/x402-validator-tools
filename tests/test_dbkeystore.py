@@ -151,7 +151,14 @@ class TestValidateQuotaWiring:
             checks = [_Check()]
 
         async def fake_run_audit(url, mode, timeout=10.0):
-            return _Report()
+            # _run_audit returns (report, probe) since the directory cold
+            # probe landed.
+            return _Report(), {
+                "check_name": "directory_cold_probe",
+                "status": "PASS",
+                "message": "ok",
+                "details": {"method": "POST", "status_code": 402},
+            }
 
         client = TestClient(app_mod.app)
         with patch.object(app_mod, "_run_audit", fake_run_audit):

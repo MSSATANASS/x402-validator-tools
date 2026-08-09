@@ -77,8 +77,17 @@ def _mock_post(content="Fix the CAIP-2 header."):
     return fake_post, captured
 
 
+_PROBE = {
+    "check_name": "directory_cold_probe",
+    "status": "PASS",
+    "message": "ok",
+    "details": {"method": "POST", "status_code": 402},
+}
+
+
 async def _fake_audit(url, mode, timeout=10.0):
-    return _fake_report()
+    # _run_audit returns (report, probe) since the directory cold probe landed.
+    return _fake_report(), _PROBE
 
 
 class TestAdvisorUnit:
