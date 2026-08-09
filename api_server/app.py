@@ -29,17 +29,32 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from api_server import ai_advisor, auth, auth_pages, ratelimit, stripe_integration
+from api_server.audit_cache import (
+    cache_enabled,
+    get_audit_cache,
+    make_cache_key,
+    should_skip_cache_request,
+    should_skip_cache_store,
+)
 from api_server.keystore import get_store
 from api_server.logging_config import (
     RequestContextMiddleware,
     get_logger,
     setup_logging,
+)
+from api_server.metrics import (
+    PrometheusMiddleware,
+    metrics_enabled,
+    metrics_response,
+    record_audit_metrics,
+    record_cache,
+    record_rate_limit,
 )
 from api_server.models import (
     PLANS,
@@ -51,6 +66,7 @@ from api_server.models import (
     ValidateRequest,
     ValidateResponse,
 )
+from api_server.telemetry import setup_telemetry, start_audit_span
 from api_server.pages import (
     PAGE_CSS as _PAGE_CSS,
 )
@@ -92,6 +108,12 @@ Invalid payloads return FastAPI's standard `{"detail":[…]}` 422 envelope.
 
 ## Correlation
 Every response includes `X-Request-Id`. Send the same header to continue a trace.
+
+## Metrics & tracing
+- `GET /metrics` — Prometheus (disable with `METRICS_ENABLED=0`)
+- OpenTelemetry — enable with `OTEL_ENABLED=1` or `OTEL_EXPORTER_OTLP_ENDPOINT`
+- Per-key rate limits — `API_KEY_RATE_LIMIT_ENABLED` (default on)
+- Audit cache — `AUDIT_CACHE_TTL_SECONDS` (default 0 = off)
 """.strip()
 
 app = FastAPI(
@@ -101,6 +123,9 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestContextMiddleware)
+if metrics_enabled():
+    app.add_middleware(PrometheusMiddleware)
+setup_telemetry(app)
 
 # Static assets (logo, favicon, og-image) live alongside this package.
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -2069,6 +2094,14 @@ async def open_metrics() -> HTMLResponse:
 # ---------------------------------------------------------------------------
 
 
+@app.get("/metrics", include_in_schema=False)
+async def prometheus_metrics():
+    """Prometheus scrape endpoint."""
+    if not metrics_enabled():
+        raise HTTPException(404, "Metrics disabled")
+    return metrics_response()
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
@@ -2082,6 +2115,7 @@ async def plans() -> list[Plan]:
 @app.post("/validate", response_model=ValidateResponse)
 async def validate(
     req: ValidateRequest,
+    response: Response,
     api_key: str = Depends(_require_api_key),
 ) -> ValidateResponse:
     store = get_store()
@@ -2098,22 +2132,40 @@ async def validate(
             f"{plan_id}). Upgrade: /create-checkout-session?plan_id=pro",
         )
 
-    started = time.monotonic()
-    try:
-        report, probe, batch = await _run_audit(req.url, req.mode)
-    except Exception as e:
-        log.warning(
-            "audit_failed",
-            extra={
-                "event": "audit.failed",
-                "url": req.url,
-                "mode": req.mode,
-                "source": "api",
-                "plan_id": plan_id,
-                "error_type": type(e).__name__,
-            },
+    # Per-key burst rate limit (hourly window by plan). Independent of monthly quota.
+    if not ratelimit.allow_api_key(api_key, plan_id):
+        record_rate_limit("api_key")
+        raise HTTPException(
+            429,
+            f"API key rate limit exceeded for plan {plan_id!r}. "
+            f"Retry later or upgrade: /create-checkout-session?plan_id=pro",
         )
-        raise HTTPException(502, f"Audit failed: {e}")
+
+    skip_req = should_skip_cache_request(advise=req.advise, explain=req.explain)
+    cache_key = make_cache_key(req.url, req.mode)
+    if cache_enabled() and not skip_req:
+        cached = get_audit_cache().get(cache_key)
+        if cached is not None:
+            response.headers["X-Audit-Cache"] = "HIT"
+            return ValidateResponse(**cached)
+
+    started = time.monotonic()
+    with start_audit_span("x402.audit.validate"):
+        try:
+            report, probe, batch = await _run_audit(req.url, req.mode)
+        except Exception as e:
+            log.warning(
+                "audit_failed",
+                extra={
+                    "event": "audit.failed",
+                    "url": req.url,
+                    "mode": req.mode,
+                    "source": "api",
+                    "plan_id": plan_id,
+                    "error_type": type(e).__name__,
+                },
+            )
+            raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
     checks = _flatten_checks(report)
     # Append tools-side checks, matching the _flatten_checks entry shape.
@@ -2145,6 +2197,12 @@ async def validate(
             "checks_failed": failed,
         },
     )
+    record_audit_metrics(
+        source="api",
+        overall=overall,
+        mode=req.mode,
+        latency_seconds=elapsed_ms / 1000.0,
+    )
     store.record_audit(
         url=report.target_url,
         mode=req.mode,
@@ -2170,7 +2228,7 @@ async def validate(
         ai_advice = await ai_advisor.advise(**ai_args)
     elif req.explain:
         ai_summary = await ai_advisor.summarize(**ai_args)
-    return ValidateResponse(
+    resp = ValidateResponse(
         url=report.target_url,
         overall=overall,
         summary=summary,
@@ -2180,6 +2238,14 @@ async def validate(
         ai_advice=ai_advice,
         ai_summary=ai_summary,
     )
+    if cache_enabled():
+        if skip_req or should_skip_cache_store(checks):
+            record_cache("skip")
+            response.headers["X-Audit-Cache"] = "SKIP"
+        else:
+            get_audit_cache().set(cache_key, resp.model_dump())
+            response.headers["X-Audit-Cache"] = "STORE"
+    return resp
 
 
 _DEFAULT_PUBLIC_DAILY_LIMIT = 3
@@ -2201,6 +2267,7 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
     )
     limiter = ratelimit.get_limiter()
     if not limiter.allow(client_ip, limit):
+        record_rate_limit("ip")
         raise HTTPException(
             status_code=429,
             detail=(
@@ -2208,22 +2275,34 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
                 f"with Pro: /create-checkout-session?plan_id=pro"
             ),
         )
+
+    skip_req = should_skip_cache_request(advise=req.advise, explain=req.explain)
+    cache_key = make_cache_key(req.url, req.mode)
+    if cache_enabled() and not skip_req:
+        cached = get_audit_cache().get(cache_key)
+        if cached is not None:
+            body = dict(cached)
+            body["remaining_today"] = limiter.remaining(client_ip, limit)
+            body["cache"] = "HIT"
+            return body
+
     started = time.monotonic()
-    try:
-        report, probe, batch = await _run_audit(req.url, req.mode)
-    except Exception as e:
-        log.warning(
-            "audit_failed",
-            extra={
-                "event": "audit.failed",
-                "url": req.url,
-                "mode": req.mode,
-                "source": "public",
-                "client_ip": client_ip,
-                "error_type": type(e).__name__,
-            },
-        )
-        raise HTTPException(502, f"Audit failed: {e}")
+    with start_audit_span("x402.audit.public"):
+        try:
+            report, probe, batch = await _run_audit(req.url, req.mode)
+        except Exception as e:
+            log.warning(
+                "audit_failed",
+                extra={
+                    "event": "audit.failed",
+                    "url": req.url,
+                    "mode": req.mode,
+                    "source": "public",
+                    "client_ip": client_ip,
+                    "error_type": type(e).__name__,
+                },
+            )
+            raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
     checks = [
         {
@@ -2263,6 +2342,12 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
             "checks_failed": failed,
         },
     )
+    record_audit_metrics(
+        source="public",
+        overall=overall,
+        mode=req.mode,
+        latency_seconds=elapsed_ms / 1000.0,
+    )
     get_store().record_audit(
         url=report.target_url,
         mode=req.mode,
@@ -2272,7 +2357,7 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         caller_plan=None,
         source="public",
     )
-    return {
+    body = {
         "url": report.target_url,
         "overall": overall,
         "summary": summary,
@@ -2281,6 +2366,15 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         "timestamp": report.timestamp.isoformat(),
         "remaining_today": limiter.remaining(client_ip, limit),
     }
+    if cache_enabled() and not skip_req and not should_skip_cache_store(checks):
+        # Store without remaining_today (IP-specific)
+        to_store = {k: v for k, v in body.items() if k != "remaining_today"}
+        get_audit_cache().set(cache_key, to_store)
+        body["cache"] = "STORE"
+    elif cache_enabled():
+        record_cache("skip")
+        body["cache"] = "SKIP"
+    return body
 
 
 @app.post("/create-checkout-session", response_model=CheckoutResponse)

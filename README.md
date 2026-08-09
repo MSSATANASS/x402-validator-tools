@@ -75,6 +75,15 @@ The API emits **JSON lines** (JSONL) in production / when `LOG_FORMAT=json`:
 Each HTTP response includes **`X-Request-Id`** (echoes your header if you send one).  
 Access lines use `event=http.access`; audits use `event=audit.completed` / `audit.failed` with `url`, `mode`, `overall`, `latency_ms`, `checks_total`, `checks_failed`.
 
+### Prometheus, rate limits, cache, OpenTelemetry
+
+| Feature | Env | Notes |
+|---------|-----|--------|
+| **Metrics** | `METRICS_ENABLED=1` (default) | `GET /metrics` — HTTP latency/status, audits PASS/FAIL, rate-limit & cache counters |
+| **Per-key rate limit** | `API_KEY_RATE_LIMIT_ENABLED=1` | Hourly burst caps by plan (`RATE_LIMIT_KEY_FREE=30`, `_PRO=120`, `_ENTERPRISE=600`; window `RATE_LIMIT_KEY_WINDOW_SECONDS=3600`) |
+| **Audit cache** | `AUDIT_CACHE_TTL_SECONDS=0` (off) | In-process TTL cache by `url\|mode`. Skips AI (`advise`/`explain`) and live `batch-settlement` offers. Header `X-Audit-Cache: HIT\|STORE\|SKIP` |
+| **OpenTelemetry** | `OTEL_ENABLED=1` or `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional: `pip install -e ".[otel]"` |
+
 ## Docker
 
 ```bash

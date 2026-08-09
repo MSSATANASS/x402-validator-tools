@@ -1,17 +1,28 @@
-"""In-memory IP rate limiter for public-facing endpoints.
+"""In-memory rate limiters for public and authenticated endpoints.
 
-Sliding 24-hour window keyed by client IP. Good enough for a single-replica
-deployment; for multi-replica swap for Redis / Memcached.
+- IP limiter: sliding window for demo / signup / login (24h default).
+- API-key limiter: per-key hourly caps by plan (opt-in via env).
+
+Single-replica only; for multi-replica swap for Redis / Memcached.
 """
 
 from __future__ import annotations
 
+import os
 import threading
 import time as _time
 from collections import defaultdict, deque
 from collections.abc import Callable
 
 _WINDOW_SECONDS = 86_400  # 24h sliding window
+
+# Per-key defaults (requests per window). Override with RATE_LIMIT_* env.
+_DEFAULT_KEY_WINDOW = 3_600  # 1 hour
+_DEFAULT_KEY_LIMITS: dict[str, int] = {
+    "free": 30,
+    "pro": 120,
+    "enterprise": 600,
+}
 
 
 class IpRateLimiter:
@@ -64,13 +75,60 @@ class IpRateLimiter:
 
 
 _limiter = IpRateLimiter()
+_key_limiter = IpRateLimiter(
+    window_seconds=int(
+        os.environ.get("RATE_LIMIT_KEY_WINDOW_SECONDS", str(_DEFAULT_KEY_WINDOW))
+    )
+)
 
 
 def get_limiter() -> IpRateLimiter:
-    """Return the module-level default IpRateLimiter."""
+    """Return the module-level default IpRateLimiter (IP / public)."""
     return _limiter
+
+
+def get_key_limiter() -> IpRateLimiter:
+    """Return the per-API-key rate limiter."""
+    return _key_limiter
 
 
 def reset_limiter() -> None:
     """Reset all buckets (used by tests)."""
     _limiter.reset()
+    _key_limiter.reset()
+
+
+def key_rate_limit_enabled() -> bool:
+    return os.environ.get("API_KEY_RATE_LIMIT_ENABLED", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+
+
+def key_limit_for_plan(plan_id: str | None) -> int:
+    """Max requests per window for an API key on ``plan_id``."""
+    pid = (plan_id or "free").lower()
+    env_key = f"RATE_LIMIT_KEY_{pid.upper()}"
+    raw = os.environ.get(env_key, "").strip()
+    if raw.isdigit():
+        return max(1, int(raw))
+    return _DEFAULT_KEY_LIMITS.get(pid, _DEFAULT_KEY_LIMITS["free"])
+
+
+def allow_api_key(api_key: str, plan_id: str | None) -> bool:
+    """True if the key is within its plan's rate limit (or limiting is off)."""
+    if not key_rate_limit_enabled():
+        return True
+    limit = key_limit_for_plan(plan_id)
+    # Hash-ish key prefix to avoid storing full secrets in memory maps longer than needed
+    bucket_key = f"key:{(api_key or '')[:24]}"
+    return _key_limiter.allow(bucket_key, limit)
+
+
+def remaining_api_key(api_key: str, plan_id: str | None) -> int:
+    if not key_rate_limit_enabled():
+        return key_limit_for_plan(plan_id)
+    bucket_key = f"key:{(api_key or '')[:24]}"
+    return _key_limiter.remaining(bucket_key, key_limit_for_plan(plan_id))
