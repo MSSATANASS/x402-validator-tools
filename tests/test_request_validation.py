@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import sys
 from datetime import datetime, timezone
 from unittest.mock import patch
 
