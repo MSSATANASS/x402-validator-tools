@@ -117,6 +117,40 @@ def _flatten_checks(report) -> list[CheckResultItem]:
     ]
 
 
+# Match x402_conformance_suite._engine.auditor priority so tools-side checks
+# (cold probe, later batch-settlement) affect overall the same way as engine checks.
+_STATUS_PRIORITY: dict[str, int] = {
+    "PASS": 0,
+    "ERROR": 1,
+    "FAIL": 2,
+    "CRITICAL_FAIL": 3,
+}
+
+
+def _status_of(check) -> str:
+    """Read status from a CheckResultItem or a plain dict entry."""
+    if isinstance(check, dict):
+        return str(check.get("status") or "ERROR")
+    return str(getattr(check, "status", None) or "ERROR")
+
+
+def _aggregate_check_results(checks: list) -> tuple[str, str]:
+    """Recompute overall + summary after tools-side checks are appended.
+
+    The engine's ``report.summary`` / ``report.overall_status`` only cover the
+    suite checks. We append ``directory_cold_probe`` (and will append more)
+    after the fact — without this recompute the API can report ``5/7`` while
+    returning 8 entries, or overall PASS while a tools check FAILed.
+    """
+    if not checks:
+        return "PASS", "0/0 checks passed. Overall: PASS"
+    statuses = [_status_of(c) for c in checks]
+    overall = max(statuses, key=lambda s: _STATUS_PRIORITY.get(s, 0))
+    passed = sum(1 for s in statuses if s == "PASS")
+    total = len(statuses)
+    return overall, f"{passed}/{total} checks passed. Overall: {overall}"
+
+
 def _require_admin(x_admin_secret: str = Header(..., alias="X-Admin-Secret")) -> None:
     """FastAPI dependency: 401 unless ``ADMIN_SECRET`` env var matches the header."""
     expected = os.environ.get("ADMIN_SECRET", "")
@@ -1893,15 +1927,6 @@ async def validate(
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
-    store.record_audit(
-        url=report.target_url,
-        mode=req.mode,
-        overall=report.overall_status,
-        latency_ms=elapsed_ms,
-        caller_key=api_key,
-        caller_plan=plan_id,
-        source="api",
-    )
     checks = _flatten_checks(report)
     # Append the directory cold probe, matching the _flatten_checks entry shape.
     checks.append(CheckResultItem(
@@ -1910,11 +1935,21 @@ async def validate(
         message=probe["message"],
         details=probe["details"],
     ))
+    overall, summary = _aggregate_check_results(checks)
+    store.record_audit(
+        url=report.target_url,
+        mode=req.mode,
+        overall=overall,
+        latency_ms=elapsed_ms,
+        caller_key=api_key,
+        caller_plan=plan_id,
+        source="api",
+    )
     ai_advice = ai_summary = None
     ai_args = dict(
         url=report.target_url,
-        overall=report.overall_status,
-        summary=report.summary,
+        overall=overall,
+        summary=summary,
         checks=checks,
     )
     if req.advise and req.explain:
@@ -1928,8 +1963,8 @@ async def validate(
         ai_summary = await ai_advisor.summarize(**ai_args)
     return ValidateResponse(
         url=report.target_url,
-        overall=report.overall_status,
-        summary=report.summary,
+        overall=overall,
+        summary=summary,
         checks=checks,
         latency_ms=elapsed_ms,
         timestamp=report.timestamp.isoformat(),
@@ -1970,15 +2005,6 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
     except Exception as e:
         raise HTTPException(502, f"Audit failed: {e}")
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
-    get_store().record_audit(
-        url=report.target_url,
-        mode=req.mode,
-        overall=report.overall_status,
-        latency_ms=elapsed_ms,
-        caller_key=None,
-        caller_plan=None,
-        source="public",
-    )
     checks = [
         {
             "name": c.check_name,
@@ -1995,10 +2021,20 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
         "message": probe["message"],
         "details": probe["details"],
     })
+    overall, summary = _aggregate_check_results(checks)
+    get_store().record_audit(
+        url=report.target_url,
+        mode=req.mode,
+        overall=overall,
+        latency_ms=elapsed_ms,
+        caller_key=None,
+        caller_plan=None,
+        source="public",
+    )
     return {
         "url": report.target_url,
-        "overall": report.overall_status,
-        "summary": report.summary,
+        "overall": overall,
+        "summary": summary,
         "checks": checks,
         "latency_ms": elapsed_ms,
         "timestamp": report.timestamp.isoformat(),

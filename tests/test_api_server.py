@@ -703,6 +703,53 @@ class TestSuccessPageRender:
         assert token in r.text
 
 
+class TestAggregateCheckResults:
+    """overall/summary must include tools-side checks (cold probe, etc.)."""
+
+    def test_empty_is_pass(self) -> None:
+        from api_server.app import _aggregate_check_results
+
+        overall, summary = _aggregate_check_results([])
+        assert overall == "PASS"
+        assert summary == "0/0 checks passed. Overall: PASS"
+
+    def test_counts_engine_plus_probe(self) -> None:
+        from api_server.app import _aggregate_check_results
+
+        overall, summary = _aggregate_check_results(
+            [
+                {"status": "PASS"},
+                {"status": "PASS"},
+                {"status": "FAIL"},
+            ]
+        )
+        assert overall == "FAIL"
+        assert summary == "2/3 checks passed. Overall: FAIL"
+
+    def test_probe_fail_downgrades_engine_pass(self) -> None:
+        from api_server.app import CheckResultItem, _aggregate_check_results
+
+        overall, summary = _aggregate_check_results(
+            [
+                CheckResultItem(name="manifest_discovery", status="PASS", message="ok"),
+                CheckResultItem(
+                    name="directory_cold_probe", status="FAIL", message="405"
+                ),
+            ]
+        )
+        assert overall == "FAIL"
+        assert "1/2" in summary
+        assert "FAIL" in summary
+
+    def test_priority_critical_over_fail(self) -> None:
+        from api_server.app import _aggregate_check_results
+
+        overall, _ = _aggregate_check_results(
+            [{"status": "FAIL"}, {"status": "CRITICAL_FAIL"}, {"status": "ERROR"}]
+        )
+        assert overall == "CRITICAL_FAIL"
+
+
 class TestAuditPublic:
     def _setup_limits(self, monkeypatch, limit: int) -> None:
         from api_server import ratelimit as rl_mod
@@ -724,9 +771,48 @@ class TestAuditPublic:
         assert r.status_code == 200
         body = r.json()
         assert body["overall"] == "PASS"
+        # Engine fake has 1 PASS check + cold-probe fixture PASS → 2/2, not engine's "4/4"
+        assert body["summary"] == "2/2 checks passed. Overall: PASS"
         assert body["remaining_today"] == 2  # default 3, one used
         assert isinstance(body["latency_ms"], (int, float))
         assert body["checks"][0]["name"] == "manifest_discovery"
+        assert body["checks"][-1]["name"] == "directory_cold_probe"
+
+    def test_summary_and_overall_include_failing_cold_probe(
+        self, client, monkeypatch
+    ) -> None:
+        """Regression: engine PASS must not hide a tools-side FAIL."""
+        from api_server import ratelimit as rl_mod
+
+        rl_mod.reset_limiter()
+
+        async def fake_run(url, mode, **_kw):
+            return _make_fake_audit_report()
+
+        async def fail_probe(url, timeout=10.0, **_kw):
+            return {
+                "check_name": "directory_cold_probe",
+                "status": "FAIL",
+                "message": "POST is not allowed (HTTP 405)",
+                "details": {"method": "POST", "status_code": 405},
+            }
+
+        with (
+            patch("x402_conformance_suite._engine.run_audit", side_effect=fake_run),
+            patch(
+                "api_server.visibility.check_directory_cold_probe",
+                side_effect=fail_probe,
+            ),
+        ):
+            r = client.post(
+                "/audit-public",
+                json={"url": "https://x402-merchant.example.com"},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["overall"] == "FAIL"
+        assert body["summary"] == "1/2 checks passed. Overall: FAIL"
+        assert any(c["name"] == "directory_cold_probe" for c in body["checks"])
 
     def test_rate_limit_returns_429_after_n_calls(self, client, monkeypatch) -> None:
         self._setup_limits(monkeypatch, limit=3)
