@@ -267,10 +267,22 @@ def _require_admin(x_admin_secret: str = Header(..., alias="X-Admin-Secret")) ->
 
 
 _LANDING_HTML = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* Apply theme before paint (default dark; respect stored preference). */
+(function () {
+  try {
+    var t = localStorage.getItem("x402-theme");
+    if (t !== "light" && t !== "dark") t = "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+})();
+</script>
 <title>x402 Validator — strict-v2 conformance audits · Manifest, CAIP-2, JSON, Bazaar</title>
 <meta name="description" content="Audit any x402 merchant endpoint for strict-v2 conformance in ~580 ms. Live demo, no signup · Free, Pro ($9/mo), Enterprise ($49/mo). Hosted by Gael L Chulim.">
 <link rel="canonical" href="https://x402-validator-tools.onrender.com/">
@@ -287,8 +299,8 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
 <meta name="twitter:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#FF4D00">
-<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0c0b10" id="themeColorMeta">
+<meta name="color-scheme" content="dark light">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -335,12 +347,44 @@ _LANDING_HTML = """<!DOCTYPE html>
 </script>
 <style>
 /* ============================================================
-   Design system: light Halo + brand orange (#FF4D00)
+   Design system: brand orange (#FF4D00) · ink #2B2644 · surface #F5F5F5
+   Default theme: dark. Light tokens preserved under data-theme="light".
    - Body:    Instrument Sans
    - Editorial: Instrument Serif (pre-headline)
-   - Brand:   #FF4D00 · Ink: #2B2644 · Surface: #F5F5F5
    ============================================================ */
-:root {
+:root,
+html[data-theme="dark"] {
+  --bg: #0c0b10;
+  --fg: #f4f2f0;
+  --fg-80: rgba(244,242,240,0.82);
+  --fg-70: rgba(244,242,240,0.72);
+  --fg-60: rgba(244,242,240,0.58);
+  --fg-50: rgba(244,242,240,0.48);
+  --accent: #f4f2f0;
+  --accent-hover: #FF8A4D;
+  --gradient-end: #2B2644;
+  --primary-text-dark: #0a0a0a;
+  --glass-border: rgba(255,255,255,0.10);
+  --ink: #2B2644;
+  --hero-grad: linear-gradient(to left, #2B2644, #FF4D00, #FF8A4D);
+  --brand: #FF4D00;
+  --brand-soft: #FF8A4D;
+  --brand-glow: rgba(255,77,0,0.35);
+  --surface: #16141c;
+  --surface-muted: rgba(255,255,255,0.04);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+  --shadow-md: 0 16px 48px -18px rgba(0,0,0,0.55);
+  --shadow-brand: 0 16px 48px -16px rgba(255,77,0,0.40);
+  --ring: 0 0 0 3px rgba(255,77,0,0.22);
+  --nav-bg: rgba(12,11,16,0.82);
+  --card-border: rgba(255,255,255,0.08);
+  --hero-bg: linear-gradient(165deg, #1a1528 0%, #121820 45%, #1a1410 100%);
+  color-scheme: dark;
+}
+/* Light tokens (also keeps #F5F5F5 / rgba(10,10,10,0.70) in source for tests) */
+html[data-theme="light"] {
   --bg: #F5F5F5;
   --fg: #0a0a0a;
   --fg-80: rgba(10,10,10,0.80);
@@ -359,26 +403,29 @@ _LANDING_HTML = """<!DOCTYPE html>
   --brand-glow: rgba(255,77,0,0.30);
   --surface: #ffffff;
   --surface-muted: rgba(10,10,10,0.035);
-  --radius-lg: 20px;
-  --radius-md: 14px;
   --shadow-sm: 0 1px 2px rgba(10,10,10,0.04);
   --shadow-md: 0 12px 40px -18px rgba(43,38,68,0.28);
   --shadow-brand: 0 16px 48px -16px rgba(255,77,0,0.35);
   --ring: 0 0 0 3px rgba(255,77,0,0.18);
+  --nav-bg: rgba(245,245,245,0.78);
+  --card-border: rgba(10,10,10,0.08);
+  --hero-bg: linear-gradient(165deg, #EFEDF7 0%, #EAF3EF 45%, #F3EDE8 100%);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-html, body { margin: 0; padding: 0; background: #F5F5F5; }
+html, body { margin: 0; padding: 0; background: var(--bg); }
 
 body {
   font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
   color: var(--fg);
-  background: #F5F5F5;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 ::selection { background: rgba(255,77,0,0.22); color: #0a0a0a; }
@@ -538,19 +585,42 @@ a { color: inherit; }
 .navbar {
   position: fixed; top: 0; left: 0; width: 100%;
   z-index: 50;
-  background: rgba(245,245,245,0.78);
+  background: var(--nav-bg);
   backdrop-filter: blur(18px) saturate(1.2);
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  border-bottom: 1px solid rgba(10,10,10,0.07);
+  border-bottom: 1px solid var(--glass-border);
   padding: 12px 24px;
   display: flex; align-items: center; justify-content: space-between;
   transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 .navbar.scrolled {
-  background: rgba(245,245,245,0.92);
-  border-bottom-color: rgba(10,10,10,0.10);
+  box-shadow: 0 8px 28px -18px rgba(0,0,0,0.45);
+}
+html[data-theme="light"] .navbar.scrolled {
   box-shadow: 0 8px 28px -18px rgba(43,38,68,0.35);
 }
+.theme-toggle {
+  appearance: none;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  color: var(--fg);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  border-color: rgba(255,77,0,0.45);
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.12);
+}
+.theme-toggle:active { transform: scale(0.96); }
+.theme-toggle svg { width: 18px; height: 18px; display: block; }
+html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
 .nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
 .nav-left .icon {
   width: 28px; height: 28px; display: block;
@@ -559,7 +629,7 @@ a { color: inherit; }
   box-shadow: 0 0 0 1px rgba(255,77,0,0.25);
 }
 .nav-brand-text {
-  color: #0a0a0a;
+  color: var(--fg);
   font-family: 'Instrument Sans', sans-serif;
   font-weight: 700;
   font-size: 15px;
@@ -605,7 +675,7 @@ a { color: inherit; }
 .book-demo:hover { color: var(--brand); }
 
 .btn-primary-pill {
-  background: var(--fg); color: var(--primary-text-dark);
+  background: var(--brand); color: #fff;
   padding: 10px 20px;
   border-radius: 999px;
   font-size: 14px; font-weight: 600;
@@ -615,7 +685,7 @@ a { color: inherit; }
   display: inline-block;
 }
 .btn-primary-pill:hover {
-  background: #141414;
+  background: #FF5C14;
   box-shadow: 0 0 22px var(--brand-glow);
   transform: translateY(-1px);
 }
@@ -632,12 +702,12 @@ a { color: inherit; }
   max-width: 88rem;
   margin: 72px auto 0;
   min-height: min(720px, calc(100vh - 120px));
-  background: linear-gradient(165deg, #EFEDF7 0%, #EAF3EF 45%, #F3EDE8 100%);
+  background: var(--hero-bg);
   color: var(--fg);
   overflow: hidden;
   border-radius: 28px;
   display: flex; flex-direction: column;
-  border: 1px solid rgba(10,10,10,0.06);
+  border: 1px solid var(--glass-border);
   box-shadow: 0 24px 80px -40px rgba(43,38,68,0.35);
 }
 @media (max-width: 640px) {
@@ -1527,6 +1597,94 @@ footer {
   .pricing-section { padding: 64px 20px; }
   .hero-content { padding-top: 100px; }
 }
+
+/* ============================================================
+   Dark theme surface overrides (hardcoded light card colors)
+   ============================================================ */
+html[data-theme="dark"] .plan,
+html[data-theme="dark"] .trust-grid,
+html[data-theme="dark"] .how-card,
+html[data-theme="dark"] .audit-form,
+html[data-theme="dark"] .audit-summary,
+html[data-theme="dark"] .check-row,
+html[data-theme="dark"] .faq-item,
+html[data-theme="dark"] .sample-chip,
+html[data-theme="dark"] .btn-copy-json,
+html[data-theme="dark"] .hcard.light,
+html[data-theme="dark"] .audit-results.receipt {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--card-border);
+}
+html[data-theme="dark"] .audit-form input[type="url"],
+html[data-theme="dark"] .audit-form select {
+  background: #1c1a24;
+  border-color: rgba(255,255,255,0.12);
+  color: var(--fg);
+}
+html[data-theme="dark"] .audit-form input[type="url"]::placeholder {
+  color: rgba(244,242,240,0.40);
+}
+html[data-theme="dark"] .plan-cta.solid {
+  background: var(--brand);
+  color: #fff;
+}
+html[data-theme="dark"] .plan-cta.outline {
+  color: var(--fg);
+  border-color: rgba(255,255,255,0.16);
+}
+html[data-theme="dark"] .hcard.ink {
+  background: linear-gradient(160deg, #1e1a2a 0%, #14121a 100%);
+}
+html[data-theme="dark"] .pricing-pill {
+  color: #FFB08A;
+  background: rgba(255,77,0,0.12);
+  border-color: rgba(255,77,0,0.30);
+}
+html[data-theme="dark"] .marquee-item,
+html[data-theme="dark"] .stack-item {
+  color: rgba(244,242,240,0.55);
+}
+html[data-theme="dark"] .stack-section {
+  border-color: rgba(255,255,255,0.08);
+}
+html[data-theme="dark"] footer {
+  border-color: rgba(255,255,255,0.08);
+  color: var(--fg-70);
+}
+html[data-theme="dark"] .foot-col a { color: var(--fg-80); }
+html[data-theme="dark"] .foot-bottom { border-color: rgba(255,255,255,0.08); }
+html[data-theme="dark"] .check-row .check-name { color: var(--fg); }
+html[data-theme="dark"] .check-row .check-msg { color: var(--fg-70); }
+html[data-theme="dark"] .faq-item summary { color: var(--fg); }
+html[data-theme="dark"] .faq-item p { color: var(--fg-70); }
+html[data-theme="dark"] .faq-item p code {
+  background: rgba(255,255,255,0.08);
+  color: var(--fg);
+}
+html[data-theme="dark"] .audit-loading {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+  color: var(--fg-70);
+}
+html[data-theme="dark"] .audit-summary.overall-PASS {
+  background: linear-gradient(180deg, rgba(16,185,129,0.12), var(--surface) 55%);
+}
+html[data-theme="dark"] .audit-summary.overall-FAIL,
+html[data-theme="dark"] .audit-summary.overall-CRITICAL_FAIL {
+  background: linear-gradient(180deg, rgba(239,68,68,0.12), var(--surface) 55%);
+}
+html[data-theme="dark"] .plan.featured {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255,77,0,0.14), transparent 45%),
+    var(--surface);
+}
+html[data-theme="dark"] ::selection {
+  background: rgba(255,77,0,0.35);
+  color: #fff;
+}
+/* keep light mesh rgba tokens in source for locked tests */
+html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mesh rules */ }
 </style>
 </head>
 <body>
@@ -1552,6 +1710,14 @@ footer {
   </div>
 
   <div class="nav-right">
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark mode" title="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"/>
+      </svg>
+    </button>
     __AUTH_NAV__
     <a class="book-demo" href="https://github.com/MSSATANASS/x402-validator-tools/issues">Contact</a>
     <a class="btn-primary-pill" href="/create-checkout-session?plan_id=pro">Get Started</a>
@@ -2088,6 +2254,28 @@ footer {
       };
       onScroll();
       window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    // Theme toggle (default dark; persist in localStorage)
+    function applyTheme(theme) {
+      var t = theme === 'light' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      try { localStorage.setItem('x402-theme', t); } catch (e) {}
+      var meta = document.getElementById('themeColorMeta');
+      if (meta) meta.setAttribute('content', t === 'dark' ? '#0c0b10' : '#FF4D00');
+      var btn = document.getElementById('themeToggle');
+      if (btn) {
+        btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+        btn.title = t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+      }
+    }
+    var themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', function () {
+        var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+      });
+      applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
     }
 
     // Progressive enhancement: if we ever land at "/" with ?url=&mode= in the
