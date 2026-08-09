@@ -1429,6 +1429,29 @@ footer {
   padding: 14px 14px 10px;
   position: relative;
 }
+.audit-results.receipt::before {
+  content: '';
+  position: absolute; top: 0; left: 16px; right: 16px; height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--hero-grad);
+  opacity: 0.85;
+}
+.audit-results.receipt.receipt-probing::before {
+  animation: receiptProbe 1.1s ease-in-out infinite;
+}
+.audit-results.receipt.receipt-rate::before {
+  background: linear-gradient(90deg, #F59E0B, #FF8A4D, #F59E0B);
+}
+.audit-results.receipt.receipt-error::before {
+  background: linear-gradient(90deg, #EF4444, #FF8A4D, #EF4444);
+}
+@keyframes receiptProbe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .audit-results.receipt.receipt-probing::before { animation: none; opacity: 0.85; }
+}
 .receipt-header {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; margin: 0 0 10px; flex-wrap: wrap;
@@ -1441,6 +1464,24 @@ footer {
   margin: 0;
   font-weight: 600;
 }
+.receipt-title .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand);
+  margin-right: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 3px rgba(255,77,0,0.18);
+}
+.receipt-probing .receipt-title .live-dot {
+  animation: livePulse 1s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .receipt-probing .receipt-title .live-dot { animation: none; }
+}
 .receipt-meta {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
@@ -1448,6 +1489,71 @@ footer {
   margin: 0 0 12px;
   line-height: 1.45;
   word-break: break-word;
+}
+.receipt-skeleton {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 4px 0 8px;
+}
+.receipt-skel-row {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  border-left: 3px solid rgba(255,77,0,0.35);
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 0%,
+    rgba(255,77,0,0.06) 45%,
+    var(--surface-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: skelShimmer 1.4s ease-in-out infinite;
+}
+.receipt-skel-row:nth-child(2) { border-left-color: rgba(16,185,129,0.35); animation-delay: 0.12s; }
+.receipt-skel-row:nth-child(3) { border-left-color: rgba(245,158,11,0.40); animation-delay: 0.24s; }
+.receipt-skel-row:nth-child(4) { animation-delay: 0.36s; opacity: 0.85; }
+.receipt-skel-row:nth-child(5) { animation-delay: 0.48s; opacity: 0.7; }
+@keyframes skelShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .receipt-skel-row { animation: none; }
+}
+.receipt-status-msg {
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--fg-80);
+}
+.receipt-status-msg strong {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: var(--fg-50);
+}
+.receipt-status-msg a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+.receipt-status-msg a:hover { text-decoration: underline; }
+.receipt-status-msg.is-error {
+  background: rgba(239,68,68,0.10);
+  border: 1px solid rgba(239,68,68,0.32);
+}
+.receipt-status-msg.is-rate {
+  background: rgba(245,158,11,0.10);
+  border: 1px solid rgba(245,158,11,0.35);
+}
+.receipt-status-msg.is-probe {
+  background: var(--surface-muted);
+  border: 1px solid var(--card-border);
+  display: flex; align-items: flex-start; gap: 12px;
 }
 .audit-results-toolbar {
   display: flex; justify-content: flex-end; gap: 8px;
@@ -1718,7 +1824,7 @@ html[data-theme="light"] .how-step { color: #B83A00; background: rgba(255,77,0,0
   line-height: 1.55;
 }
 .audit-rate { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.30); }
-.audit-rate a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.audit-rate a { color: var(--brand); text-decoration: none; font-weight: 600; }
 .audit-rate a:hover { text-decoration: underline; }
 .audit-loading {
   background: var(--surface-muted);
@@ -1730,12 +1836,15 @@ html[data-theme="light"] .how-step { color: #B83A00; background: rgba(255,77,0,0
   color: var(--fg-70);
   display: flex; align-items: center; gap: 10px;
 }
-.audit-loading .spinner {
+.audit-loading .spinner,
+.receipt-status-msg .spinner {
   width: 14px; height: 14px;
   border: 2px solid var(--divider);
   border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .audit-empty {
@@ -2316,20 +2425,39 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  function receiptShell(title, meta, bodyHtml, extraClass) {
+    return '<div class="receipt-header">' +
+        '<p class="receipt-title">' + title + '</p>' +
+      '</div>' +
+      (meta ? '<p class="receipt-meta">' + meta + '</p>' : '') +
+      bodyHtml;
+  }
+
   function renderResults(el, body, status) {
     if (!el) return;
     if (status === 429) {
-      el.className = 'audit-results';
-      el.innerHTML =
-        '<div class="audit-rate">Daily limit reached (3 per IP). ' +
-        'Get unlimited audits with Pro — ' +
-        '<a href="/create-checkout-session?plan_id=pro">buy Pro ($9/mo)</a>.</div>';
+      el.className = 'audit-results receipt receipt-rate';
+      el.innerHTML = receiptShell(
+        'SETTLEMENT RECEIPT',
+        'state=RATE_LIMITED · free_tier=3/IP/day',
+        '<div class="receipt-status-msg is-rate">' +
+          '<strong>channel closed · quota</strong>' +
+          'Daily limit reached (3 per IP). Get unlimited audits with Pro — ' +
+          '<a href="/create-checkout-session?plan_id=pro">buy Pro ($9/mo)</a>.' +
+        '</div>'
+      );
       return;
     }
     if (!body || body.detail) {
-      el.className = 'audit-results';
-      el.innerHTML =
-        '<div class="audit-error">' + esc(body && body.detail || 'Audit failed') + '</div>';
+      el.className = 'audit-results receipt receipt-error';
+      el.innerHTML = receiptShell(
+        'SETTLEMENT RECEIPT',
+        'state=ERROR · method=POST /audit-public',
+        '<div class="receipt-status-msg is-error">' +
+          '<strong>challenge failed</strong>' +
+          esc(body && body.detail || 'Audit failed') +
+        '</div>'
+      );
       return;
     }
     window.__x402LastAudit = body;
@@ -2415,7 +2543,15 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
       })
       .catch(function (e) {
         if (results) {
-          results.innerHTML = '<div class="audit-error">Network error: ' + esc(e && e.message || e) + '</div>';
+          results.className = 'audit-results receipt receipt-error';
+          results.innerHTML = receiptShell(
+            'SETTLEMENT RECEIPT',
+            'state=NETWORK_ERROR · method=POST /audit-public',
+            '<div class="receipt-status-msg is-error">' +
+              '<strong>no answer</strong>' +
+              'Network error: ' + esc(e && e.message || e) +
+            '</div>'
+          );
         }
       })
       .then(function () { if (submitBtn) submitBtn.disabled = false; });
@@ -2440,9 +2576,23 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
         if (submitBtn) submitBtn.disabled = true;
         if (results) {
           results.hidden = false;
-          results.className = 'audit-results';
-          results.innerHTML =
-            '<div class="audit-loading"><span class="spinner"></span>Auditing ' + esc(url) + '…</div>';
+          results.className = 'audit-results receipt receipt-probing';
+          results.innerHTML = receiptShell(
+            '<span class="live-dot" aria-hidden="true"></span>CHANNEL PROBE',
+            'state=PROBING · mode=' + esc(mode) + ' · target=' + esc(url),
+            '<div class="receipt-status-msg is-probe">' +
+              '<span class="spinner" aria-hidden="true"></span>' +
+              '<div><strong>awaiting 402 challenge</strong>' +
+              'Running nine checks against ' + esc(url) + '…</div>' +
+            '</div>' +
+            '<div class="receipt-skeleton" aria-hidden="true">' +
+              '<div class="receipt-skel-row"></div>' +
+              '<div class="receipt-skel-row"></div>' +
+              '<div class="receipt-skel-row"></div>' +
+              '<div class="receipt-skel-row"></div>' +
+              '<div class="receipt-skel-row"></div>' +
+            '</div>'
+          );
         }
         runAudit(url, mode, results, submitBtn);
       });
