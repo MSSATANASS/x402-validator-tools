@@ -204,12 +204,50 @@ integration tests for Postgres stay behind `TEST_DATABASE_URL`.
 
 ## Deployment
 
-This repo is **not auto-published**. Owner deploys:
+The hosted app is **not auto-published** from CI. Owner deploys:
 
 - **Render.com** Pro plan for `api_server` and `dashboard` (live at
-  `https://x402-validator-tools.onrender.com`).
+  `https://x402-validator-tools.onrender.com`), via Render's own git
+  auto-deploy (`render.yaml`).
 - The proxy is containerised via the included `Dockerfile` but is
   operator-deployed per-environment.
+
+### Container images & CI security (OIDC)
+
+CI authenticates with **OpenID Connect (OIDC)** and short-lived tokens only —
+there are **no long-lived credentials** (no registry password, no
+`CODECOV_TOKEN`) stored in the repo. Every workflow declares an explicit,
+least-privilege `permissions` block; jobs widen scope only to what they need.
+
+- **Image publishing** — on push to `main` and on `v*` tags, `docker.yml`
+  builds and pushes a multi-tag image to
+  `ghcr.io/mssatanass/x402-validator-tools`, authenticating with the
+  automatically provisioned, job-scoped `GITHUB_TOKEN` (`packages: write`).
+  Pull requests only build; they never touch the registry.
+- **Keyless signing** — each published image is signed with
+  [cosign](https://github.com/sigstore/cosign) using the GitHub OIDC token
+  (`id-token: write`). cosign exchanges that token with Sigstore's Fulcio CA
+  for an ephemeral certificate and records the signature in the public Rekor
+  transparency log. No signing keys are stored anywhere.
+
+  Verify a published image:
+
+  ```bash
+  cosign verify \
+    --certificate-identity-regexp "https://github.com/MSSATANASS/x402-validator-tools/.github/workflows/docker.yml@.*" \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+    ghcr.io/mssatanass/x402-validator-tools:main
+  ```
+
+- **Coverage upload** — `test.yml` uploads to Codecov via OIDC
+  (`use_oidc: true` + `id-token: write`), so no upload token is needed.
+
+`tests/test_ci_oidc.py` guards this posture: it fails if a workflow drops its
+explicit permissions, references any secret other than the built-in
+`GITHUB_TOKEN`, or stops signing images / using Codecov OIDC.
+
+See [`docs/ci-oidc.md`](docs/ci-oidc.md) for the full design and for how to
+extend OIDC to a cloud provider (AWS / GCP / Azure) if a deploy step is added.
 
 ## License
 

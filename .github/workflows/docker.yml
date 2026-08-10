@@ -9,22 +9,77 @@ on:
 
 env:
   IMAGE_NAME: x402-validator-tools
+  REGISTRY: ghcr.io
+
+# Least privilege: the workflow can only *read* the repository by default.
+# The build job widens its own scope to exactly what publishing + signing
+# need, and nothing more.
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout
+      packages: write # push the image to GHCR via the job-scoped GITHUB_TOKEN
+      id-token: write # mint an OIDC token for cosign keyless signing (no keys stored)
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image
+      # No stored registry password: authenticate to GHCR with the
+      # automatically provisioned, job-scoped GITHUB_TOKEN. Skipped on
+      # pull_request so fork PRs never touch the registry or a credential.
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # metadata-action lowercases the image path, so the uppercase owner
+          # (MSSATANASS) becomes a valid GHCR reference automatically.
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build image (push only on non-PR events)
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: false
-          tags: ${{ env.IMAGE_NAME }}:ci
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      # Keyless signing: cosign asks GitHub's OIDC provider for a short-lived
+      # identity token (the reason this job needs id-token: write), exchanges
+      # it with Sigstore's Fulcio CA for an ephemeral signing certificate,
+      # signs the image digest, and records the signature in the public Rekor
+      # transparency log. No private keys or long-lived secrets are involved.
+      - name: Sign image (keyless OIDC)
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          IMAGE="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+          cosign sign --yes "${IMAGE}@${DIGEST}"

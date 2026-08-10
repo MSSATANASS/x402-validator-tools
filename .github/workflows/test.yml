@@ -6,10 +6,19 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege at the workflow level: read-only access to the source.
+# The pytest job widens its own scope to mint an OIDC token so Codecov can
+# authenticate without a stored CODECOV_TOKEN secret.
+permissions:
+  contents: read
+
 jobs:
   pytest:
     name: pytest (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC token for tokenless Codecov upload
     strategy:
       fail-fast: false
       matrix:
@@ -41,8 +50,11 @@ jobs:
           x402-api --help || true
           x402-dashboard --help || true
 
+      # Tokenless upload: codecov-action requests the GitHub OIDC token (hence
+      # id-token: write above) instead of reading a long-lived CODECOV_TOKEN.
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
+          use_oidc: true
           files: ./coverage.xml
           fail_ci_if_error: false
