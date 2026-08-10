@@ -91,11 +91,13 @@ _OPENAPI_DESCRIPTION = """
 Audit x402 merchant endpoints for strict-v2 conformance.
 
 ## Authentication
-- `POST /validate` requires header `X-API-Key`.
-- Admin routes require `X-Admin-Secret`.
+- `POST /validate` requires header `X-API-Key` (Stripe checkout or admin mint).
+- This API is **not** an x402 paywall merchant: free discovery routes declare
+  `security: []`; the paid audit path is API-key identity, not HTTP 402 settlement.
+- Operator admin/webhook routes are omitted from the public OpenAPI document.
 
 ## Validation errors (HTTP 422)
-JSON bodies for audit and admin key issuance are validated with Pydantic:
+JSON bodies for audit are validated with Pydantic:
 
 | Field | Rule |
 |-------|------|
@@ -116,10 +118,36 @@ Every response includes `X-Request-Id`. Send the same header to continue a trace
 - Audit cache — `AUDIT_CACHE_TTL_SECONDS` (default 0 = off)
 """.strip()
 
+# x402scan / AgentCash discovery: contact.email + agent guidance (info.x-guidance).
+_OPENAPI_CONTACT_EMAIL = os.environ.get(
+    "OPENAPI_CONTACT_EMAIL", "mss_ali@users.noreply.github.com"
+)
+_OPENAPI_CONTACT = {
+    "name": "Gael L Chulim / MSSATANASS",
+    "email": _OPENAPI_CONTACT_EMAIL,
+    "url": "https://github.com/MSSATANASS/x402-validator-tools/issues",
+}
+_OPENAPI_X_GUIDANCE = """
+How to use this API as an agent:
+
+1. Free health: GET /health → { "status": "ok" }.
+2. Catalog plans: GET /plans → subscription tiers (free / pro / enterprise).
+3. Try without a key: POST /audit-public with JSON
+   { "url": "https://merchant.example/pay", "mode": "standard" }.
+   Rate-limited per IP (default 3/day). Returns nine-check audit JSON + remaining_today.
+4. Production audits: obtain an API key via POST /create-checkout-session?plan_id=pro
+   (Stripe Checkout), then POST /validate with header X-API-Key and the same JSON body.
+5. Modes: "standard" audits one URL; "marketplace" walks catalog products.
+
+This service *audits* third-party x402 merchants. It does not charge callers via
+x402 HTTP 402 payment challenges — billing is Stripe + API keys.
+""".strip()
+
 app = FastAPI(
     title="x402 Validator API",
     version="0.3.0",
     description=_OPENAPI_DESCRIPTION,
+    contact=_OPENAPI_CONTACT,
 )
 
 app.add_middleware(RequestContextMiddleware)
@@ -3080,17 +3108,42 @@ async def prometheus_metrics():
     return metrics_response()
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    summary="Health",
+    description="Liveness probe. Free; no auth.",
+    openapi_extra={"security": []},
+    responses={200: {"description": "Service is up"}},
+)
 async def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/plans")
+@app.get(
+    "/plans",
+    summary="List subscription plans",
+    description="Public plan catalog (free / pro / enterprise). Free; no auth.",
+    openapi_extra={"security": []},
+)
 async def plans() -> list[Plan]:
     return list(PLANS.values())
 
 
-@app.post("/validate", response_model=ValidateResponse)
+@app.post(
+    "/validate",
+    response_model=ValidateResponse,
+    summary="Audit a merchant URL (API key)",
+    description=(
+        "Run nine strict-v2 conformance checks against a merchant URL. "
+        "Requires X-API-Key. Not an x402 paywall — identity is API-key based."
+    ),
+    openapi_extra={"security": [{"ApiKeyAuth": []}]},
+    responses={
+        401: {"description": "Missing or unknown API key"},
+        429: {"description": "Quota or rate limit exceeded"},
+        502: {"description": "Upstream audit engine failure"},
+    },
+)
 async def validate(
     req: ValidateRequest,
     response: Response,
@@ -3229,7 +3282,19 @@ async def validate(
 _DEFAULT_PUBLIC_DAILY_LIMIT = 3
 
 
-@app.post("/audit-public")
+@app.post(
+    "/audit-public",
+    summary="Public demo audit (no API key)",
+    description=(
+        "Same nine checks as /validate without an API key. Rate-limited per IP. "
+        "Free discovery route for agents and the landing-page demo."
+    ),
+    openapi_extra={"security": []},
+    responses={
+        429: {"description": "Daily IP limit reached"},
+        502: {"description": "Upstream audit engine failure"},
+    },
+)
 async def audit_public(req: ValidateRequest, request: Request) -> dict:
     """Public, unauthenticated audit endpoint for the landing-page demo.
 
@@ -3355,9 +3420,24 @@ async def audit_public(req: ValidateRequest, request: Request) -> dict:
     return body
 
 
-@app.post("/create-checkout-session", response_model=CheckoutResponse)
+@app.post(
+    "/create-checkout-session",
+    response_model=CheckoutResponse,
+    summary="Create Stripe Checkout session",
+    description=(
+        "Start Stripe Checkout for a plan. Required query: plan_id "
+        "(free | pro | enterprise). Free; no auth. Returns checkout_url or a note."
+    ),
+    openapi_extra={"security": []},
+)
 async def create_checkout_session(
-    plan_id: Annotated[PlanId, Query(description="free | pro | enterprise")],
+    plan_id: Annotated[
+        PlanId,
+        Query(
+            description="free | pro | enterprise",
+            examples=["pro"],
+        ),
+    ],
 ) -> CheckoutResponse:
     # plan_id is constrained by PlanId (422 on unknown); PLANS lookup is belt-and-suspenders.
     if plan_id not in PLANS:
@@ -3407,7 +3487,7 @@ async def create_checkout_session_link(
     raise HTTPException(503, "Stripe is not configured (set STRIPE_SECRET_KEY)")
 
 
-@app.post("/stripe-webhook")
+@app.post("/stripe-webhook", include_in_schema=False)
 async def stripe_webhook(
     request: Request,
     stripe_signature: str = Header(..., alias="stripe-signature"),
@@ -3508,7 +3588,12 @@ class IssueKeyResponse(BaseModel):
     issued_at: str
 
 
-@app.post("/admin/keys", response_model=IssueKeyResponse, dependencies=[Depends(_require_admin)])
+@app.post(
+    "/admin/keys",
+    response_model=IssueKeyResponse,
+    dependencies=[Depends(_require_admin)],
+    include_in_schema=False,
+)
 async def admin_issue_key(req: IssueKeyRequest) -> IssueKeyResponse:
     # plan_id already constrained to PlanId by Pydantic (422 on unknown).
     key = get_store().issue(req.plan_id)
@@ -3524,12 +3609,21 @@ class KeyListResponse(BaseModel):
     keys: dict[str, str]
 
 
-@app.get("/admin/keys", response_model=KeyListResponse, dependencies=[Depends(_require_admin)])
+@app.get(
+    "/admin/keys",
+    response_model=KeyListResponse,
+    dependencies=[Depends(_require_admin)],
+    include_in_schema=False,
+)
 async def admin_list_keys() -> KeyListResponse:
     return KeyListResponse(count=len(get_store().all()), keys=get_store().all())
 
 
-@app.delete("/admin/keys/{key}", dependencies=[Depends(_require_admin)])
+@app.delete(
+    "/admin/keys/{key}",
+    dependencies=[Depends(_require_admin)],
+    include_in_schema=False,
+)
 async def admin_revoke_key(key: str) -> dict:
     if not get_store().revoke(key):
         raise HTTPException(404, "Key not found")
@@ -3541,6 +3635,90 @@ async def admin_revoke_key(key: str) -> dict:
 # ---------------------------------------------------------------------------
 
 app.include_router(auth_pages.router)
+
+
+# ---------------------------------------------------------------------------
+# OpenAPI customization for x402scan / AgentCash discovery
+# ---------------------------------------------------------------------------
+
+
+def custom_openapi() -> dict:
+    """Publish a discovery-friendly OpenAPI document.
+
+    - ``info.contact.email`` for ownership verification (x402scan / Poncho)
+    - ``info.x-guidance`` agent how-to
+    - Free routes declare ``security: []`` so scanners do not expect HTTP 402
+    - ``/validate`` declares ``ApiKeyAuth`` (identity, not x402 payment)
+    - No ``x-payment-info`` — this API is not an x402 merchant paywall
+    """
+    if app.openapi_schema is not None:
+        return app.openapi_schema
+
+    from fastapi.openapi.utils import get_openapi
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        openapi_version=app.openapi_version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags,
+        servers=app.servers,
+        terms_of_service=getattr(app, "terms_of_service", None),
+        contact=app.contact,
+        license_info=getattr(app, "license_info", None),
+    )
+
+    info = schema.setdefault("info", {})
+    info["contact"] = {
+        "name": _OPENAPI_CONTACT["name"],
+        "email": _OPENAPI_CONTACT_EMAIL,
+        "url": _OPENAPI_CONTACT["url"],
+    }
+    info["x-guidance"] = _OPENAPI_X_GUIDANCE
+
+    components = schema.setdefault("components", {})
+    schemes = components.setdefault("securitySchemes", {})
+    schemes["ApiKeyAuth"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": (
+            "API key from Stripe checkout or admin mint. "
+            "Identity gate only — not an x402 payment proof."
+        ),
+    }
+
+    free_ops = {
+        ("/health", "get"),
+        ("/plans", "get"),
+        ("/audit-public", "post"),
+        ("/create-checkout-session", "post"),
+    }
+    apikey_ops = {("/validate", "post")}
+
+    for path, item in schema.get("paths", {}).items():
+        if not isinstance(item, dict):
+            continue
+        for method, op in item.items():
+            if method.startswith("x-") or not isinstance(op, dict):
+                continue
+            key = (path, method.lower())
+            # Never advertise x402 payment on this service.
+            op.pop("x-payment-info", None)
+            if key in free_ops:
+                op["security"] = []
+            elif key in apikey_ops:
+                op["security"] = [{"ApiKeyAuth": []}]
+            else:
+                # Any other public op: free (do not probe as paid x402).
+                op.setdefault("security", [])
+
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 # ---------------------------------------------------------------------------

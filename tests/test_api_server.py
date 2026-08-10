@@ -100,6 +100,48 @@ class TestHealth:
         assert r.json() == {"status": "ok"}
 
 
+class TestOpenApiDiscovery:
+    """x402scan / AgentCash discovery contract for /openapi.json."""
+
+    def test_contact_email_and_guidance(self, client: TestClient) -> None:
+        r = client.get("/openapi.json")
+        assert r.status_code == 200
+        body = r.json()
+        contact = body["info"]["contact"]
+        assert contact.get("email")
+        assert "@" in contact["email"]
+        assert body["info"].get("x-guidance")
+        assert "audit-public" in body["info"]["x-guidance"]
+
+    def test_free_routes_declare_empty_security(self, client: TestClient) -> None:
+        paths = client.get("/openapi.json").json()["paths"]
+        assert paths["/health"]["get"]["security"] == []
+        assert paths["/plans"]["get"]["security"] == []
+        assert paths["/audit-public"]["post"]["security"] == []
+        assert paths["/create-checkout-session"]["post"]["security"] == []
+
+    def test_validate_is_apikey_not_x402_paid(self, client: TestClient) -> None:
+        body = client.get("/openapi.json").json()
+        op = body["paths"]["/validate"]["post"]
+        assert op["security"] == [{"ApiKeyAuth": []}]
+        assert "x-payment-info" not in op
+        schemes = body["components"]["securitySchemes"]
+        assert schemes["ApiKeyAuth"]["name"] == "X-API-Key"
+
+    def test_internal_routes_hidden_from_public_schema(self, client: TestClient) -> None:
+        paths = client.get("/openapi.json").json()["paths"]
+        assert "/stripe-webhook" not in paths
+        assert "/admin/keys" not in paths
+        assert "/admin/keys/{key}" not in paths
+
+    def test_create_checkout_plan_id_required(self, client: TestClient) -> None:
+        params = client.get("/openapi.json").json()["paths"][
+            "/create-checkout-session"
+        ]["post"]["parameters"]
+        plan = next(p for p in params if p.get("name") == "plan_id")
+        assert plan.get("required") is True
+
+
 class TestLanding:
     def test_renders_html(self, client: TestClient) -> None:
         r = client.get("/")
