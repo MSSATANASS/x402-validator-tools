@@ -120,11 +120,14 @@ class TestOpenApiDiscovery:
         assert paths["/audit-public"]["post"]["security"] == []
         assert paths["/create-checkout-session"]["post"]["security"] == []
 
-    def test_validate_is_apikey_not_x402_paid(self, client: TestClient) -> None:
+    def test_validate_is_x402_paid_with_apikey_alt(self, client: TestClient) -> None:
         body = client.get("/openapi.json").json()
         op = body["paths"]["/validate"]["post"]
-        assert op["security"] == [{"ApiKeyAuth": []}]
-        assert "x-payment-info" not in op
+        # Dual access: empty security req OR ApiKeyAuth; x-payment-info marks paid
+        assert op["security"] == [{}, {"ApiKeyAuth": []}]
+        assert "x-payment-info" in op
+        assert op["x-payment-info"]["price"]["mode"] == "fixed"
+        assert "402" in op["responses"]
         schemes = body["components"]["securitySchemes"]
         assert schemes["ApiKeyAuth"]["name"] == "X-API-Key"
 
@@ -380,7 +383,8 @@ class TestPlans:
 class TestValidate:
     def test_requires_api_key_header(self, client: TestClient) -> None:
         r = client.post("/validate", json={"url": "https://example.com"})
-        assert r.status_code == 422  # FastAPI: missing required header
+        # Without X402_PAY_TO: 401 missing key. With paywall: 402 challenge.
+        assert r.status_code in (401, 402)
 
     def test_rejects_unknown_key(self, client: TestClient) -> None:
         r = client.post(
