@@ -120,7 +120,7 @@ Every response includes `X-Request-Id`. Send the same header to continue a trace
 
 # x402scan / AgentCash discovery: contact.email + agent guidance (info.x-guidance).
 _OPENAPI_CONTACT_EMAIL = os.environ.get(
-    "OPENAPI_CONTACT_EMAIL", "mss_ali@users.noreply.github.com"
+    "OPENAPI_CONTACT_EMAIL", "mssalidev@proton.me"
 )
 _OPENAPI_CONTACT = {
     "name": "Gael L Chulim / MSSATANASS",
