@@ -159,32 +159,37 @@ setup_telemetry(app)
 
 @app.middleware("http")
 async def x402_validate_paywall(request: Request, call_next):
-    """POST /validate: API key **or** x402 payment; else 402 (before body 422).
+    """GET/POST /validate: API key or x402 payment; else 402 first.
 
-    FastAPI validates the JSON body before the route runs. x402scan probes
-    without a body — so the paywall must live in middleware, ahead of
-    request validation, or discovery gets 422/405 instead of 402.
+    x402scan probes resources method-agnostically (well-known lists URLs only).
+    A bare GET used to 405 and a body-less POST used to 422 — both fail
+    discovery. Challenge is issued here for GET/HEAD/POST before routing.
     """
-    if request.method == "POST" and request.url.path.rstrip("/") == "/validate":
-        if x402_paywall.extract_api_key(request):
+    path = request.url.path.rstrip("/") or "/"
+    if path != "/validate" or request.method not in ("GET", "HEAD", "POST"):
+        return await call_next(request)
+
+    # Identity bypass (Stripe / admin key path) — POST only executes the audit.
+    if x402_paywall.extract_api_key(request):
+        if request.method == "POST":
             return await call_next(request)
-        if not x402_paywall.paywall_enabled():
+        # GET/HEAD with API key still returns the challenge shape for probes.
+        return x402_paywall.payment_required_response(path='/validate')
+
+    payment = x402_paywall.extract_payment_signature(request)
+    if payment and request.method == "POST":
+        required = x402_paywall.build_payment_required(path='/validate')
+        ok, detail = await x402_paywall.verify_payment_with_facilitator(
+            payment, required
+        )
+        if ok:
+            request.state.x402_settlement = detail
             return await call_next(request)
-        payment = x402_paywall.extract_payment_signature(request)
-        if payment:
-            try:
-                required = x402_paywall.build_payment_required(path="/validate")
-            except RuntimeError:
-                return x402_paywall.payment_required_response(path="/validate")
-            ok, detail = await x402_paywall.verify_payment_with_facilitator(
-                payment, required
-            )
-            if ok:
-                request.state.x402_settlement = detail
-                return await call_next(request)
-            return x402_paywall.payment_required_response(path="/validate")
-        return x402_paywall.payment_required_response(path="/validate")
-    return await call_next(request)
+        return x402_paywall.payment_required_response(path='/validate')
+
+    # Unauthenticated probe → always 402 (even without X402_PAY_TO).
+    return x402_paywall.payment_required_response(path='/validate')
+
 
 
 # Static assets (logo, favicon, og-image) live alongside this package.
@@ -3185,6 +3190,31 @@ async def plans() -> list[Plan]:
     return list(PLANS.values())
 
 
+@app.get(
+    "/validate",
+    summary="x402 payment challenge (probe)",
+    description=(
+        "Unauthenticated probes (x402scan / agents) receive HTTP 402 with a "
+        "v2 PAYMENT-REQUIRED challenge. Use POST with payment or X-API-Key "
+        "to run the audit."
+    ),
+    openapi_extra={
+        "security": [{}],
+        "x-payment-info": {
+            "price": {"mode": "fixed", "currency": "USD", "amount": "0.02"},
+            "protocols": [{"x402": {}}],
+        },
+    },
+    responses={
+        402: {"description": "Payment Required — x402 v2 challenge"},
+    },
+    include_in_schema=True,
+)
+async def validate_challenge_get() -> Response:
+    """Always 402 — middleware also handles this; route avoids FastAPI 405."""
+    return x402_paywall.payment_required_response(path="/validate")
+
+
 @app.post(
     "/validate",
     response_model=ValidateResponse,
@@ -3779,7 +3809,34 @@ def custom_openapi() -> dict:
         ("/audit-public", "post"),
         ("/create-checkout-session", "post"),
     }
-    paid_validate = ("/validate", "post")
+    paid_validate_ops = {("/validate", "post"), ("/validate", "get")}
+    _paid_402 = {
+        "description": (
+            "Payment Required — x402 v2 challenge "
+            "(PAYMENT-REQUIRED header, base64 PaymentRequired JSON)"
+        ),
+        "headers": {
+            "PAYMENT-REQUIRED": {
+                "description": "Base64-encoded x402 v2 PaymentRequired",
+                "schema": {"type": "string"},
+            }
+        },
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "x402Version": {"type": "integer"},
+                        "error": {"type": "string"},
+                        "accepts": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        },
+                    },
+                }
+            }
+        },
+    }
 
     for path, item in schema.get("paths", {}).items():
         if not isinstance(item, dict):
@@ -3792,39 +3849,15 @@ def custom_openapi() -> dict:
                 # Explicit free/public — x402scan registers these as public.
                 op["security"] = []
                 op.pop("x-payment-info", None)
-            elif key == paid_validate:
-                # Dual access: API key OR x402 payment (OR of security reqs).
-                # Empty object {} = no identity required when paying via x402.
-                op["security"] = [{}, {"ApiKeyAuth": []}]
-                # Always advertise x-payment-info so discovery marks the route
-                # paid; runtime 402 is emitted when X402_PAY_TO is configured
-                # (and still when probes hit without payment).
+            elif key in paid_validate_ops:
+                # Dual access on POST; GET is challenge-only for probes.
+                if method.lower() == "post":
+                    op["security"] = [{}, {"ApiKeyAuth": []}]
+                else:
+                    op["security"] = [{}]
                 op["x-payment-info"] = x402_paywall.openapi_payment_info()
                 responses = op.setdefault("responses", {})
-                responses["402"] = {
-                    "description": (
-                        "Payment Required — x402 v2 challenge "
-                        "(PAYMENT-REQUIRED header, base64 PaymentRequired JSON)"
-                    ),
-                    "headers": {
-                        "PAYMENT-REQUIRED": {
-                            "description": "Base64-encoded x402 v2 PaymentRequired",
-                            "schema": {"type": "string"},
-                        }
-                    },
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "x402Version": {"type": "integer"},
-                                    "error": {"type": "string"},
-                                    "accepts": {"type": "array", "items": {"type": "object"}},
-                                },
-                            }
-                        }
-                    },
-                }
+                responses["402"] = _paid_402
             else:
                 op.setdefault("security", [])
                 op.pop("x-payment-info", None)

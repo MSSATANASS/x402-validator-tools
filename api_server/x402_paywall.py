@@ -41,16 +41,31 @@ _DEFAULT_TIMEOUT = 300
 _EVM_ADDR_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
 
+# Sentinel receive address when X402_PAY_TO is unset — still a valid 0x address
+# so discovery probes parse accepts[]. Replace in production via X402_PAY_TO.
+_DISCOVERY_PLACEHOLDER_PAY_TO = "0x4024024024024024024024024024024024024024"
+
+
 def pay_to() -> str | None:
+    """Configured receive address, or None if unset/invalid."""
     raw = (os.environ.get("X402_PAY_TO") or "").strip()
     if not raw or not _EVM_ADDR_RE.match(raw):
         return None
     return raw
 
 
+def pay_to_for_challenge() -> str:
+    """Address embedded in PaymentRequired accepts[] (always valid EVM format)."""
+    return pay_to() or _DISCOVERY_PLACEHOLDER_PAY_TO
+
+
 def paywall_enabled() -> bool:
-    """Paywall is on only when a valid receive address is configured."""
-    return pay_to() is not None
+    """Always on for /validate discovery + dual access.
+
+    A missing X402_PAY_TO still emits 402 (placeholder payTo) so x402scan can
+    register the route; real settlement requires a real payTo + facilitator.
+    """
+    return True
 
 
 def network() -> str:
@@ -95,12 +110,17 @@ def resource_url(path: str = "/validate") -> str:
 
 def build_payment_required(*, path: str = "/validate") -> dict[str, Any]:
     """Build an x402 v2 PaymentRequired object for the paid resource."""
-    to = pay_to()
-    if not to:
-        raise RuntimeError("X402_PAY_TO is not configured")
+    to = pay_to_for_challenge()
+    configured = pay_to() is not None
+    err = "Payment required to audit an x402 merchant URL"
+    if not configured:
+        err = (
+            "Payment required — set X402_PAY_TO on the server to a Base USDC "
+            "receive address before settling real payments"
+        )
     return {
         "x402Version": 2,
-        "error": "Payment required to audit an x402 merchant URL",
+        "error": err,
         "resource": {
             "url": resource_url(path),
             "description": (

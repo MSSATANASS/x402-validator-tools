@@ -71,6 +71,13 @@ class TestMiddleware402:
         assert decoded["accepts"][0]["amount"] == "20000"
         assert r.json()["x402Version"] == 2
 
+    def test_validate_get_returns_402_not_405(self, client: TestClient):
+        """x402scan probes well-known resources with GET; must not 405."""
+        r = client.get("/validate")
+        assert r.status_code == 402
+        assert r.json()["x402Version"] == 2
+        assert r.json()["accepts"]
+
     def test_validate_empty_json_still_402(self, client: TestClient):
         r = client.post(
             "/validate",
@@ -117,3 +124,33 @@ class TestOpenApiPaid:
         assert body["version"] == 1
         assert any("/validate" in u for u in body["resources"])
         assert body["openapi"].endswith("/openapi.json")
+
+
+class TestPaywallWithoutPayTo:
+    """Discovery must work even before the operator sets X402_PAY_TO."""
+
+    @pytest.fixture()
+    def client_no_payto(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "api_keys.json"))
+        monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
+        monkeypatch.delenv("X402_PAY_TO", raising=False)
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.setenv("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
+        import api_server.keystore  # noqa: F401
+        import api_server.app  # noqa: F401
+
+        keystore_mod = sys.modules["api_server.keystore"]
+        app_mod = sys.modules["api_server.app"]
+        importlib.reload(keystore_mod)
+        importlib.reload(app_mod)
+        app_mod.app.openapi_schema = None
+        return TestClient(app_mod.app)
+
+    def test_get_and_post_still_402(self, client_no_payto: TestClient):
+        for method in ("get", "post"):
+            r = getattr(client_no_payto, method)("/validate")
+            assert r.status_code == 402, method
+            body = r.json()
+            assert body["x402Version"] == 2
+            assert body["accepts"][0]["payTo"].startswith("0x")
+            assert len(body["accepts"][0]["payTo"]) == 42
