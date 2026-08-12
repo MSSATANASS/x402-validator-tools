@@ -1,0 +1,573 @@
+diff --git a/.github/workflows/x402-validators.yml b/.github/workflows/x402-validators.yml
+new file mode 100644
+index 0000000..00aee6c
+--- /dev/null
++++ b/.github/workflows/x402-validators.yml
+@@ -0,0 +1,30 @@
++name: x402 Validators CI
++
++on:
++  pull_request:
++  push:
++    branches: [ main ]
++
++jobs:
++  test:
++    runs-on: ubuntu-latest
++    strategy:
++      matrix:
++        python-version: [3.10, 3.11]
++    steps:
++      - uses: actions/checkout@v4
++      - name: Set up Python
++        uses: actions/setup-python@v4
++        with:
++          python-version: ${{ matrix.python-version }}
++      - name: Install dependencies
++        run: |
++          python -m pip install --upgrade pip setuptools wheel
++          python -m pip install -e .[dev]
++      - name: Run pytest
++        run: |
++          python -m pytest -q
++      - name: Run validators (example)
++        run: |
++          # Run example validators as a smoke check
++          python -c "from examples import x402_validators as v; print('manifest-check:', v.validate_manifest_shape({'x402Version':'1','accepts':[{'scheme':'exact','network':'eip155:1','asset':'USDC','payTo':'0x0'}],'resource':'/'}))"
+diff --git a/docs/x402-top-10.md b/docs/x402-top-10.md
+new file mode 100644
+index 0000000..fe478a2
+--- /dev/null
++++ b/docs/x402-top-10.md
+@@ -0,0 +1,60 @@
++Hecho por mss_ali
++
++Resumen de problemas en x402 centrados en grandes exchanges (Binance, Coinbase, Kraken, OKX, Huobi) y soluciones propuestas
++
++Contexto breve
++x402 define cómo los servidores devuelven una respuesta 402 con un challenge de pago. Grandes exchanges e infra de mercado introducen variaciones operacionales (gateways, KYC, facilitators) que generan problemas concretos en adopción. Aquí se listan 10 problemas observados en esos operadores y soluciones aplicables desde este repositorio.
++
++Top-10 problemas observados en exchanges y soluciones (resumen)
++
++1) Cold-probe bloqueado por gateways/anti-bot
++- Problema: CDNs, WAFs y rate-limits bloquean o redirigen las "cold probes" que esperan un 402, devolviendo 403/429/302.
++- Solución: client cold-probe robusto (header fingerprints, retry/backoff) + guía para configurar WAFs y permitir probes desde directorios de confianza.
++
++2) /.well-known/x402 mal expuesto o detrás de rutas internas
++- Problema: manifest ubicado en subdominios internos o protegido por ACLs, causando 404/401 en probes.
++- Solución: linter para manifest (JSON Schema) y ejemplos de deployment público (CDN-friendly) en repo.
++
++3) `accepts` con assets/paths propietarios o mal etiquetados
++- Problema: exchanges listan esquemas internos (custodial tokens) o usan nombres no-CAIP, rompiendo interoperabilidad.
++- Solución: utilitario CAIP-2 validator y migración de mapping; policy y tests que aseguren naming estándar en CI.
++
++4) Recibos firmados con esquemas custodiales no explicados
++- Problema: algunos exchanges firman recibos con custodial systems (no keys públicas explicadas), impidiendo verificación externa.
++- Solución: spec de receipts en repo y librería de verificación que soporte ed25519, ECDSA y workflows custodial (instrucciones de key disclosure).
++
++5) Nonce/authorization reuse y conciliación off-chain
++- Problema: plataformas que reutilizan o no documentan nonces y flujo EIP-3009 (replay risks, settlement mismatches).
++- Solución: helpers para generar/verificar nonces y ejemplos de anchoring (policy_hash + salt) y pruebas para la sala de conciliación.
++
++6) Facilitator routing y wash/self-routing por exchanges
++- Problema: facilitators operados por el mismo exchange pueden autoprocesar pagos (wash), inflando métricas y falseando integridad.
++- Solución: heurísticas detectores (pattern detection, on-chain volume correlation) y un esquema de clasificación de facilitators en el repo.
++
++7) Pricing/quote volatilidad y comportamiento de maxAmountRequired
++- Problema: cotizaciones que expiran muy rápido o valores inconsistentes entre manifests y quotes, generando fallas de pago.
++- Solución: test harness que simule latencias y compare quote vs settle; recomendación de TTL mínimos y ejemplo de recalibration.
++
++8) KYC/auth gate antes del 402 (retorna 401/403 en vez de 402)
++- Problema: exchanges que requieren auth antes de mostrar challenge; rompe discovery y cold-probes.
++- Solución: guidelines y middleware shim para separar puertas KYC de la exposición pública del challenge; ejemplo en docs.
++
++9) Key rotation y revocación mal gestionadas
++- Problema: rotaciones de claves en exchanges invalidan recibos históricos sin mecanismo de revocación detallado.
++- Solución: modelo de revocación por estados (valid, rotated, revoked) y muestra de keystore con historial de versiones y pruebas de verificación temporal.
++
++10) Falta de tests reproducibles/CI contra endpoints de exchanges
++- Problema: los integradores no disponen de suite automática que ejecute probes contra sandboxes/exchanges y verifique conformidad.
++- Solución: GitHub Action + validator (este repo) con matrices de endpoints, cold-probe mode y reporting que pueda integrarse en PRs.
++
++Artefactos y acciones incluidas
++- docs/: esta guía (actualizada) con recomendaciones para exchanges.
++- examples/x402_validators.py: utilitarios iniciales (CAIP-2, manifest checks, parser tolerante).
++- tests/test_x402_solutions.py: pruebas unitarias que validan utilitarios.
++
++Siguientes pasos propuestos
++- Ampliar utilitarios: receipt verification, facilitator classification, nonce helpers y cold-probe client.
++- Añadir Action CI que ejecute validators en PRs y contra sandboxes de exchanges.
++- Preparar README y guía de adopción dirigida a operadores (Binance/Coinbase-style).
++
++Hecho por mss_ali
+diff --git a/examples/facilitator_detector.py b/examples/facilitator_detector.py
+new file mode 100644
+index 0000000..d0a0a49
+--- /dev/null
++++ b/examples/facilitator_detector.py
+@@ -0,0 +1,32 @@
++"""Simple heuristics to classify/detect potentially malicious or self-routing facilitators.
++This is intentionally lightweight and testable without external services.
++"""
++from typing import Dict, Any
++
++
++def classify_facilitator(metrics: Dict[str, Any]) -> Dict[str, Any]:
++    """Return a classification with wash_flag boolean and reasons list.
++
++    Expected metrics keys (optional): on_chain_volume_30d (float), reuse_count (int), mediator (str)
++    """
++    result = {"wash_flag": False, "reasons": []}
++    vol = float(metrics.get("on_chain_volume_30d", 0) or 0)
++    reuse = int(metrics.get("reuse_count", 0) or 0)
++    mediator = str(metrics.get("mediator", "")).lower()
++
++    # Heuristic 1: low volume but very high reuse suggests synthetic routing
++    if vol < 1000 and reuse >= 10:
++        result["wash_flag"] = True
++        result["reasons"].append("low_volume_high_reuse")
++
++    # Heuristic 2: mediator label equals known exchange-owned mediator
++    if mediator in ("exchange", "custodial", "internal") and reuse >= 5:
++        result["wash_flag"] = True
++        result["reasons"].append("mediator_exchange_reuse")
++
++    # Heuristic 3: extreme spike pattern (flag if reuse >> volume)
++    if reuse > vol / 100 and reuse > 50:
++        result["wash_flag"] = True
++        result["reasons"].append("spike_reuse_vs_volume")
++
++    return result
+diff --git a/examples/receipt_utils.py b/examples/receipt_utils.py
+new file mode 100644
+index 0000000..cc55874
+--- /dev/null
++++ b/examples/receipt_utils.py
+@@ -0,0 +1,121 @@
++"""Utilities for handling and verifying x402 receipts
++- parse_receipt: structural validation
++- compute_response_hash: sha256 hex digest helper
++- verify_binding: checks response-body -> responseHash binding (sha256)
++- verify_signature: supports ed25519 and ecdsa-secp256k1 (uses PyNaCl and cryptography)
++
++Signatures and signer formats (for this repo's convention):
++- ed25519: signer is hex of 32-byte public key, signature is hex of signature bytes
++- ecdsa-secp256k1: signer is PEM-encoded public key string, signature is hex of DER-encoded signature bytes
++
++This file performs real signature verification. For production, adapt signer formats to your deployment.
++"""
++import json
++import hashlib
++from typing import Any, Dict
++
++# crypto libs
++from cryptography.hazmat.primitives import hashes, serialization
++from cryptography.hazmat.primitives.asymmetric import ec
++from cryptography.exceptions import InvalidSignature
++import nacl.signing
++import nacl.exceptions
++
++
++def parse_receipt(receipt_raw: Any) -> Dict[str, Any]:
++    """Parse and minimally validate a receipt object (dict or JSON string).
++
++    Raises ValueError on invalid shape.
++    """
++    if isinstance(receipt_raw, str):
++        try:
++            receipt = json.loads(receipt_raw)
++        except Exception as e:
++            raise ValueError("receipt is not valid JSON: " + str(e))
++    elif isinstance(receipt_raw, dict):
++        receipt = receipt_raw
++    else:
++        raise ValueError("receipt must be JSON string or dict")
++
++    required = ["receiptVersion", "responseHash", "signature", "signer", "algorithm"]
++    for f in required:
++        if f not in receipt:
++            raise ValueError(f"receipt missing required field: {f}")
++
++    return receipt
++
++
++def compute_response_hash(response_body: str) -> str:
++    """Compute sha256 hex digest of the response body chosen to be bound in the receipt."""
++    if not isinstance(response_body, (str, bytes)):
++        raise ValueError("response_body must be str or bytes")
++    if isinstance(response_body, str):
++        response_body = response_body.encode("utf-8")
++    h = hashlib.sha256()
++    h.update(response_body)
++    return h.hexdigest()
++
++
++def verify_binding(receipt: Dict[str, Any], response_body: str) -> bool:
++    """Verify that receipt.responseHash matches the SHA256 of response_body."""
++    expected = compute_response_hash(response_body)
++    return str(receipt.get("responseHash", "")).lower() == expected.lower()
++
++
++def verify_signature(receipt: Dict[str, Any]) -> bool:
++    """Verify the cryptographic signature in the receipt.
++
++    Supports algorithms:
++      - 'ed25519' : signer is hex public key (32 bytes), signature hex is raw signature bytes
++      - 'ecdsa-secp256k1' : signer is PEM public key string, signature hex is DER-encoded signature
++
++    Returns True if signature verifies over the raw responseHash bytes.
++    """
++    algo = str(receipt.get("algorithm", "")).lower()
++    resp_hash_hex = str(receipt.get("responseHash", ""))
++    sig_hex = str(receipt.get("signature", ""))
++
++    if not resp_hash_hex or not sig_hex:
++        return False
++
++    message = bytes.fromhex(resp_hash_hex)
++    signature = bytes.fromhex(sig_hex)
++
++    try:
++        if algo == "ed25519":
++            pub_hex = receipt.get("signer")
++            if not isinstance(pub_hex, str):
++                return False
++            pub_bytes = bytes.fromhex(pub_hex)
++            vk = nacl.signing.VerifyKey(pub_bytes)
++            try:
++                vk.verify(message, signature)
++                return True
++            except nacl.exceptions.BadSignatureError:
++                return False
++
++        elif algo == "ecdsa-secp256k1":
++            pub_pem = receipt.get("signer")
++            if not isinstance(pub_pem, str):
++                return False
++            pub = serialization.load_pem_public_key(pub_pem.encode("utf-8"))
++            try:
++                pub.verify(signature, message, ec.ECDSA(hashes.SHA256()))
++                return True
++            except InvalidSignature:
++                return False
++
++        else:
++            # unknown algorithm
++            return False
++    except Exception:
++        return False
++
++
++# Backwards-compatible convenience function
++def verify_receipt(receipt_raw: Any, response_body: str) -> bool:
++    """Full verification: parse, check binding and verify signature."""
++    receipt = parse_receipt(receipt_raw)
++    if not verify_binding(receipt, response_body):
++        return False
++    return verify_signature(receipt)
+diff --git a/examples/x402_validators.py b/examples/x402_validators.py
+new file mode 100644
+index 0000000..b4f4dc7
+--- /dev/null
++++ b/examples/x402_validators.py
+@@ -0,0 +1,77 @@
++"""Pequeños utilitarios para validar CAIP-2 y manifest x402.
++Archivo de ejemplo: no añade dependencias externas y sirve como base para tests.
++"""
++import json
++import re
++from typing import Any, Dict, List
++
++CAIP2_RE = re.compile(r"^[a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}$")
++
++
++def is_valid_caip2(chain_id: str) -> bool:
++    """Valida forma básica de CAIP-2 (namespace:reference)."""
++    if not isinstance(chain_id, str):
++        return False
++    return bool(CAIP2_RE.match(chain_id))
++
++
++def validate_manifest_shape(manifest: Dict[str, Any]) -> List[str]:
++    """Chequeo muy básico de keys esperadas en /.well-known/x402 manifest.
++
++    Retorna lista de errores (vacía si ok).
++    """
++    errors: List[str] = []
++    if not isinstance(manifest, dict):
++        return ["manifest must be a JSON object"]
++
++    # x402Version required
++    if "x402Version" not in manifest:
++        errors.append("missing x402Version")
++
++    # accepts must be present and be a list
++    accepts = manifest.get("accepts")
++    if accepts is None:
++        errors.append("missing accepts array")
++    elif not isinstance(accepts, list):
++        errors.append("accepts must be an array/list")
++    else:
++        for i, opt in enumerate(accepts):
++            if not isinstance(opt, dict):
++                errors.append(f"accepts[{i}] must be an object")
++                continue
++            # Chequear fields mínimos
++            for field in ("scheme", "network", "asset", "payTo"):
++                if field not in opt:
++                    errors.append(f"accepts[{i}] missing field: {field}")
++            # network debe ser CAIP-2-like
++            net = opt.get("network")
++            if net is not None and not is_valid_caip2(net):
++                errors.append(f"accepts[{i}].network not valid CAIP-2: {net}")
++
++    # resource is recommended
++    if "resource" not in manifest:
++        errors.append("missing resource (recommended)")
++
++    return errors
++
++
++def parse_402_challenge(body: str) -> Dict[str, Any]:
++    """Parser tolerante para cuerpos de 402: intenta parsear JSON y devolver dict.
++
++    Lanza ValueError con mensaje accionable si no es JSON o la forma es inválida.
++    """
++    try:
++        obj = json.loads(body)
++    except Exception as e:
++        raise ValueError("invalid JSON in 402 body: " + str(e))
++
++    if not isinstance(obj, dict):
++        raise ValueError("402 body must be a JSON object")
++
++    # Quick sanity: must contain x402Version and accepts
++    if "x402Version" not in obj:
++        raise ValueError("402 body missing x402Version")
++    if "accepts" not in obj:
++        raise ValueError("402 body missing accepts array")
++
++    return obj
+diff --git a/pyproject.toml b/pyproject.toml
+index 6a164fc..142341e 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -33,6 +33,9 @@ dependencies = [
+     "python-multipart>=0.0.9",
+     # Prometheus metrics (GET /metrics).
+     "prometheus-client>=0.20",
++    # Cryptographic verification for receipts
++    "cryptography>=40.0",
++    "pynacl>=1.5",
+ ]
+ 
+ [project.optional-dependencies]
+diff --git a/tests/test_receipt_and_facilitator.py b/tests/test_receipt_and_facilitator.py
+new file mode 100644
+index 0000000..68dfdaf
+--- /dev/null
++++ b/tests/test_receipt_and_facilitator.py
+@@ -0,0 +1,68 @@
++import importlib.util
++import os
++import sys
++
++HERE = os.path.dirname(__file__)
++ROOT = os.path.dirname(HERE)
++
++# load receipt_utils
++spec_r = importlib.util.spec_from_file_location("receipt_utils", os.path.join(ROOT, "examples", "receipt_utils.py"))
++mod_r = importlib.util.module_from_spec(spec_r)
++sys.modules[spec_r.name] = mod_r
++spec_r.loader.exec_module(mod_r)
++
++# load facilitator_detector
++spec_f = importlib.util.spec_from_file_location("facilitator_detector", os.path.join(ROOT, "examples", "facilitator_detector.py"))
++mod_f = importlib.util.module_from_spec(spec_f)
++sys.modules[spec_f.name] = mod_f
++spec_f.loader.exec_module(mod_f)
++
++
++def test_verify_binding_and_signature_ok():
++    body = "{\"data\": \"hello\"}"
++    resp_hash = mod_r.compute_response_hash(body)
++    receipt = {
++        "receiptVersion": "1",
++        "responseHash": resp_hash,
++        "signature": resp_hash,
++        "signer": "0xdead",
++        "algorithm": "placeholder"
++    }
++    parsed = mod_r.parse_receipt(receipt)
++    assert mod_r.verify_binding(parsed, body)
++    assert mod_r.verify_signature_placeholder(parsed)
++
++
++def test_verify_binding_fail():
++    body = "{}"
++    receipt = {
++        "receiptVersion": "1",
++        "responseHash": "bad",
++        "signature": "also-bad",
++        "signer": "0xdead",
++        "algorithm": "placeholder"
++    }
++    parsed = mod_r.parse_receipt(receipt)
++    assert not mod_r.verify_binding(parsed, body)
++    assert not mod_r.verify_signature_placeholder(parsed)
++
++
++def test_parse_receipt_errors():
++    try:
++        mod_r.parse_receipt(123)
++        assert False
++    except ValueError:
++        pass
++
++
++def test_facilitator_detector_flags():
++    m1 = {"on_chain_volume_30d": 50, "reuse_count": 20, "mediator": "exchange"}
++    out = mod_f.classify_facilitator(m1)
++    assert out["wash_flag"] is True
++    assert "low_volume_high_reuse" in out["reasons"] or "mediator_exchange_reuse" in out["reasons"]
++
++
++def test_facilitator_detector_ok():
++    m2 = {"on_chain_volume_30d": 1000000, "reuse_count": 1, "mediator": "external"}
++    out2 = mod_f.classify_facilitator(m2)
++    assert out2["wash_flag"] is False
+diff --git a/tests/test_signature_verification.py b/tests/test_signature_verification.py
+new file mode 100644
+index 0000000..be601e2
+--- /dev/null
++++ b/tests/test_signature_verification.py
+@@ -0,0 +1,56 @@
++import importlib.util
++import os
++import sys
++import json
++
++HERE = os.path.dirname(__file__)
++ROOT = os.path.dirname(HERE)
++
++spec = importlib.util.spec_from_file_location("receipt_utils", os.path.join(ROOT, "examples", "receipt_utils.py"))
++mod = importlib.util.module_from_spec(spec)
++sys.modules[spec.name] = mod
++spec.loader.exec_module(mod)
++
++# crypto libs for key generation in tests
++import nacl.signing
++from cryptography.hazmat.primitives.asymmetric import ec
++from cryptography.hazmat.primitives import serialization, hashes
++
++
++def test_ed25519_signature_verification():
++    body = '{"ok": true}'
++    resp_hash = mod.compute_response_hash(body)
++
++    sk = nacl.signing.SigningKey.generate()
++    vk = sk.verify_key
++    sig = sk.sign(bytes.fromhex(resp_hash)).signature
++
++    receipt = {
++        "receiptVersion": "1",
++        "responseHash": resp_hash,
++        "signature": sig.hex(),
++        "signer": vk.encode().hex(),
++        "algorithm": "ed25519"
++    }
++
++    assert mod.verify_receipt(receipt, body)
++
++
++def test_ecdsa_signature_verification():
++    body = '{"ok": "ecdsa"}'
++    resp_hash = mod.compute_response_hash(body)
++
++    priv = ec.generate_private_key(ec.SECP256K1())
++    pub = priv.public_key()
++    sig = priv.sign(bytes.fromhex(resp_hash), ec.ECDSA(hashes.SHA256()))
++    pub_pem = pub.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo).decode()
++
++    receipt = {
++        "receiptVersion": "1",
++        "responseHash": resp_hash,
++        "signature": sig.hex(),
++        "signer": pub_pem,
++        "algorithm": "ecdsa-secp256k1"
++    }
++
++    assert mod.verify_receipt(receipt, body)
+diff --git a/tests/test_x402_solutions.py b/tests/test_x402_solutions.py
+new file mode 100644
+index 0000000..5360f5a
+--- /dev/null
++++ b/tests/test_x402_solutions.py
+@@ -0,0 +1,67 @@
++import importlib.util
++import os
++import sys
++import json
++
++# Cargar el script examples/x402_validators.py como módulo dinámico
++HERE = os.path.dirname(__file__)
++ROOT = os.path.dirname(HERE)
++MODULE_PATH = os.path.join(ROOT, "examples", "x402_validators.py")
++
++spec = importlib.util.spec_from_file_location("x402_validators", MODULE_PATH)
++mod = importlib.util.module_from_spec(spec)
++sys.modules[spec.name] = mod
++spec.loader.exec_module(mod)
++
++
++def test_is_valid_caip2_ok():
++    assert mod.is_valid_caip2("eip155:1")
++    assert mod.is_valid_caip2("cosmos:cosmoshub-4")
++
++
++def test_is_valid_caip2_bad():
++    assert not mod.is_valid_caip2(123)
++    assert not mod.is_valid_caip2("")
++    assert not mod.is_valid_caip2("not:a:good:id")
++
++
++def test_validate_manifest_shape_minimal_ok():
++    manifest = {
++        "x402Version": "1",
++        "accepts": [
++            {"scheme": "exact", "network": "eip155:1", "asset": "USDC", "payTo": "0xabc"}
++        ],
++        "resource": "/weather"
++    }
++    errs = mod.validate_manifest_shape(manifest)
++    assert errs == []
++
++
++def test_validate_manifest_shape_errors():
++    manifest = {"accepts": "not-an-array"}
++    errs = mod.validate_manifest_shape(manifest)
++    assert "missing x402Version" in errs
++    assert any("accepts must be an array" in e for e in errs)
++
++
++def test_parse_402_challenge_ok():
++    body = json.dumps({"x402Version": "1", "accepts": [], "resource": "/r"})
++    obj = mod.parse_402_challenge(body)
++    assert obj["x402Version"] == "1"
++
++
++def test_parse_402_challenge_invalid_json():
++    try:
++        mod.parse_402_challenge("not json")
++        assert False, "should have raised"
++    except ValueError as e:
++        assert "invalid JSON" in str(e)
++
++
++def test_parse_402_challenge_missing_keys():
++    body = json.dumps({"accepts": []})
++    try:
++        mod.parse_402_challenge(body)
++        assert False
++    except ValueError as e:
++        assert "missing x402Version" in str(e)

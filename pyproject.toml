@@ -33,6 +33,9 @@ dependencies = [
     "python-multipart>=0.0.9",
     # Prometheus metrics (GET /metrics).
     "prometheus-client>=0.20",
+    # Cryptographic verification for receipts
+    "cryptography>=40.0",
+    "pynacl>=1.5",
 ]
 
 [project.optional-dependencies]
