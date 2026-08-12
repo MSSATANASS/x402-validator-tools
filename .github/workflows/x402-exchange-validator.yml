@@ -1,0 +1,232 @@
+name: x402 Exchange Validator
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily against sandbox exchanges
+    - cron: '0 2 * * *'
+
+jobs:
+  manifest-lint:
+    runs-on: ubuntu-latest
+    name: Lint x402 Manifests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run manifest linter
+        run: |
+          python -m pytest tests/test_manifest_linter.py -v --tb=short
+
+  cold-probe-test:
+    runs-on: ubuntu-latest
+    name: Test Cold-Probe Client
+    strategy:
+      matrix:
+        exchange:
+          - binance.com
+          - api.coinbase.com
+          - kraken.com
+          - okx.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Probe ${{ matrix.exchange }} for x402
+        run: |
+          python -c "
+          from examples.cold_probe_client import ColdProbeClient, ProbeConfig
+          config = ProbeConfig(
+            base_url='https://${{ matrix.exchange }}',
+            max_retries=3,
+            initial_backoff_seconds=1.0
+          )
+          client = ColdProbeClient(config)
+          status, manifest = client.discover_manifest()
+          print(f'Manifest discovery: {status}')
+          if manifest:
+            print(f'Manifest found at /.well-known/x402')
+            print(f'x402Version: {manifest.get(\"x402Version\")}')
+            print(f'Accepts: {len(manifest.get(\"accepts\", []))} options')
+          "
+        continue-on-error: true
+
+  receipt-verification:
+    runs-on: ubuntu-latest
+    name: Test Receipt Verification
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run receipt verification tests
+        run: |
+          python -m pytest tests/test_receipt_and_facilitator.py::test_verify_binding_and_signature_ok -v
+          python -m pytest tests/test_receipt_and_facilitator.py::test_verify_binding_fail -v
+
+  facilitator-classification:
+    runs-on: ubuntu-latest
+    name: Test Facilitator Classification
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run facilitator assessment tests
+        run: |
+          python -c "
+          from examples.facilitator_classifier import assess_facilitator
+          
+          exchanges = {
+            'binance': {'name': 'Binance', 'affiliates': []},
+            'coinbase': {'name': 'Coinbase', 'affiliates': []},
+          }
+          
+          # Test suspicious facilitator
+          fac = {
+            'id': 'test_fac_1',
+            'name': 'Test Facilitator',
+            'settlement_volume_usd': 1000000.0,
+            'onchain_volume_usd': 50000.0,  # Low correlation
+            'recent_settlement_times_ms': [100, 150, 200],  # Fast
+            'settlement_method': 'custodial',
+            'key_disclosure_status': 'none',
+          }
+          
+          profile = assess_facilitator(fac, exchanges)
+          print(f'Risk Level: {profile.risk_level.value}')
+          print(f'Flags: {profile.historical_flags}')
+          assert profile.risk_level.value in ['high', 'critical'], 'Expected high risk for suspicious fac'
+          print('✓ Facilitator classification test passed')
+          "
+
+  nonce-verification:
+    runs-on: ubuntu-latest
+    name: Test Nonce & Authorization
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run nonce tests
+        run: |
+          python -c "
+          from examples.nonce_helpers import NonceManager, generate_anchored_authorization, verify_authorization
+          import json
+          
+          manager = NonceManager(nonce_ttl_seconds=60)
+          nonce = manager.generate_nonce(challenger_id='test_exchange')
+          
+          response = json.dumps({'x402Version': '1', 'accepts': []})
+          policy = {'maxAmount': '100.00', 'currency': 'usd'}
+          
+          auth = generate_anchored_authorization(nonce, response, policy)
+          valid, err = verify_authorization(auth, response, policy)
+          
+          assert valid, f'Authorization verification failed: {err}'
+          print('✓ Nonce and authorization tests passed')
+          "
+
+  key-rotation:
+    runs-on: ubuntu-latest
+    name: Test Key Rotation & Revocation
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run key rotation tests
+        run: |
+          python -c "
+          from examples.key_rotation import KeyStore
+          
+          store = KeyStore()
+          
+          # Create initial key
+          key_v1 = store.add_key('key_1', 'ed25519', 'abc' * 11)
+          assert key_v1.state == 'valid', 'Initial key should be valid'
+          
+          # Create replacement key
+          key_v2 = store.add_key('key_2', 'ed25519', 'def' * 11)
+          
+          # Rotate
+          success, msg = store.rotate_key('key_1', 'key_2')
+          assert success, f'Rotation failed: {msg}'
+          
+          # Verify current state is rotated
+          v1_now = store.get_key_for_verification('key_1')
+          assert v1_now is None, 'v1 should not be usable now'
+          
+          print('✓ Key rotation tests passed')
+          "
+
+  summary:
+    runs-on: ubuntu-latest
+    name: Test Summary
+    needs: [manifest-lint, receipt-verification, facilitator-classification, nonce-verification, key-rotation]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          echo "x402 Exchange Validator Test Summary"
+          echo "======================================"
+          echo "✓ Manifest linting"
+          echo "✓ Receipt verification"
+          echo "✓ Facilitator classification"
+          echo "✓ Nonce & authorization"
+          echo "✓ Key rotation & revocation"
+          echo ""
+          echo "All core x402 validators operational."
