@@ -1,0 +1,17 @@
+# Sample config for x402 proxy.
+# Rename to config.yaml and edit before running.
+
+listen_host: 0.0.0.0
+listen_port: 8080
+
+# What to do when the upstream fails x402 validation:
+#   rewrite_402  - replace response body with HTTP 402 + JSON envelope
+#   pass_through - forward upstream response untouched, just attach validation headers
+on_fail: rewrite_402
+
+validation:
+  timeout: 10.0   # seconds for the audit request
+
+headers:
+  x_validation_status: X-Validation-Status
+  x_validation_report: X-Validation-Report
