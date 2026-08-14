@@ -3087,6 +3087,46 @@ _WHAT_WE_TRACK_DB_NO_STATS = """<h2>What we track (and what we don't)</h2>
      temporarily unavailable — we show real numbers or nothing.</p>"""
 
 
+def _llms_txt() -> str:
+    """Return concise, origin-aware discovery guidance for agent clients."""
+    base = x402_paywall.public_base()
+    return "\n".join(
+        [
+            "# x402 Validator API",
+            "> Production evidence for x402 endpoints before agents spend.",
+            "",
+            "## What this API does",
+            "Audit an x402 merchant URL for strict-v2 conformance and live 402 behavior.",
+            "The audit returns structured PASS, FAIL, or ERROR findings for manifest discovery,",
+            "CAIP-2, JSON resilience, Bazaar metadata, accepts[] completeness, discovery,",
+            "cold-probe visibility, and batch-settlement requirements.",
+            "",
+            "## Start here",
+            f"- OpenAPI contract: {base}/openapi.json",
+            f"- Health check: {base}/health",
+            f"- Pricing catalog: {base}/plans",
+            f"- Free demo: POST {base}/audit-public (rate-limited per IP)",
+            "",
+            "## Paid audit",
+            f"- Endpoint: POST {base}/validate",
+            "- Price: USD 0.02 fixed, payable with x402 on the network quoted by the runtime challenge.",
+            "- Alternative access: X-API-Key obtained through the service's checkout flow.",
+            "- Probe GET /validate first to read the current PAYMENT-REQUIRED challenge before paying.",
+            "- Request JSON: url (absolute http/https URL), mode (standard or marketplace),",
+            "  advise (optional boolean for AI remediation when available), explain (optional string).",
+            "",
+            "## Safe agent workflow",
+            "1. Read this file and the OpenAPI contract.",
+            "2. Probe GET /validate and verify the quoted payment terms match your policy.",
+            "3. Submit POST /validate with a valid request body and payment or API key.",
+            "4. Treat FAIL findings as remediation tasks; do not infer settlement success from a listing alone.",
+            "",
+            "## Discovery compatibility",
+            "OpenAPI is the canonical discovery surface. /.well-known/x402 remains available for legacy clients.",
+        ]
+    )
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def landing(request: Request) -> HTMLResponse:
     logged_in = False
@@ -3143,6 +3183,12 @@ async def prometheus_metrics():
     if not metrics_enabled():
         raise HTTPException(404, "Metrics disabled")
     return metrics_response()
+
+
+@app.get("/llms.txt", include_in_schema=False)
+async def llms_txt() -> Response:
+    """Free plain-text provider guidance for AgentCash and LLM clients."""
+    return Response(content=_llms_txt(), media_type="text/plain; charset=utf-8")
 
 
 @app.get(

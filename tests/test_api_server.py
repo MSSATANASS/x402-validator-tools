@@ -120,6 +120,16 @@ class TestOpenApiDiscovery:
         assert paths["/audit-public"]["post"]["security"] == []
         assert paths["/create-checkout-session"]["post"]["security"] == []
 
+    def test_llms_txt_is_free_and_agent_actionable(self, client: TestClient) -> None:
+        r = client.get("/llms.txt")
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/plain")
+        assert "# x402 Validator API" in r.text
+        assert "POST" in r.text and "/validate" in r.text
+        assert "USD 0.02" in r.text
+        assert "OpenAPI" in r.text
+        assert "GET /validate" in r.text
+
     def test_validate_is_x402_paid_with_apikey_alt(self, client: TestClient) -> None:
         body = client.get("/openapi.json").json()
         op = body["paths"]["/validate"]["post"]
