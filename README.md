@@ -1,14 +1,16 @@
 # x402-validator-tools
 
-Complementary tools for **[smartflowproai-lang/x402-endpoint-validator](https://github.com/smartflowproai-lang/x402-endpoint-validator)** — the core conformance engine.
+**Production evidence for x402 endpoints, built by Gael Leonardo Chulim Gongora (mss_ali / Ali Nain).** This project turns strict-v2 conformance checks and live 402 behavior into reproducible findings for operators, CI pipelines, and agent systems before they spend.
+
+It is maintained alongside the upstream **[smartflowproai-lang/x402-endpoint-validator](https://github.com/smartflowproai-lang/x402-endpoint-validator)** ecosystem. The source of truth is the published checks and fixtures: this project does not claim ownership of the upstream engine.
 
 This monorepo bundles three operator-facing surfaces around the engine:
 
 | Component    | Tech           | Purpose                                            |
 |--------------|----------------|----------------------------------------------------|
-| `api_server` | FastAPI + Stripe | Paid API: `POST /validate`, public demo, accounts |
-| `dashboard`  | Flask            | Human UI to browse audit history                  |
-| `proxy`      | aiohttp          | Middleware that validates proxied traffic         |
+| `api_server` | FastAPI + Stripe | Hosted audit API: `POST /validate`, public demo, accounts |
+| `dashboard`  | Flask            | Human UI for audit evidence and history            |
+| `proxy`      | aiohttp          | Middleware for real-time header verification       |
 
 The conformance engine is the separate package **`x402-conformance-suite`**
 (declared in `pyproject.toml`).

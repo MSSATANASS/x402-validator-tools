@@ -304,7 +304,7 @@ PAGE_NAV = """
       <svg class="nav-hex" viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" focusable="false">
         <polygon class="hex-stroke" points="20,3.5 34.5,11.75 34.5,28.25 20,36.5 5.5,28.25 5.5,11.75"/>
       </svg>
-      <span class="nav-brand-text">x402 validator</span>
+      <span class="nav-brand-text">x402 validator · evidence</span>
     </a>
   </div>
   <div class="nav-links" id="pageNavLinks">
@@ -395,7 +395,7 @@ PAGE_NAV = """
 
 PAGE_FOOTER = """
 <footer>
-  <div>© 2026 x402 validator · Apache-2.0 ·
+  <div>© 2026 x402 validator · built by Gael Leonardo Chulim Gongora · mss_ali / Ali Nain · Apache-2.0 ·
     <a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">engine</a> ·
     <a href="https://pypi.org/project/x402-conformance-suite/" rel="noopener">pip install</a> ·
     <a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>

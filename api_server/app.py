@@ -89,7 +89,7 @@ setup_logging()
 log = get_logger()
 
 _OPENAPI_DESCRIPTION = """
-Audit x402 merchant endpoints for strict-v2 conformance.
+Evidence-first audits for x402 merchant endpoints. Verify strict-v2 conformance, live 402 behavior, and the details agents need before they spend.
 
 ## Authentication
 - `POST /validate` requires header `X-API-Key` (Stripe checkout or admin mint).
@@ -124,7 +124,7 @@ _OPENAPI_CONTACT_EMAIL = os.environ.get(
     "OPENAPI_CONTACT_EMAIL", "mssalidev@proton.me"
 )
 _OPENAPI_CONTACT = {
-    "name": "Gael L Chulim / MSSATANASS",
+    "name": "Gael Leonardo Chulim Gongora (mss_ali / Ali Nain) / MSSATANASS",
     "email": _OPENAPI_CONTACT_EMAIL,
     "url": "https://github.com/MSSATANASS/x402-validator-tools/issues",
 }
@@ -348,11 +348,11 @@ _LANDING_HTML = """<!DOCTYPE html>
   }
 })();
 </script>
-<title>x402 Validator — strict-v2 conformance audits · Manifest, CAIP-2, JSON, Bazaar</title>
-<meta name="description" content="Audit any x402 merchant endpoint for strict-v2 conformance in ~580 ms. Live demo, no signup · Free, Pro ($9/mo), Enterprise ($49/mo). Hosted by Gael L Chulim.">
+<title>x402 Validator — production evidence for x402 endpoints</title>
+<meta name="description" content="Verify x402 endpoints with strict-v2 conformance, live 402 behavior, and operator-actionable evidence before agents spend. Built by Gael Leonardo Chulim Gongora (mss_ali / Ali Nain).">
 <link rel="canonical" href="https://x402-validator-tools.fly.dev/">
-<meta property="og:title" content="x402 Validator — strict-v2 conformance audits">
-<meta property="og:description" content="Manifest, CAIP-2, JSON resilience, Bazaar compliance. Operator-actionable results in ~580 ms. Free demo + Pro API.">
+<meta property="og:title" content="x402 Validator — evidence before agents spend">
+<meta property="og:description" content="Strict-v2 conformance and live 402 evidence for x402 endpoints, with operator-actionable findings.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://x402-validator-tools.fly.dev/">
 <meta property="og:site_name" content="x402 validator">
@@ -360,8 +360,8 @@ _LANDING_HTML = """<!DOCTYPE html>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="x402 Validator — strict-v2 conformance audits">
-<meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Fly.io · Billed via Stripe.">
+<meta name="twitter:title" content="x402 Validator — evidence before agents spend">
+<meta name="twitter:description" content="Strict-v2 conformance and live 402 evidence for x402 endpoints. Free demo + Pro API.">
 <meta name="twitter:image" content="https://x402-validator-tools.fly.dev/static/og-image.png">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0c0b10" id="themeColorMeta">
@@ -383,13 +383,13 @@ _LANDING_HTML = """<!DOCTYPE html>
       "applicationCategory": "DeveloperApplication",
       "applicationSubCategory": "API Service / Testing Tool",
       "operatingSystem": "Any (hosted REST API)",
-      "description": "Conformance audit API for x402 strict-v2 merchant endpoints. Runs Manifest, CAIP-2, JSON resilience, and Bazaar compliance checks against any URL and returns operator-actionable JSON.",
+      "description": "Evidence-first conformance audit API for x402 merchant endpoints. It verifies strict-v2 requirements and live 402 behavior, then returns operator-actionable JSON.",
       "offers": [
         {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "100 audits / month · forever · no signup"},
         {"@type": "Offer", "name": "Pro", "price": "9", "priceCurrency": "USD", "description": "500 audits / month · API key · marketplace mode · email support"},
         {"@type": "Offer", "name": "Enterprise", "price": "49", "priceCurrency": "USD", "description": "5,000 audits / month · bulk · priority support · volume rebate"}
       ],
-      "creator": {"@type": "Person", "name": "Gael L Chulim", "sameAs": "https://github.com/MSSATANASS"},
+      "creator": {"@type": "Person", "name": "Gael Leonardo Chulim Gongora", "alternateName": ["mss_ali", "Ali Nain"], "sameAs": "https://github.com/MSSATANASS"},
       "license": "https://www.apache.org/licenses/LICENSE-2.0"
     },
     {
@@ -2225,10 +2225,10 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
   <div class="hero-decor br"></div>
 
   <div class="hero-content">
-    <p class="brand-eyebrow anim-fade-up"><span class="brk">[</span> x402-validator-tools <span class="brk">]</span></p>
-    <p class="pre-headline anim-fade-up">Ship x402 endpoints with confidence</p>
-    <h1 class="main-headline anim-scale">Audit x402 in Seconds</h1>
-    <p class="sub-headline">Manifest, CAIP-2, JSON resilience, and Bazaar compliance — checked against any merchant URL in ~580 ms, with operator-actionable errors.</p>
+    <p class="brand-eyebrow anim-fade-up"><span class="brk">[</span> x402-validator-tools · Gael Leonardo Chulim Gongora · mss_ali / Ali Nain <span class="brk">]</span></p>
+    <p class="pre-headline anim-fade-up">Evidence before agents spend</p>
+    <h1 class="main-headline anim-scale">Prove your x402 endpoint works.</h1>
+    <p class="sub-headline">Strict-v2 conformance and live 402 behavior, verified against a real merchant URL with operator-actionable evidence.</p>
     <div class="hero-ctas anim-fade-up-late">
       <a class="cta-primary" href="/create-checkout-session?plan_id=pro">
         <span class="label">Get Your API Key</span>
@@ -2291,7 +2291,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
 
 <!-- =================== HOW IT WORKS =================== -->
 <section id="how" class="how-section">
-  <h2 class="how-headline">From URL to verdict in three steps</h2>
+  <h2 class="how-headline">From URL to evidence in three steps</h2>
   <div class="how-grid">
     <article class="how-card">
       <div class="how-step">1</div>
@@ -2305,8 +2305,8 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
     </article>
     <article class="how-card">
       <div class="how-step">3</div>
-      <h3>Get actionable JSON</h3>
-      <p>PASS / FAIL / ERROR per check with operator-actionable errors — ready for CI or a team channel.</p>
+      <h3>Get actionable evidence</h3>
+      <p>PASS / FAIL / ERROR per check with operator-actionable findings — ready for CI or a team channel.</p>
     </article>
   </div>
 </section>
@@ -2324,14 +2324,14 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
           </span>
         </a>
       </div>
-      <p class="cards-lede">An open-source conformance engine that tells you whether an x402 endpoint is actually payable by an agent &mdash; not just whether it responds.</p>
+      <p class="cards-lede">An open-source conformance engine built from real x402 failure modes: it tells you whether an endpoint is actually invocable by an agent &mdash; not just whether it responds.</p>
     </div>
 
     <div class="card-grid">
       <div class="hcard light wide">
         <div>
           <p class="hcard-mono">9 checks &middot; standard mode</p>
-          <h3 class="hcard-title">Depth, not a ping</h3>
+          <h3 class="hcard-title">Evidence, not a ping</h3>
         </div>
         <p class="hcard-body">Manifest, CAIP-2 inside v2 <code>accepts[]</code>, JSON resilience, Bazaar shape, bot-wall detection, atomic-unit amounts, catalog listing, directory cold-probe visibility, and batch-settlement requirements &mdash; each with an operator-actionable message.</p>
       </div>
@@ -2349,7 +2349,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
           <p class="hcard-mono">Apache-2.0</p>
           <h3 class="hcard-title">Runs where<br/>you work</h3>
         </div>
-        <p class="hcard-body">PyPI library, MCP server, GitHub Action, batch CLI, and this API &mdash; the same engine, 203 tests behind it.</p>
+        <p class="hcard-body">PyPI library, MCP server, GitHub Action, batch CLI, and this API &mdash; one evidence model across CI, agents, and production audits.</p>
       </div>
     </div>
   </div>
@@ -2501,7 +2501,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
     </details>
     <details class="faq-item">
       <summary>Who runs this?</summary>
-      <p>x402 validator is built and operated by Gael L Chulim (<a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Fly.io and billed through Stripe.</p>
+      <p>x402 Validator is built and operated by Gael Leonardo Chulim Gongora, known online as mss_ali and Ali Nain (<a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Fly.io and billed through Stripe.</p>
     </details>
   </div>
 </section>
@@ -2519,7 +2519,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
           <span class="foot-sub"><span class="brk">[</span> x402-validator-tools <span class="brk">]</span></span>
         </span>
       </a>
-      <div class="tag">REST API that runs the x402 strict-v2 conformance suite against any URL.</div>
+      <div class="tag">Production evidence for x402 endpoints: strict-v2 conformance, live 402 behavior, and actionable findings.</div>
     </div>
     <div class="foot-col">
       <h4>Product</h4>
@@ -3040,7 +3040,7 @@ __PAGE_NAV__
     <div class="stat"><div class="num">5</div><div class="lbl">pro keys issued — all free 3-month early-adopter grants</div></div>
     <div class="stat"><div class="num">$0</div><div class="lbl">paying-customer revenue to date</div></div>
     <div class="stat"><div class="num">3/day</div><div class="lbl">free audits per IP; Pro is $9/mo, Enterprise $49/mo</div></div>
-    <div class="stat"><div class="num">1</div><div class="lbl">person running this (Gael L Chulim), hosted on Fly.io, billed via Stripe</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">person running this (Gael Leonardo Chulim Gongora · mss_ali / Ali Nain), hosted on Fly.io, billed via Stripe</div></div>
   </div>
 
   __WHAT_WE_TRACK__

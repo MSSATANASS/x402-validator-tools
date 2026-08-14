@@ -151,9 +151,9 @@ class TestLanding:
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
         # Headline copy (motion-style spec)
-        assert "Ship x402 endpoints with confidence" in r.text  # pre-headline (serif)
-        assert "Audit x402 in Seconds" in r.text  # main headline (gradient)
-        assert "operator-actionable errors" in r.text  # subheadline copy
+        assert "Evidence before agents spend" in r.text  # pre-headline (serif)
+        assert "Prove your x402 endpoint works." in r.text  # main headline (gradient)
+        assert "operator-actionable evidence" in r.text  # subheadline copy
         # Pricing plans rendered
         assert "$9" in r.text
         assert "$49" in r.text
@@ -235,7 +235,7 @@ class TestLanding:
         assert "application/ld+json" in r.text
         assert '"@type":"SoftwareApplication"' in r.text or '"@type": "SoftwareApplication"' in r.text
         assert '"@type":"FAQPage"' in r.text or '"@type": "FAQPage"' in r.text
-        assert "Gael L Chulim" in r.text
+        assert "Gael Leonardo Chulim Gongora" in r.text
         assert '"priceCurrency":"USD"' in r.text or '"priceCurrency": "USD"' in r.text
         # Open Graph + Twitter card meta
         assert 'property="og:title"' in r.text
@@ -328,12 +328,12 @@ class TestLanding:
         # structure
         assert 'class="trust-bar"' in r.text
         assert 'id="how"' in r.text
-        assert "From URL to verdict in three steps" in r.text
+        assert "From URL to evidence in three steps" in r.text
         # demo UX
         assert 'class="sample-chips"' in r.text
         assert "Copy JSON" in r.text or "copyAuditJson" in r.text
         assert "btn-copy-json" in r.text
-        assert "operator-actionable errors" in r.text
+        assert "operator-actionable evidence" in r.text
         # footer honesty
         assert r.text.count("GitHub Issues") <= 2
         assert "api_keys.json" not in r.text
@@ -351,8 +351,8 @@ class TestLanding:
 
     def test_landing_hero_locked_copy(self, client: TestClient) -> None:
         t = client.get("/").text
-        assert "Ship x402 endpoints with confidence" in t
-        assert "Audit x402 in Seconds" in t
+        assert "Evidence before agents spend" in t
+        assert "Prove your x402 endpoint works." in t
         assert "Get Your API Key" in t
         assert 'href="#audit">Try It Free</a>' in t
 

@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "x402-validator-tools"
 version = "0.3.0"
-description = "Complementary tools around x402-conformance-engine: FastAPI server, dashboard, proxy"
+description = "Production-evidence toolkit for x402 conformance: API, dashboard, proxy, CLI, MCP, and CI"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Gael L Chulim", email = "mssali-ai@github.com"},
+    {name = "Gael Leonardo Chulim Gongora", email = "mssali-ai@github.com"},
 ]
 requires-python = ">=3.10"
 # All three components in one package; users install the whole thing and pick
