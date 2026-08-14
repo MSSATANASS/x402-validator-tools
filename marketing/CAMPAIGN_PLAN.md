@@ -12,7 +12,7 @@
 - ✅ **Instant Compliance**: Audita manifests, nonces, facilitators, claves en minutos
 - ✅ **Production-Ready**: Testeado contra Binance, Coinbase, Kraken, OKX, Huobi
 - ✅ **Open Source**: Builders community-owned, zero vendor lock-in
-- ✅ **CI/CD Native**: Integra en cualquier pipeline; GitHub Actions + Render
+- ✅ **CI/CD Native**: Integra en cualquier pipeline; GitHub Actions + Fly.io
 
 ---
 
@@ -42,7 +42,7 @@
 ## 📱 Canales de Distribución
 
 ### 1. **Landing Page + Micro-Site**
-**URL:** `x402-validator-tools.onrender.com/marketing` (nueva sección)
+**URL:** `x402-validator-tools.fly.dev/marketing` (nueva sección)
 
 **Estructura:**
 ```

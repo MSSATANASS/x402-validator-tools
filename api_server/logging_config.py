@@ -1,8 +1,8 @@
 """Structured JSON logging for the API server.
 
-Emits one JSON object per line (JSONL) so Render / Docker log drains can
+Emits one JSON object per line (JSONL) so Fly.io / Docker log drains can
 index fields without regex. Toggle with ``LOG_FORMAT=json|text`` (default
-``json`` when ``ENV``/``RENDER`` looks production-like, else ``text``).
+``json`` when a Fly.io or production environment looks active, else ``text``).
 
 Request correlation: middleware sets ``request.state.request_id`` and
 binds it into the logging context for the duration of the request.
@@ -79,9 +79,9 @@ def _use_json_format() -> bool:
     explicit = os.environ.get("LOG_FORMAT", "").strip().lower()
     if explicit in ("json", "text"):
         return explicit == "json"
-    # Default JSON on Render / production-ish hosts
-    env = os.environ.get("ENV", "").lower()
-    return bool(os.environ.get("RENDER") or env in ("prod", "production"))
+    # Default JSON on Fly.io / production-like hosts.
+    env = (os.environ.get("ENV") or os.environ.get("ENVIRONMENT") or "").lower()
+    return bool(os.environ.get("FLY_APP_NAME") or env in ("prod", "production"))
 
 
 def setup_logging(level: str | None = None) -> logging.Logger:

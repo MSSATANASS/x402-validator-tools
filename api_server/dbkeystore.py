@@ -2,11 +2,11 @@
 
 Activated by setting ``DATABASE_URL``::
 
-    DATABASE_URL=postgresql://user:pass@<polardb-endpoint>:5432/x402
+    DATABASE_URL=postgresql://user:pass@<neon-endpoint>:5432/x402
 
 The public interface is identical to ``api_server.keystore.KeyStore``, so
 application code keeps calling ``get_store()`` unchanged. The schema is
-created idempotently on first boot (safe against an empty PolarDB cluster).
+created idempotently on first boot (safe against an empty Neon database).
 
 On top of the JSON store's behavior, this backend adds:
 

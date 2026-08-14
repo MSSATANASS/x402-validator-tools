@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot migration: JSON keystore -> PostgreSQL / PolarDB.
+"""One-shot migration: JSON keystore -> PostgreSQL / Neon.
 
 Usage:
     DATABASE_URL=postgresql://user:pass@host:5432/x402 \
@@ -10,11 +10,12 @@ already exist in the database are left untouched (ON CONFLICT DO NOTHING),
 so it is safe to re-run. Prints a summary and exits 0 on success.
 
 Typical cutover sequence (no downtime):
-    1. Provision PolarDB, set DATABASE_URL on the new replica.
-    2. Run this script against the live api_keys.json (from the Render disk).
-    3. Verify: compare `GET /admin/keys` output before/after.
-    4. Point DNS / API Gateway at the new deployment, keep Render warm until
-       you're confident, then decommission.
+    1. Provision the Neon database and set ``DATABASE_URL`` on the Fly.io app.
+    2. Export the legacy ``api_keys.json`` from its last durable location.
+    3. Run this script locally against that export.
+    4. Verify: compare `GET /admin/keys` output before/after.
+    5. Deploy the Fly.io release, validate health and Stripe test webhooks, then
+       retire the legacy deployment only after the rollback window closes.
 """
 
 from __future__ import annotations

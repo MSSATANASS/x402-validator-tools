@@ -22,7 +22,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("X402_PAY_TO", "0x1111111111111111111111111111111111111111")
     monkeypatch.setenv("X402_AMOUNT_ATOMIC", "20000")
     monkeypatch.setenv("X402_PRICE_USD", "0.02")
-    monkeypatch.setenv("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
+    monkeypatch.setenv("PUBLIC_URL", "https://x402-validator-tools.fly.dev")
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("X402_FACILITATOR_URL", raising=False)
 
@@ -135,7 +135,7 @@ class TestPaywallWithoutPayTo:
         monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
         monkeypatch.delenv("X402_PAY_TO", raising=False)
         monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.setenv("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
+        monkeypatch.setenv("PUBLIC_URL", "https://x402-validator-tools.fly.dev")
         import api_server.keystore  # noqa: F401
         import api_server.app  # noqa: F401
 

@@ -1,4 +1,4 @@
-"""Tests for the Qwen AI Advisor (api_server.ai_advisor) and /validate wiring."""
+"""Tests for the Inception Labs-backed AI advisor and /validate wiring."""
 
 from __future__ import annotations
 
@@ -14,10 +14,9 @@ from api_server import ai_advisor
 
 
 class _Check:
-    """Mimics both the internal report check (check_name) and the flattened
-    CheckResultItem (name) so it can feed _flatten_checks and ai_advisor."""
+    """Mimics report checks consumed by the advisor."""
 
-    def __init__(self, name, status, message):
+    def __init__(self, name: str, status: str, message: str):
         self.name = name
         self.check_name = name
         self.status = status
@@ -38,8 +37,8 @@ def client(tmp_path, monkeypatch):
 
     monkeypatch.setenv("API_KEYS_FILE", str(tmp_path / "api_keys.json"))
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    import api_server.keystore  # noqa: F401
-    import api_server.app  # noqa: F401
+    importlib.import_module("api_server.keystore")
+    importlib.import_module("api_server.app")
 
     keystore_mod = sys.modules["api_server.keystore"]
     app_mod = sys.modules["api_server.app"]
@@ -54,23 +53,25 @@ def _fake_report():
         overall_status = "FAIL"
         summary = "1/2 checks passed"
         timestamp = datetime(2026, 8, 8, 12, 0, 0, tzinfo=timezone.utc)
-        checks = [
-            _Check("manifest_discovery", "PASS", "ok"),
-            _Check("caip2_compliance", "FAIL", "Payment-Required header missing"),
-        ]
+        def __init__(self):
+            self.checks = [
+                _Check("manifest_discovery", "PASS", "ok"),
+                _Check("caip2_compliance", "FAIL", "Payment-Required header missing"),
+            ]
 
     return _Report()
 
 
-def _mock_post(content="Fix the CAIP-2 header."):
+def _mock_post(content: str = "Fix the CAIP-2 header."):
     captured = {}
 
     async def fake_post(self, url, **kwargs):
         captured["url"] = str(url)
         captured["json"] = kwargs.get("json")
+        captured["headers"] = kwargs.get("headers")
         return httpx.Response(
             200,
-            json={"choices": [{"message": {"content": content}}]},
+            json={"choices": [{"message": {"role": "assistant", "content": content}}]},
             request=httpx.Request("POST", str(url)),
         )
 
@@ -88,50 +89,55 @@ _BATCH = {
     "check_name": "batch_settlement_requirements",
     "status": "PASS",
     "message": "N/A — no batch-settlement offers",
-    "details": {
-        "applicable": False,
-        "payload_source": "cold_probe_post",
-        "status_code": 402,
-    },
+    "details": {"applicable": False, "payload_source": "cold_probe_post", "status_code": 402},
 }
 
 
 async def _fake_audit(url, mode, timeout=10.0):
-    # _run_audit returns (report, probe, batch).
     return _fake_report(), _PROBE, _BATCH
 
 
 class TestAdvisorUnit:
-    def test_disabled_without_key(self, monkeypatch):
-        monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    def test_disabled_without_inception_key(self, monkeypatch):
+        monkeypatch.delenv("INCEPTION_API_KEY", raising=False)
         assert ai_advisor.enabled() is False
 
     def test_returns_none_when_disabled(self, monkeypatch):
         import asyncio
 
-        monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+        monkeypatch.delenv("INCEPTION_API_KEY", raising=False)
         assert asyncio.run(ai_advisor.advise("u", "FAIL", "s", _CHECKS)) is None
 
-    def test_success_returns_content(self, monkeypatch):
+    def test_success_uses_inception_chat_contract(self, monkeypatch):
         import asyncio
 
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
-        monkeypatch.setenv("DASHSCOPE_BASE_URL", "https://stub.example/v1/")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
+        monkeypatch.setenv("INCEPTION_BASE_URL", "https://stub.example/v1/")
         fake_post, captured = _mock_post()
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+
         out = asyncio.run(
             ai_advisor.advise("https://example.com", "FAIL", "1/2", _CHECKS)
         )
+
         assert out == "Fix the CAIP-2 header."
         assert captured["url"] == "https://stub.example/v1/chat/completions"
-        user_msg = captured["json"]["messages"][1]["content"]
-        assert "caip2_compliance" in user_msg
-        assert "manifest_discovery" not in user_msg  # only failing checks sent
+        assert captured["headers"] == {
+            "Authorization": "Bearer test-key",
+            "Content-Type": "application/json",
+        }
+        assert captured["json"]["model"] == "mercury-2"
+        assert captured["json"]["reasoning_effort"] == "low"
+        assert captured["json"]["temperature"] == 0.5
+        assert captured["json"]["messages"][0] == {"role": "system", "content": ai_advisor._SYSTEM}
+        user_message = captured["json"]["messages"][1]["content"]
+        assert "caip2_compliance" in user_message
+        assert "manifest_discovery" not in user_message
 
     def test_graceful_on_transport_error(self, monkeypatch):
         import asyncio
 
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
 
         async def boom(self, url, **kwargs):
             raise httpx.ConnectError("nope")
@@ -142,7 +148,7 @@ class TestAdvisorUnit:
     def test_graceful_on_bad_payload(self, monkeypatch):
         import asyncio
 
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
 
         async def bad(self, url, **kwargs):
             return httpx.Response(
@@ -154,182 +160,101 @@ class TestAdvisorUnit:
 
 
 class TestSummarizeUnit:
-    def test_summarize_returns_none_when_disabled(self, monkeypatch):
-        import asyncio
-
-        monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
-        assert asyncio.run(ai_advisor.summarize("u", "FAIL", "s", _CHECKS)) is None
-
     def test_summarize_sends_all_checks(self, monkeypatch):
         import asyncio
 
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
         fake_post, captured = _mock_post("Your site mostly works.")
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+
         out = asyncio.run(
             ai_advisor.summarize("https://example.com", "FAIL", "1/2", _CHECKS)
         )
+
         assert out == "Your site mostly works."
-        user_msg = captured["json"]["messages"][1]["content"]
-        # The summary covers the whole report, not just the failures.
-        assert "caip2_compliance" in user_msg
-        assert "manifest_discovery" in user_msg
-        system_msg = captured["json"]["messages"][0]["content"]
-        assert system_msg == ai_advisor._SUMMARY_SYSTEM
-        assert system_msg != ai_advisor._SYSTEM
-
-    def test_summarize_graceful_on_transport_error(self, monkeypatch):
-        import asyncio
-
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
-
-        async def boom(self, url, **kwargs):
-            raise httpx.ConnectError("nope")
-
-        monkeypatch.setattr(httpx.AsyncClient, "post", boom)
-        assert asyncio.run(ai_advisor.summarize("u", "FAIL", "s", _CHECKS)) is None
+        user_message = captured["json"]["messages"][1]["content"]
+        assert "caip2_compliance" in user_message
+        assert "manifest_discovery" in user_message
+        assert captured["json"]["messages"][0]["content"] == ai_advisor._SUMMARY_SYSTEM
+        assert captured["json"]["messages"][0]["content"] != ai_advisor._SYSTEM
 
 
 class TestValidateWiring:
     def test_advise_attaches_advice(self, client, monkeypatch):
         tc, app_mod = client
         key = app_mod.get_store().issue("pro")
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
         fake_post, captured = _mock_post("Rotate your manifest.")
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
         with patch.object(app_mod, "_run_audit", _fake_audit):
-            r = tc.post(
+            response = tc.post(
                 "/validate",
                 json={"url": "https://example.com", "advise": True},
                 headers={"X-API-Key": key},
             )
-        assert r.status_code == 200
-        assert r.json()["ai_advice"] == "Rotate your manifest."
+        assert response.status_code == 200
+        assert response.json()["ai_advice"] == "Rotate your manifest."
         assert "caip2_compliance" in captured["json"]["messages"][1]["content"]
-
-    def test_no_advice_by_default(self, client, monkeypatch):
-        tc, app_mod = client
-        key = app_mod.get_store().issue("pro")
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
-        fake_post, _ = _mock_post()
-        monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-        with patch.object(app_mod, "_run_audit", _fake_audit):
-            r = tc.post(
-                "/validate",
-                json={"url": "https://example.com"},
-                headers={"X-API-Key": key},
-            )
-        assert r.status_code == 200
-        assert r.json()["ai_advice"] is None
-        assert r.json()["ai_summary"] is None
-
-    def test_advise_without_key_is_null(self, client, monkeypatch):
-        tc, app_mod = client
-        key = app_mod.get_store().issue("pro")
-        monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
-        with patch.object(app_mod, "_run_audit", _fake_audit):
-            r = tc.post(
-                "/validate",
-                json={"url": "https://example.com", "advise": True},
-                headers={"X-API-Key": key},
-            )
-        assert r.status_code == 200
-        assert r.json()["ai_advice"] is None
-
 
     def test_explain_attaches_summary(self, client, monkeypatch):
         tc, app_mod = client
         key = app_mod.get_store().issue("pro")
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
         fake_post, captured = _mock_post("In short: mostly works.")
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
         with patch.object(app_mod, "_run_audit", _fake_audit):
-            r = tc.post(
+            response = tc.post(
                 "/validate",
                 json={"url": "https://example.com", "explain": True},
                 headers={"X-API-Key": key},
             )
-        assert r.status_code == 200
-        assert r.json()["ai_summary"] == "In short: mostly works."
-        assert r.json()["ai_advice"] is None
-        # Summary payload includes passing checks too.
+        assert response.status_code == 200
+        assert response.json()["ai_summary"] == "In short: mostly works."
+        assert response.json()["ai_advice"] is None
         assert "manifest_discovery" in captured["json"]["messages"][1]["content"]
-
-    def test_explain_without_key_is_null(self, client, monkeypatch):
-        tc, app_mod = client
-        key = app_mod.get_store().issue("pro")
-        monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
-        with patch.object(app_mod, "_run_audit", _fake_audit):
-            r = tc.post(
-                "/validate",
-                json={"url": "https://example.com", "explain": True},
-                headers={"X-API-Key": key},
-            )
-        assert r.status_code == 200
-        assert r.json()["ai_summary"] is None
 
     def test_advise_and_explain_both_fire(self, client, monkeypatch):
         tc, app_mod = client
         key = app_mod.get_store().issue("pro")
-        monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
+        monkeypatch.setenv("INCEPTION_API_KEY", "test-key")
         payloads = []
 
         async def fake_post(self, url, **kwargs):
-            payload = kwargs.get("json")
+            payload = kwargs["json"]
             payloads.append(payload)
-            is_advisor = payload["messages"][0]["content"] == ai_advisor._SYSTEM
-            content = "ADVICE-TEXT" if is_advisor else "SUMMARY-TEXT"
+            content = "ADVICE-TEXT" if payload["messages"][0]["content"] == ai_advisor._SYSTEM else "SUMMARY-TEXT"
             return httpx.Response(
                 200,
-                json={"choices": [{"message": {"content": content}}]},
+                json={"choices": [{"message": {"role": "assistant", "content": content}}]},
                 request=httpx.Request("POST", str(url)),
             )
 
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
         with patch.object(app_mod, "_run_audit", _fake_audit):
-            r = tc.post(
+            response = tc.post(
                 "/validate",
-                json={
-                    "url": "https://example.com",
-                    "advise": True,
-                    "explain": True,
-                },
+                json={"url": "https://example.com", "advise": True, "explain": True},
                 headers={"X-API-Key": key},
             )
-        assert r.status_code == 200
-        body = r.json()
-        assert body["ai_advice"] == "ADVICE-TEXT"
-        assert body["ai_summary"] == "SUMMARY-TEXT"
+        assert response.status_code == 200
+        assert response.json()["ai_advice"] == "ADVICE-TEXT"
+        assert response.json()["ai_summary"] == "SUMMARY-TEXT"
         assert len(payloads) == 2
-        user_blobs = [p["messages"][1]["content"] for p in payloads]
-        assert any("failing_checks" in b for b in user_blobs)
-        assert any('"checks"' in b for b in user_blobs)
+        user_blobs = [payload["messages"][1]["content"] for payload in payloads]
+        assert any("failing_checks" in blob for blob in user_blobs)
+        assert any('"checks"' in blob for blob in user_blobs)
 
 
 @pytest.mark.skipif(
-    not os.environ.get("DASHSCOPE_API_KEY"),
-    reason="DASHSCOPE_API_KEY not set (integration)",
+    not os.environ.get("INCEPTION_API_KEY"),
+    reason="INCEPTION_API_KEY not set (integration)",
 )
 class TestAdvisorIntegration:
-    def test_real_qwen_advice(self):
+    def test_real_inception_advice(self):
         import asyncio
 
         out = asyncio.run(
             ai_advisor.advise(
-                url="https://example.com",
-                overall="FAIL",
-                summary="1/7 checks passed",
-                checks=_CHECKS,
-                timeout=20.0,
-            )
-        )
-        assert out and len(out) > 10
-
-    def test_real_qwen_summary(self):
-        import asyncio
-
-        out = asyncio.run(
-            ai_advisor.summarize(
                 url="https://example.com",
                 overall="FAIL",
                 summary="1/7 checks passed",

@@ -27,7 +27,7 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # Structured JSON logs on Render by default (see api_server.logging_config).
+    # Structured JSON logs for Fly.io (see api_server.logging_config).
     LOG_FORMAT=json \
     LOG_LEVEL=INFO \
     COMPONENT=api \

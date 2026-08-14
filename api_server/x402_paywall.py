@@ -98,7 +98,7 @@ def facilitator_url() -> str | None:
 
 def public_base() -> str:
     return (
-        os.environ.get("PUBLIC_URL") or "https://x402-validator-tools.onrender.com"
+        os.environ.get("PUBLIC_URL") or "https://x402-validator-tools.fly.dev"
     ).rstrip("/")
 
 

@@ -69,7 +69,7 @@ The API emits **JSON lines** (JSONL) in production / when `LOG_FORMAT=json`:
 
 | Env | Default | Meaning |
 |-----|---------|---------|
-| `LOG_FORMAT` | `json` on Render / `ENV=production`; else `text` | Log encoder |
+| `LOG_FORMAT` | `json` when `LOG_FORMAT=json` or production is detected; else `text` | Log encoder |
 | `LOG_LEVEL` | `INFO` | Logger level |
 
 Each HTTP response includes **`X-Request-Id`** (echoes your header if you send one).  
@@ -106,11 +106,11 @@ See `docker-compose.yml` for multi-service ports and `DATABASE_URL`.
 
 | Component    | Env vars                                       |
 |--------------|------------------------------------------------|
-| `api_server` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PUBLIC_URL`, `HOST`, `PORT`, `API_KEYS_FILE`, `DATABASE_URL` (optional), `ADMIN_SECRET`, `AUDIT_PUBLIC_DAILY_LIMIT`, `LOG_FORMAT`, `LOG_LEVEL`, `DASHSCOPE_API_KEY` (optional AI advice) |
+| `api_server` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PUBLIC_URL`, `HOST`, `PORT`, `DATABASE_URL` (required in production), `ADMIN_SECRET`, `AUDIT_PUBLIC_DAILY_LIMIT`, `LOG_FORMAT`, `LOG_LEVEL`, `INCEPTION_API_KEY` (optional AI advice), `INCEPTION_MODEL` (optional override), `INCEPTION_REASONING_EFFORT` (optional override) |
 | `dashboard`  | `FLASK_DEBUG`, `HOST`, `PORT`                  |
 | `proxy`      | proxy reads `proxy/config.yaml` at startup     |
 
-### Database backend (PostgreSQL / PolarDB)
+### Database backend (PostgreSQL / Neon)
 
 By default the API persists keys to a JSON file (`api_keys.json`, override
 with `API_KEYS_FILE`). Setting `DATABASE_URL` switches to the
@@ -137,8 +137,8 @@ DATABASE_URL=postgresql://... python scripts/migrate_keystore_to_db.py /var/data
 ```
 
 The migration is idempotent (`ON CONFLICT DO NOTHING`) and never prints
-credentials. Works with any PostgreSQL 12+, including Alibaba Cloud PolarDB
-(always-free 2C8G tier) and the `db` service in `docker-compose.yml`.
+credentials. Works with any PostgreSQL 12+, including Neon Postgres and the
+`db` service in `docker-compose.yml`.
 
 Integration tests for the DB backend run when `TEST_DATABASE_URL` is set:
 
@@ -204,13 +204,33 @@ integration tests for Postgres stay behind `TEST_DATABASE_URL`.
 
 ## Deployment
 
-The hosted app is **not auto-published** from CI. Owner deploys:
+The public API deploys to **Fly.io** from the repository root using `fly.toml`
+and the included multi-stage `Dockerfile`. Its canonical public address is
+`https://x402-validator-tools.fly.dev`. The Fly app runs only `COMPONENT=api`;
+the dashboard and proxy remain separately deployable surfaces.
 
-- **Render.com** Pro plan for `api_server` and `dashboard` (live at
-  `https://x402-validator-tools.onrender.com`), via Render's own git
-  auto-deploy (`render.yaml`).
-- The proxy is containerised via the included `Dockerfile` but is
-  operator-deployed per-environment.
+Before the first production deploy, configure secrets in Fly.io's secret store:
+`DATABASE_URL` for Neon, `REDIS_URL` for Upstash if cache is enabled, Stripe
+credentials, `ADMIN_SECRET`, the real `PUBLIC_URL`, and x402 settlement settings.
+The repository never stores those values. `DATABASE_URL` is required in
+production because the JSON keystore is local to the container filesystem and
+is not durable across replacement Machines.
+
+The committed `fly.toml` deliberately uses `auto_stop_machines = "stop"` and
+`min_machines_running = 0` for low-traffic operation. This reduces CPU/RAM
+runtime when idle, but Fly.io billing still depends on the organization's plan,
+runtime, transfer, and stopped-machine root filesystem usage; verify billing in
+the Fly.io dashboard before describing the deployment as free.
+
+Use the local test suite before deployment:
+
+```bash
+pytest -q
+```
+
+After deployment, validate `GET /health`, `GET /openapi.json`, the unauthenticated
+`POST /validate` x402 challenge, and the Stripe webhook using a signed test event
+before changing the production Stripe endpoint.
 
 ### Container images & CI security (OIDC)
 

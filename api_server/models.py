@@ -88,11 +88,11 @@ class ValidateRequest(BaseModel):
     )
     advise: bool = Field(
         default=False,
-        description="Attach Qwen AI remediation advice (requires DASHSCOPE_API_KEY server-side)",
+        description="Attach Inception AI remediation advice (requires INCEPTION_API_KEY server-side)",
     )
     explain: bool = Field(
         default=False,
-        description="Attach a plain-language AI summary of the result for non-experts (requires DASHSCOPE_API_KEY server-side)",
+        description="Attach a plain-language AI summary of the result for non-experts (requires INCEPTION_API_KEY server-side)",
     )
 
     @field_validator("url")

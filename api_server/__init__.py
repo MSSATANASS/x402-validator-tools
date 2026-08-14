@@ -8,8 +8,8 @@ Layout:
 The core engine lives in the ``x402-conformance-suite`` package; this monorepo only
 contains the surrounding machinery.
 
-Re-exports ``app`` so ``uvicorn api_server:app`` keeps working with the
-pre-restructure Render start command (which was set before this package split).
+Re-exports ``app`` so direct ASGI launchers can import the public API without
+knowing the package layout.
 """
 
 from api_server.app import app

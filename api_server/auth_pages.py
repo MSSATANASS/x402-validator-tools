@@ -200,7 +200,7 @@ def _client_ip(request: Request) -> str:
 
 
 def _cookie_secure(request: Request) -> bool:
-    """Secure flag follows the public scheme (Render sends x-forwarded-proto;
+    """Secure flag follows the public scheme (Fly.io sends x-forwarded-proto;
     TestClient/local http stays cookie-compatible)."""
     fwd = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip()
     proto = fwd or request.url.scheme
@@ -404,7 +404,7 @@ async def dashboard_upgrade(request: Request, plan_id: str):
         # free plan: nothing to buy — the user already has it
         return RedirectResponse("/dashboard", status_code=303)
     base = os.environ.get(
-        "PUBLIC_URL", "https://x402-validator-tools.onrender.com"
+        "PUBLIC_URL", "https://x402-validator-tools.fly.dev"
     )
     full_user = store.get_user(user["id"]) or {}
     stripe_customer = full_user.get("stripe_customer_id") or None

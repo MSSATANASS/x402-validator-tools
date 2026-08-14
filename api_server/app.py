@@ -7,8 +7,8 @@ Endpoints
     GET  /health           liveness check
     GET  /plans            list available subscription plans
     POST /validate         audit a single URL (requires API key; ``advise:
-                           true`` attaches Qwen AI remediation advice when
-                           ``DASHSCOPE_API_KEY`` is configured)
+                           true`` attaches Inception AI remediation advice when
+                           ``INCEPTION_API_KEY`` is configured)
     POST /create-checkout-session  create a Stripe checkout session for a plan
     POST /stripe-webhook   Stripe webhook receiver (signature verified)
     POST /admin/keys       mint a new API key for a plan (admin secret required)
@@ -16,7 +16,7 @@ Endpoints
 
 API keys are persisted to a JSON file (``api_keys.json`` by default, override
 with ``API_KEYS_FILE`` env var). Setting ``DATABASE_URL`` switches to the
-PostgreSQL / PolarDB-backed store (``api_server.dbkeystore``), which also
+PostgreSQL / Neon-backed store (``api_server.dbkeystore``), which also
 enables per-plan monthly quota enforcement and the audit log behind /open.
 """
 
@@ -350,19 +350,19 @@ _LANDING_HTML = """<!DOCTYPE html>
 </script>
 <title>x402 Validator — strict-v2 conformance audits · Manifest, CAIP-2, JSON, Bazaar</title>
 <meta name="description" content="Audit any x402 merchant endpoint for strict-v2 conformance in ~580 ms. Live demo, no signup · Free, Pro ($9/mo), Enterprise ($49/mo). Hosted by Gael L Chulim.">
-<link rel="canonical" href="https://x402-validator-tools.onrender.com/">
+<link rel="canonical" href="https://x402-validator-tools.fly.dev/">
 <meta property="og:title" content="x402 Validator — strict-v2 conformance audits">
 <meta property="og:description" content="Manifest, CAIP-2, JSON resilience, Bazaar compliance. Operator-actionable results in ~580 ms. Free demo + Pro API.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://x402-validator-tools.onrender.com/">
+<meta property="og:url" content="https://x402-validator-tools.fly.dev/">
 <meta property="og:site_name" content="x402 validator">
-<meta property="og:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
+<meta property="og:image" content="https://x402-validator-tools.fly.dev/static/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="x402 Validator — strict-v2 conformance audits">
-<meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Render · Billed via Stripe.">
-<meta name="twitter:image" content="https://x402-validator-tools.onrender.com/static/og-image.png">
+<meta name="twitter:description" content="Audit any x402 merchant in ~580 ms. Free demo + Pro API. Hosted on Fly.io · Billed via Stripe.">
+<meta name="twitter:image" content="https://x402-validator-tools.fly.dev/static/og-image.png">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0c0b10" id="themeColorMeta">
 <meta name="color-scheme" content="dark light">
@@ -379,7 +379,7 @@ _LANDING_HTML = """<!DOCTYPE html>
     {
       "@type": "SoftwareApplication",
       "name": "x402 Validator",
-      "url": "https://x402-validator-tools.onrender.com/",
+      "url": "https://x402-validator-tools.fly.dev/",
       "applicationCategory": "DeveloperApplication",
       "applicationSubCategory": "API Service / Testing Tool",
       "operatingSystem": "Any (hosted REST API)",
@@ -2366,7 +2366,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
         <span class="stack-item" style="font-family:Impact,sans-serif;font-weight:700;letter-spacing:0.05em;font-size:18px;">MCP</span>
         <span class="stack-item" style="font-family:Georgia,serif;font-weight:600;letter-spacing:-0.02em;font-size:17px;">GitHub Action</span>
         <span class="stack-item" style="font-family:Helvetica,sans-serif;font-weight:700;letter-spacing:-0.01em;font-size:15px;">FastAPI</span>
-        <span class="stack-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:14px;text-transform:uppercase;">Render</span>
+        <span class="stack-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:14px;text-transform:uppercase;">Fly.io</span>
         <span class="stack-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.18em;font-size:14px;">Stripe</span>
         <span class="stack-item" style="font-family:Palatino,serif;font-weight:500;letter-spacing:0.03em;font-size:15px;">203 tests</span>
         <span class="stack-item" style="font-family:'Times New Roman',serif;font-weight:400;letter-spacing:0.02em;font-size:14px;">Apache-2.0</span>
@@ -2374,7 +2374,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
         <span class="stack-item" style="font-family:Impact,sans-serif;font-weight:700;letter-spacing:0.05em;font-size:18px;">MCP</span>
         <span class="stack-item" style="font-family:Georgia,serif;font-weight:600;letter-spacing:-0.02em;font-size:17px;">GitHub Action</span>
         <span class="stack-item" style="font-family:Helvetica,sans-serif;font-weight:700;letter-spacing:-0.01em;font-size:15px;">FastAPI</span>
-        <span class="stack-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:14px;text-transform:uppercase;">Render</span>
+        <span class="stack-item" style="font-family:Verdana,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:14px;text-transform:uppercase;">Fly.io</span>
         <span class="stack-item" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.18em;font-size:14px;">Stripe</span>
         <span class="stack-item" style="font-family:Palatino,serif;font-weight:500;letter-spacing:0.03em;font-size:15px;">203 tests</span>
       </div>
@@ -2501,7 +2501,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
     </details>
     <details class="faq-item">
       <summary>Who runs this?</summary>
-      <p>x402 validator is built and operated by Gael L Chulim (<a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Render and billed through Stripe.</p>
+      <p>x402 validator is built and operated by Gael L Chulim (<a href="https://github.com/MSSATANASS">GitHub: MSSATANASS</a>). The engine is Apache-2.0 and open source (<a href="https://github.com/MSSATANASS/x402-conformance-engine" rel="noopener">GitHub</a>); the audit API is a hosted service on Fly.io and billed through Stripe.</p>
     </details>
   </div>
 </section>
@@ -2546,7 +2546,7 @@ html[data-theme="light"] .mesh-violet { /* rgba(255,77,0,0.22) lives in base mes
   </div>
   <div class="foot-bottom">
     <div>© 2026 x402 validator · Apache-2.0</div>
-    <div>Stripe billing · hosted on Render · Postgres keystore when configured</div>
+    <div>Stripe billing · hosted on Fly.io · Postgres keystore when configured</div>
   </div>
 </footer>
 
@@ -2899,7 +2899,7 @@ _VS_DOCTOR_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#0c0b10">
 <title>x402 Validator vs x402 Doctor — checker depth, compared honestly</title>
 <meta name="description" content="x402 Doctor (Stelar Digital) is a quick free endpoint checker. x402 Validator is a strict-v2 conformance engine: 9 checks, marketplace walk, batch, MCP, PyPI, GitHub Action. Facts only.">
-<link rel="canonical" href="https://x402-validator-tools.onrender.com/vs-x402-doctor">
+<link rel="canonical" href="https://x402-validator-tools.fly.dev/vs-x402-doctor">
 <meta property="og:title" content="x402 Validator vs x402 Doctor">
 <meta property="og:description" content="Quick checker vs strict-v2 conformance engine. What each one actually runs, verified against both products' own docs.">
 <meta property="og:type" content="article">
@@ -2987,7 +2987,7 @@ _OPEN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#0c0b10">
 <title>Open — real numbers behind x402 Validator</title>
 <meta name="description" content="Tests, corpus results, the CAIP-2 bug we shipped and fixed same-day, keys issued, revenue. Every number verifiable, none projected.">
-<link rel="canonical" href="https://x402-validator-tools.onrender.com/open">
+<link rel="canonical" href="https://x402-validator-tools.fly.dev/open">
 <meta property="og:title" content="Open — x402 Validator real numbers">
 <meta property="og:description" content="Honest metrics: 203 tests, 27-endpoint corpus, one same-day bug fix, 5 free pro keys, $0 revenue so far.">
 <meta property="og:type" content="website">
@@ -3040,7 +3040,7 @@ __PAGE_NAV__
     <div class="stat"><div class="num">5</div><div class="lbl">pro keys issued — all free 3-month early-adopter grants</div></div>
     <div class="stat"><div class="num">$0</div><div class="lbl">paying-customer revenue to date</div></div>
     <div class="stat"><div class="num">3/day</div><div class="lbl">free audits per IP; Pro is $9/mo, Enterprise $49/mo</div></div>
-    <div class="stat"><div class="num">1</div><div class="lbl">person running this (Gael L Chulim), hosted on Render, billed via Stripe</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">person running this (Gael L Chulim), hosted on Fly.io, billed via Stripe</div></div>
   </div>
 
   __WHAT_WE_TRACK__
@@ -3557,7 +3557,7 @@ async def create_checkout_session(
     if plan_id not in PLANS:
         raise HTTPException(400, f"Unknown plan: {plan_id!r}")
 
-    base = os.environ.get("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
+    base = os.environ.get("PUBLIC_URL", "https://x402-validator-tools.fly.dev")
     try:
         url = stripe_integration.create_checkout_session(
             plan_id,
@@ -3588,7 +3588,7 @@ async def create_checkout_session_link(
     if plan_id not in PLANS:
         raise HTTPException(400, f"Unknown plan: {plan_id!r}")
 
-    base = os.environ.get("PUBLIC_URL", "https://x402-validator-tools.onrender.com")
+    base = os.environ.get("PUBLIC_URL", "https://x402-validator-tools.fly.dev")
     url = stripe_integration.create_checkout_session(
         plan_id,
         success_url=f"{base}/success?session_id={{CHECKOUT_SESSION_ID}}",

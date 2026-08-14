@@ -7,7 +7,7 @@
 ## Week 1-2: Content Production (Aug 12-26)
 
 ### Landing Page & Website
-- [ ] Deploy `/marketing` section to Render
+- [ ] Deploy `/marketing` section to Fly.io
 - [ ] Publish `landing_page.html` (5 sections: hero, problems, features, usecases, pricing)
 - [ ] Set up analytics (Google Analytics + Segment)
 - [ ] Test all CTAs and links (free audit, GitHub, demo)

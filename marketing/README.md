@@ -113,7 +113,7 @@ Fully responsive, production-ready marketing website.
 
 **Deployment:**
 ```bash
-# Copy to your Render web app
+# Copy into the FastAPI static/content path used by the Fly.io API image
 cp landing_page.html /path/to/x402-validator-tools/public/marketing/index.html
 
 # Or add as new route:

@@ -327,7 +327,7 @@ Used by:
 
 GitHub: https://github.com/MSSATANASS/x402-validator-tools
 Live scanner: https://x402scan.com
-Docs: https://x402-validator-tools.onrender.com/docs
+Docs: https://x402-validator-tools.fly.dev/docs
 
 Questions? Join our Discord or reply here.
 ```
@@ -356,7 +356,7 @@ python -m examples.manifest_linter --file your_manifest.json
 [DOCS & REPORTS]
 Live audit: https://x402scan.com
 GitHub: https://github.com/MSSATANASS/x402-validator-tools
-Docs: https://x402-validator-tools.onrender.com
+Docs: https://x402-validator-tools.fly.dev
 
 Questions? React 👇 or open a GitHub issue.
 ```
